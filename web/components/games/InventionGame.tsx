@@ -318,6 +318,13 @@ export function InventionGame({
             >
               Next invention
             </button>
+          ) : isAdmin ? (
+            <button
+              className="retro-btn border-2 border-(--retro-cream) bg-(--surface) px-5 py-2 text-sm font-semibold text-(--retro-cream)"
+              onClick={() => sendAction({ action: "advance" })}
+            >
+              Skip to voting
+            </button>
           ) : null}
         </div>
       ) : null}
