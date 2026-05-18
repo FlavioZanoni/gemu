@@ -190,11 +190,12 @@ func (h *Hub) handleRoomCreate(client *Client, env Envelope) {
 	}
 
 	room := &rooms.Room{
-		ID:         uuid.NewString(),
-		Name:       name,
-		GameType:   gameType,
+		ID: uuid.NewString(),
+		Name: name,
+		GameType: gameType,
+		GameName: factory.Name,
 		Visibility: rooms.Visibility(visibility),
-		JoinCode:   joinCode,
+		JoinCode: joinCode,
 		MaxPlayers: maxPlayers,
 	}
 	h.rooms.Create(room)
@@ -531,6 +532,15 @@ func (h *Hub) handleGameAction(client *Client, env Envelope) {
 								invention.FinalizeFunding()
 							}
 						}
+					}
+				}
+			}
+		case "results":
+			if invention, ok := game.(interface{ StartNextRound([]string) }); ok {
+				if action, _ := env.Payload["action"].(string); action == "next_round" {
+					room, _ := h.rooms.Get(roomID)
+					if room != nil && room.AdminID() == client.Player.ID {
+						invention.StartNextRound(room.ConnectedPlayerIDs())
 					}
 				}
 			}

@@ -23,17 +23,18 @@ type Player struct {
 }
 
 type Room struct {
-	ID         string     `json:"id"`
-	Name       string     `json:"name"`
-	GameType   string     `json:"gameType"`
+	ID string `json:"id"`
+	Name string `json:"name"`
+	GameType string `json:"gameType"`
+	GameName string `json:"gameName"`
 	Visibility Visibility `json:"visibility"`
-	JoinCode   string     `json:"joinCode"`
-	MaxPlayers int        `json:"maxPlayers"`
-	CreatedAt  time.Time  `json:"createdAt"`
+	JoinCode string `json:"joinCode"`
+	MaxPlayers int `json:"maxPlayers"`
+	CreatedAt time.Time `json:"createdAt"`
 
-	mu         sync.RWMutex
-	Players    map[string]Player `json:"players"`
-	AdminChain []string          `json:"adminChain"`
+	mu sync.RWMutex
+	Players map[string]Player `json:"players"`
+	AdminChain []string `json:"adminChain"`
 }
 
 func (r *Room) Snapshot() map[string]any {
@@ -62,14 +63,15 @@ func (r *Room) Snapshot() map[string]any {
 		adminID = r.AdminChain[0]
 	}
 	return map[string]any{
-		"id":         r.ID,
-		"name":       r.Name,
-		"gameType":   r.GameType,
+		"id": r.ID,
+		"name": r.Name,
+		"gameType": r.GameType,
+		"gameName": r.GameName,
 		"visibility": r.Visibility,
 		"maxPlayers": r.MaxPlayers,
-		"joinCode":   r.JoinCode,
-		"adminId":    adminID,
-		"players":    players,
+		"joinCode": r.JoinCode,
+		"adminId": adminID,
+		"players": players,
 	}
 }
 
@@ -77,11 +79,12 @@ func (r *Room) PublicView() map[string]any {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return map[string]any{
-		"id":          r.ID,
-		"name":        r.Name,
-		"gameType":    r.GameType,
-		"visibility":  r.Visibility,
-		"maxPlayers":  r.MaxPlayers,
+		"id": r.ID,
+		"name": r.Name,
+		"gameType": r.GameType,
+		"gameName": r.GameName,
+		"visibility": r.Visibility,
+		"maxPlayers": r.MaxPlayers,
 		"playerCount": len(r.Players),
 	}
 }

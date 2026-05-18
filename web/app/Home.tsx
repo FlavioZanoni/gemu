@@ -105,26 +105,26 @@ export default function Home() {
           <main className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 pb-16 pt-12">
             <header className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
               <div className="flex flex-col gap-4">
-                <div className="inline-flex w-fit items-center gap-3 rounded-full border-2 border-[color:var(--retro-cream)] bg-white/10 px-4 py-2 text-xs uppercase tracking-[0.3em] text-[color:var(--retro-cream)] shadow-[3px_3px_0_rgba(0,0,0,0.3)]">
-                  <span className="h-2 w-2 rounded-full bg-[color:var(--accent)]" />
+                <div className="inline-flex w-fit items-center gap-3 rounded-full border-2 border-(--retro-cream)] bg-white/10 px-4 py-2 text-xs uppercase tracking-[0.3em] text-(--retro-cream)] shadow-[3px_3px_0_rgba(0,0,0,0.3)]">
+                  <span className="h-2 w-2 rounded-full bg-(--accent)]" />
                   Gemu Multiplayer Hub
                 </div>
-                <h1 className="font-display text-4xl leading-tight text-[color:var(--retro-cream)] md:text-6xl">
+                <h1 className="font-display text-4xl leading-tight text-(--retro-cream)] md:text-6xl">
                   Party games, zero setup.
                 </h1>
-                <p className="max-w-2xl text-lg text-[color:var(--retro-cream)]/80">
+                <p className="max-w-2xl text-lg text-(--retro-cream)]/80">
                   Pick a game, join a room, play.
                 </p>
               </div>
               <div className="flex flex-col gap-3">
                 <button
-                  className="retro-btn bg-[color:var(--accent)] px-6 py-3 text-sm font-semibold text-[color:var(--retro-ink)]"
+                  className="retro-btn bg-(--accent)] px-6 py-3 text-sm font-semibold text-(--retro-ink)]"
                   onClick={() => setModalOpen("create")}
                 >
                   Create room
                 </button>
                 <button
-                  className="retro-btn border-2 border-[color:var(--retro-cream)] bg-[color:var(--surface)] px-6 py-3 text-sm font-semibold text-[color:var(--retro-cream)]"
+                  className="retro-btn border-2 border-(--retro-cream)] bg-(--surface)] px-6 py-3 text-sm font-semibold text-(--retro-cream)]"
                   onClick={() => setModalOpen("join")}
                 >
                   Join by code
@@ -135,10 +135,10 @@ export default function Home() {
             <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
               <div className="glass-panel retro-card p-8">
                 <div className="flex items-center justify-between">
-                  <h2 className="font-display text-2xl text-[color:var(--retro-cream)]">
+                  <h2 className="font-display text-2xl text-(--retro-cream)]">
                     Games
                   </h2>
-                  <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--retro-cream)]/70">
+                  <div className="text-xs uppercase tracking-[0.2em] text-(--retro-cream)]/70">
                     {lobby.connected ? "Live" : "Offline"}
                   </div>
                 </div>
@@ -148,29 +148,29 @@ export default function Home() {
                       key={game.type}
                       className={`retro-card border-2 p-5 transition hover:-translate-y-1 ${
                         game.palette === 0
-                          ? "border-[color:var(--accent)]"
+                          ? "border-(--accent)]"
                           : game.palette === 1
-                            ? "border-[color:var(--accent-2)]"
-                            : "border-[color:var(--accent-3)]"
+                            ? "border-(--accent-2)]"
+                            : "border-(--accent-3)]"
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-[color:var(--retro-cream)]">
+                        <h3 className="text-lg font-semibold text-(--retro-cream)]">
                           {game.name}
                         </h3>
-                        <span className="retro-pill bg-[color:var(--surface)] px-3 py-1 text-xs text-[color:var(--retro-cream)]">
+                        <span className="retro-pill bg-(--surface)] px-3 py-1 text-xs text-(--retro-cream)]">
                           {game.players} players
                         </span>
                       </div>
-                      <p className="mt-2 text-sm text-[color:var(--retro-cream)]/75">
+                      <p className="mt-2 text-sm text-(--retro-cream)]/75">
                         {game.description}
                       </p>
                       <div className="mt-4 flex items-center justify-between">
-                        <span className="text-xs uppercase tracking-[0.2em] text-[color:var(--accent-2)]">
+                        <span className="text-xs uppercase tracking-[0.2em] text-(--accent-2)]">
                           {game.tag}
                         </span>
                         <button
-                          className="retro-btn border-2 border-[color:var(--retro-cream)] bg-[color:var(--surface)] px-4 py-2 text-xs font-semibold text-[color:var(--retro-cream)]"
+                          className="retro-btn border-2 border-(--retro-cream)] bg-(--surface)] px-4 py-2 text-xs font-semibold text-(--retro-cream)]"
                           onClick={() => {
                             setSelectedGame(game.type);
                             setModalOpen("create");
@@ -186,33 +186,33 @@ export default function Home() {
 
               <aside className="glass-panel retro-card p-6">
                 <div>
-                  <h2 className="font-display text-xl text-[color:var(--retro-cream)]">
+                  <h2 className="font-display text-xl text-(--retro-cream)]">
                     Rooms
                   </h2>
-                  <p className="mt-2 text-sm text-[color:var(--retro-cream)]/75">
+                  <p className="mt-2 text-sm text-(--retro-cream)]/75">
                     Public rooms you can join right now.
                   </p>
                 </div>
                 <div className="mt-4 space-y-3">
                   {lobby.rooms.length === 0 ? (
-                    <div className="retro-card border-2 border-[color:var(--accent-2)] p-4 text-sm text-[color:var(--retro-cream)]/75">
+                    <div className="retro-card border-2 border-(--accent-2)] p-4 text-sm text-(--retro-cream)]/75">
                       No public rooms yet. Be the first!
                     </div>
                   ) : (
                     lobby.rooms.map((roomItem) => (
                       <div
                         key={roomItem.id}
-                        className="retro-card flex items-center justify-between border-2 border-[color:var(--accent-3)] p-4"
+                        className="retro-card flex items-center justify-between border-2 border-(--accent-3)] p-4"
                       >
                         <div>
-                          <p className="text-sm font-semibold text-[color:var(--retro-cream)]">
+                          <p className="text-sm font-semibold text-(--retro-cream)]">
                             {roomItem.name}
                           </p>
-                          <p className="text-xs text-[color:var(--retro-cream)]/65">
+                          <p className="text-xs text-(--retro-cream)]/65">
                             {roomItem.gameType}
                           </p>
                         </div>
-                        <span className="retro-pill bg-[color:var(--surface)] px-3 py-1 text-xs text-[color:var(--retro-cream)]">
+                        <span className="retro-pill bg-(--surface)] px-3 py-1 text-xs text-(--retro-cream)]">
                           {roomItem.playerCount}/{roomItem.maxPlayers || "∞"}
                         </span>
                       </div>
@@ -223,23 +223,23 @@ export default function Home() {
             </section>
 
             {(modalOpen === "create" || modalOpen === "join") && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-[color:var(--retro-ink)]/80 p-6">
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-(--retro-ink)]/80 p-6">
                 <div
                   ref={modalRef}
                   className="glass-panel retro-card w-full max-w-2xl p-8"
                 >
                   {modalOpen === "create" ? (
                     <>
-                      <h2 className="font-display text-2xl text-[color:var(--retro-cream)]">
+                      <h2 className="font-display text-2xl text-(--retro-cream)]">
                         Create room
                       </h2>
-                      <p className="mt-2 text-sm text-[color:var(--retro-cream)]/75">
+                      <p className="mt-2 text-sm text-(--retro-cream)]/75">
                         Pick a game type and room settings. You will join
                         immediately.
                       </p>
                       <div className="mt-6 grid gap-4">
                         <div className="flex items-center gap-4">
-        <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-[color:var(--retro-cream)] bg-[color:var(--surface)]">
+        <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-(--retro-cream)] bg-(--surface)]">
           {avatarUrl.trim() ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -248,22 +248,22 @@ export default function Home() {
               className="h-full w-full object-cover"
             />
           ) : (
-            <span className="text-2xl text-[color:var(--retro-cream)]/50">
+            <span className="text-2xl text-(--retro-cream)]/50">
               ?
             </span>
           )}
         </div>
         <div className="flex-1">
-          <p className="text-sm font-semibold text-[color:var(--retro-cream)]">
+          <p className="text-sm font-semibold text-(--retro-cream)]">
             Avatar Preview
           </p>
-          <p className="text-xs text-[color:var(--retro-cream)]/65">
+          <p className="text-xs text-(--retro-cream)]/65">
             Supports images and GIFs
           </p>
         </div>
       </div>
       <input
-        className="retro-card border-2 border-[color:var(--retro-cream)] bg-[color:var(--surface)] px-4 py-3 text-sm text-[color:var(--retro-cream)]"
+        className="retro-card border-2 border-(--retro-cream)] bg-(--surface)] px-4 py-3 text-sm text-(--retro-cream)]"
         placeholder="Room name"
                           value={roomName}
                           onChange={(event) => {
@@ -273,7 +273,7 @@ export default function Home() {
                         />
                         <div className="grid gap-3 sm:grid-cols-2">
                           <input
-                            className="retro-card border-2 border-[color:var(--retro-cream)] bg-[color:var(--surface)] px-4 py-3 text-sm text-[color:var(--retro-cream)]"
+                            className="retro-card border-2 border-(--retro-cream)] bg-(--surface)] px-4 py-3 text-sm text-(--retro-cream)]"
                             placeholder="Display name"
                             value={displayName}
                             onChange={(event) => {
@@ -282,7 +282,7 @@ export default function Home() {
                             }}
                           />
                           <input
-                            className="retro-card border-2 border-[color:var(--retro-cream)] bg-[color:var(--surface)] px-4 py-3 text-sm text-[color:var(--retro-cream)]"
+                            className="retro-card border-2 border-(--retro-cream)] bg-(--surface)] px-4 py-3 text-sm text-(--retro-cream)]"
                             placeholder="Avatar URL (supports GIFs)"
                             value={avatarUrl}
                             onChange={(event) => {
@@ -293,7 +293,7 @@ export default function Home() {
                         </div>
                         <div className="grid gap-3 sm:grid-cols-3">
                           <select
-                            className="retro-card border-2 border-[color:var(--retro-cream)] bg-[color:var(--surface)] px-4 py-3 text-sm text-[color:var(--retro-cream)]"
+                            className="retro-card border-2 border-(--retro-cream)] bg-(--surface)] px-4 py-3 text-sm text-(--retro-cream)]"
                             value={selectedGame}
                             onChange={(event) => {
                               setSelectedGame(event.target.value);
@@ -307,7 +307,7 @@ export default function Home() {
                             ))}
                           </select>
                           <select
-                            className="retro-card border-2 border-[color:var(--retro-cream)] bg-[color:var(--surface)] px-4 py-3 text-sm text-[color:var(--retro-cream)]"
+                            className="retro-card border-2 border-(--retro-cream)] bg-(--surface)] px-4 py-3 text-sm text-(--retro-cream)]"
                             value={visibility}
                             onChange={(event) => {
                               setVisibility(
@@ -320,7 +320,7 @@ export default function Home() {
                             <option value="private">Private</option>
                           </select>
                           <input
-                            className="retro-card border-2 border-[color:var(--retro-cream)] bg-[color:var(--surface)] px-4 py-3 text-sm text-[color:var(--retro-cream)]"
+                            className="retro-card border-2 border-(--retro-cream)] bg-(--surface)] px-4 py-3 text-sm text-(--retro-cream)]"
                             placeholder="Max players"
                             type="number"
                             min={2}
@@ -341,7 +341,7 @@ export default function Home() {
                         ) : null}
                         <div className="mt-4 flex gap-3">
                           <button
-                            className="retro-btn flex-1 bg-[color:var(--accent)] px-5 py-3 text-sm font-semibold text-[color:var(--retro-ink)] disabled:opacity-50"
+                            className="retro-btn flex-1 bg-(--accent)] px-5 py-3 text-sm font-semibold text-(--retro-ink)] disabled:opacity-50"
                             onClick={() => {
                               if (Number(maxPlayers) < 2) {
                                 setLocalError(
@@ -364,7 +364,7 @@ export default function Home() {
                             {room.pendingJoin ? "Starting..." : "Start room"}
                           </button>
                           <button
-                            className="retro-btn border-2 border-[color:var(--retro-cream)] bg-[color:var(--surface)] px-5 py-3 text-sm font-semibold text-[color:var(--retro-cream)]"
+                            className="retro-btn border-2 border-(--retro-cream)] bg-(--surface)] px-5 py-3 text-sm font-semibold text-(--retro-cream)]"
                             onClick={() => setModalOpen(null)}
                           >
                             Cancel
@@ -374,15 +374,15 @@ export default function Home() {
                     </>
                   ) : (
                     <>
-                      <h2 className="font-display text-2xl text-[color:var(--retro-cream)]">
+                      <h2 className="font-display text-2xl text-(--retro-cream)]">
                         Join room
                       </h2>
-                      <p className="mt-2 text-sm text-[color:var(--retro-cream)]/75">
+                      <p className="mt-2 text-sm text-(--retro-cream)]/75">
                         Enter the room ID and join code if required.
                       </p>
                       <div className="mt-6 grid gap-4">
                         <div className="flex items-center gap-4">
-        <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-[color:var(--retro-cream)] bg-[color:var(--surface)]">
+        <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-(--retro-cream)] bg-(--surface)]">
           {avatarUrl.trim() ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -391,22 +391,22 @@ export default function Home() {
               className="h-full w-full object-cover"
             />
           ) : (
-            <span className="text-2xl text-[color:var(--retro-cream)]/50">
+            <span className="text-2xl text-(--retro-cream)]/50">
               ?
             </span>
           )}
         </div>
         <div className="flex-1">
-          <p className="text-sm font-semibold text-[color:var(--retro-cream)]">
+          <p className="text-sm font-semibold text-(--retro-cream)]">
             Avatar Preview
           </p>
-          <p className="text-xs text-[color:var(--retro-cream)]/65">
+          <p className="text-xs text-(--retro-cream)]/65">
             Supports images and GIFs
           </p>
         </div>
       </div>
       <input
-        className="retro-card border-2 border-[color:var(--retro-cream)] bg-[color:var(--surface)] px-4 py-3 text-sm text-[color:var(--retro-cream)]"
+        className="retro-card border-2 border-(--retro-cream)] bg-(--surface)] px-4 py-3 text-sm text-(--retro-cream)]"
         placeholder="Room ID"
                           value={joinRoomId}
                           onChange={(event) => {
@@ -416,7 +416,7 @@ export default function Home() {
                         />
                         <div className="grid gap-3 sm:grid-cols-2">
                           <input
-                            className="retro-card border-2 border-[color:var(--retro-cream)] bg-[color:var(--surface)] px-4 py-3 text-sm text-[color:var(--retro-cream)]"
+                            className="retro-card border-2 border-(--retro-cream)] bg-(--surface)] px-4 py-3 text-sm text-(--retro-cream)]"
                             placeholder="Display name"
                             value={displayName}
                             onChange={(event) => {

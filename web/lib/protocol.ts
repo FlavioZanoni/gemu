@@ -14,6 +14,7 @@ export type PublicRoom = {
   id: string;
   name: string;
   gameType: string;
+  gameName: string;
   visibility: "public" | "private";
   maxPlayers: number;
   playerCount: number;
@@ -32,6 +33,7 @@ export type RoomSnapshot = {
   id: string;
   name: string;
   gameType: string;
+  gameName: string;
   visibility: "public" | "private";
   maxPlayers: number;
   joinCode: string;

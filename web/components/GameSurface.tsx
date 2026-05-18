@@ -8,6 +8,8 @@ type GameSurfaceProps = {
   publicState: Record<string, unknown> | null;
   privateState: Record<string, unknown> | null;
   sendAction: (payload: Record<string, unknown>) => void;
+  onFullscreenToggle?: () => void;
+  isAdmin?: boolean;
 };
 
 export function GameSurface({
@@ -18,6 +20,8 @@ export function GameSurface({
   publicState,
   privateState,
   sendAction,
+  onFullscreenToggle,
+  isAdmin,
 }: GameSurfaceProps) {
   if (gameType === "invention") {
     return (
@@ -28,19 +32,21 @@ export function GameSurface({
         publicState={publicState}
         privateState={privateState}
         sendAction={sendAction}
+        onFullscreenToggle={onFullscreenToggle}
+        isAdmin={isAdmin}
       />
     );
   }
 
   return (
     <section className="glass-panel retro-card min-h-[80vh] p-6">
-      <h2 className="font-display text-lg text-[color:var(--retro-cream)]">
+      <h2 className="font-display text-lg text-(--retro-cream)">
         Game surface
       </h2>
-      <p className="mt-2 text-sm text-[color:var(--retro-cream)]/75">
+      <p className="mt-2 text-sm text-(--retro-cream)/75">
         The shared room shell is ready. Drop the {gameType} UI here.
       </p>
-      <div className="mt-6 rounded-2xl border-2 border-dashed border-[color:var(--retro-cream)] bg-[color:var(--surface)] p-8 text-center text-sm text-[color:var(--retro-cream)]/70">
+      <div className="mt-6 rounded-2xl border-2 border-dashed border-(--retro-cream) bg-(--surface) p-8 text-center text-sm text-(--retro-cream)/70">
         Waiting for game adapter UI…
       </div>
     </section>

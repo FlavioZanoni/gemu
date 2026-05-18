@@ -50,6 +50,7 @@ export const useLobbyStore = () => {
           id: string;
           name: string;
           gameType: string;
+          gameName: string;
           visibility: "public" | "private";
           maxPlayers: number;
           players?: { id: string }[];
@@ -71,14 +72,15 @@ export const useLobbyStore = () => {
         }
         setState((prev) => {
           const nextRooms = prev.rooms.filter((r) => r.id !== snapshot.id);
-          nextRooms.push({
-            id: snapshot.id,
-            name: snapshot.name,
-            gameType: snapshot.gameType,
-            visibility: snapshot.visibility,
-            maxPlayers: snapshot.maxPlayers,
-            playerCount,
-          });
+      nextRooms.push({
+          id: snapshot.id,
+          name: snapshot.name,
+          gameType: snapshot.gameType,
+          gameName: snapshot.gameName ?? "",
+          visibility: snapshot.visibility,
+          maxPlayers: snapshot.maxPlayers,
+          playerCount,
+        });
           return { ...prev, rooms: nextRooms };
         });
       }

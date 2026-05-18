@@ -326,6 +326,23 @@ export default function RoomPage() {
     );
   }
 
+const gameSurface = (
+  <GameSurface
+    gameType={room.snapshot.gameType}
+    roomId={room.snapshot.id}
+    playerId={room.playerId ?? ""}
+    players={players.map((player) => ({
+      id: player.id,
+      name: player.name,
+    }))}
+    publicState={room.gamePublicState}
+    privateState={room.gamePrivateState}
+    sendAction={room.sendGameAction}
+    onFullscreenToggle={() => setFullscreen(!fullscreen)}
+    isAdmin={room.isAdmin}
+  />
+);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="radial-glow min-h-screen">
@@ -343,42 +360,38 @@ export default function RoomPage() {
             </div>
           ) : null}
           <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-12">
-            <RoomHeader
-              roomName={room.snapshot.name}
-              gameType={room.snapshot.gameType}
-              playerCount={players.length}
-              maxPlayers={room.snapshot.maxPlayers}
-              onLeave={() => room.leaveRoom()}
-            />
+            {!fullscreen && (
+          <RoomHeader
+            roomName={room.snapshot.name}
+            gameType={room.snapshot.gameType}
+            gameName={room.snapshot.gameName ?? ""}
+            playerCount={players.length}
+            maxPlayers={room.snapshot.maxPlayers}
+            roomId={room.snapshot.id}
+            joinCode={room.snapshot.joinCode}
+            onLeave={() => room.leaveRoom()}
+          />
+            )}
 
-            {fullscreen ? (
-              <div className="glass-panel retro-card min-h-[80vh] p-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="font-display text-lg text-(--retro-cream)">
-                    Game view
-                  </h2>
-                  <button
-                    className="retro-btn border-2 border-(--retro-cream) bg-(--surface) px-4 py-2 text-xs font-semibold text-(--retro-cream)"
-                    onClick={() => setFullscreen(false)}
-                  >
-                    Exit fullscreen
-                  </button>
-                </div>
-                <div className="mt-6">
-                  <GameSurface
-                    gameType={room.snapshot.gameType}
-                    roomId={room.snapshot.id}
-                    playerId={room.playerId ?? ""}
-                    players={players.map((player) => ({
-                      id: player.id,
-                      name: player.name,
-                    }))}
-                    publicState={room.gamePublicState}
-                    privateState={room.gamePrivateState}
-                    sendAction={room.sendGameAction}
-                  />
-                </div>
+            {fullscreen && gameStarted ? (
+              <div className="glass-panel retro-card min-h-screen p-4">
+                {gameSurface}
               </div>
+            ) : gameStarted ? (
+              <section className="grid gap-6 lg:grid-cols-[1fr_3fr]">
+                <PlayerList
+                  players={players}
+                  adminId={room.snapshot.adminId}
+                  isAdmin={room.isAdmin}
+                  onKick={(playerId) => room.kickPlayer(playerId)}
+                  readyCount={readyCount}
+                  connectedCount={connectedCount}
+                  showReady={false}
+                />
+                <div className="min-h-[80vh]">
+                  {gameSurface}
+                </div>
+              </section>
             ) : (
               <section className="grid gap-6 lg:grid-cols-[1fr_3fr]">
                 <PlayerList
@@ -388,72 +401,41 @@ export default function RoomPage() {
                   onKick={(playerId) => room.kickPlayer(playerId)}
                   readyCount={readyCount}
                   connectedCount={connectedCount}
+                  showReady={true}
                 />
-                {gameStarted ? (
-                  <div className="min-h-[80vh]">
-                    <div className="glass-panel retro-card min-h-[80vh] p-6">
-                      <div className="flex items-center justify-between">
-                        <h2 className="font-display text-lg text-(--retro-cream)">
-                          Game view
-                        </h2>
+                <section className="glass-panel retro-card min-h-[80vh] p-6">
+                  <div className="flex min-h-[70vh] flex-col items-center justify-center text-center">
+                    <h2 className="font-display text-lg text-(--retro-cream)">
+                      Waiting room
+                    </h2>
+                    <p className="mt-2 text-sm text-(--retro-cream)/75">
+                      {allConnectedReady
+                        ? "Everyone is ready. Starting..."
+                        : "Get everyone ready before the game starts."}
+                    </p>
+                    <div className="mt-6 flex flex-wrap justify-center gap-3">
+                      <button
+                        className={`retro-btn px-5 py-2 text-sm font-semibold ${
+                          currentPlayer?.ready
+                            ? "bg-(--accent-2) text-(--retro-ink)"
+                            : "bg-(--accent) text-(--retro-ink)"
+                        }`}
+                        onClick={() => room.setReady(!currentPlayer?.ready)}
+                      >
+                        {currentPlayer?.ready ? "Unready" : "Ready up"}
+                      </button>
+                      {room.isAdmin && !allConnectedReady ? (
                         <button
-                          className="retro-btn border-2 border-(--retro-cream) bg-(--surface) px-4 py-2 text-xs font-semibold text-(--retro-cream)"
-                          onClick={() => setFullscreen(true)}
+                          className="retro-btn border-2 border-(--retro-cream) bg-(--surface) px-5 py-2 text-sm font-semibold text-(--retro-cream) disabled:opacity-50"
+                          onClick={() => room.startGame(true)}
+                          disabled={connectedCount < 2}
                         >
-                          Fullscreen
+                          Force start
                         </button>
-                      </div>
-                      <div className="mt-6">
-                        <GameSurface
-                          gameType={room.snapshot.gameType}
-                          roomId={room.snapshot.id}
-                          playerId={room.playerId ?? ""}
-                          players={players.map((player) => ({
-                            id: player.id,
-                            name: player.name,
-                          }))}
-                          publicState={room.gamePublicState}
-                          privateState={room.gamePrivateState}
-                          sendAction={room.sendGameAction}
-                        />
-                      </div>
+                      ) : null}
                     </div>
                   </div>
-                ) : (
-                  <section className="glass-panel retro-card min-h-[80vh] p-6">
-                    <div className="flex min-h-[70vh] flex-col items-center justify-center text-center">
-                      <h2 className="font-display text-lg text-(--retro-cream)">
-                        Waiting room
-                      </h2>
-                      <p className="mt-2 text-sm text-(--retro-cream)/75">
-                        {allConnectedReady
-                          ? "Everyone is ready. Starting..."
-                          : "Get everyone ready before the game starts."}
-                      </p>
-                      <div className="mt-6 flex flex-wrap justify-center gap-3">
-                        <button
-                          className={`retro-btn px-5 py-2 text-sm font-semibold ${
-                            currentPlayer?.ready
-                              ? "bg-(--accent-2) text-(--retro-ink)"
-                              : "bg-(--accent) text-(--retro-ink)"
-                          }`}
-                          onClick={() => room.setReady(!currentPlayer?.ready)}
-                        >
-                          {currentPlayer?.ready ? "Unready" : "Ready up"}
-                        </button>
-                        {room.isAdmin && !allConnectedReady ? (
-                          <button
-                            className="retro-btn border-2 border-(--retro-cream) bg-(--surface) px-5 py-2 text-sm font-semibold text-(--retro-cream) disabled:opacity-50"
-                            onClick={() => room.startGame(true)}
-                            disabled={connectedCount < 2}
-                          >
-                            Force start
-                          </button>
-                        ) : null}
-                      </div>
-                    </div>
-                  </section>
-                )}
+                </section>
               </section>
             )}
           </main>
