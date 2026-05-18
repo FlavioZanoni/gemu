@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+  server:
+    build:
+      context: ./server
+    environment:
+      - WS_ADDR=:8080
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      args:
+        - NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
+    environment:
+      - NEXT_PUBLIC_WS_URL=ws://server:8080/ws
+    ports:
+      - "3000:3000"
+    depends_on:
+      - server
+    restart: unless-stopped

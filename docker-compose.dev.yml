@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    environment:
+      - WS_ADDR=:8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./server:/app
+    command: ["air", "-c", ".air.toml"]
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile.dev
+    environment:
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
+    user: "0:0"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+    command: ["npm", "run", "dev", "--", "-H", "0.0.0.0"]
+    depends_on:
+      - server
+    restart: unless-stopped

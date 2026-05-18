@@ -1,0 +1,14 @@
+node_modules/
+.next/
+dist/
+build/
+.env
+.env.local
+coverage/
+*.log
+server/bin/
+server/tmp/
+web/.next/
+web/node_modules/
+web/package-lock.json
+web/.git/

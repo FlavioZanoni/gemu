@@ -1,0 +1,98 @@
+package rooms
+
+import (
+	"errors"
+	"sync"
+	"time"
+)
+
+type Manager struct {
+	mu    sync.RWMutex
+	rooms map[string]*Room
+}
+
+func NewManager() *Manager {
+	return &Manager{rooms: make(map[string]*Room)}
+}
+
+func (m *Manager) Create(room *Room) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	room.CreatedAt = time.Now()
+	if room.Players == nil {
+		room.Players = make(map[string]Player)
+	}
+	m.rooms[room.ID] = room
+}
+
+func (m *Manager) Get(roomID string) (*Room, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	room, ok := m.rooms[roomID]
+	return room, ok
+}
+
+func (m *Manager) Remove(roomID string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.rooms, roomID)
+}
+
+func (m *Manager) ListPublic() []map[string]any {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	out := make([]map[string]any, 0)
+	for _, room := range m.rooms {
+		if room.Visibility == Public {
+			out = append(out, room.PublicView())
+		}
+	}
+	return out
+}
+
+func (m *Manager) FindPlayerBySession(sessionID string) (string, Player, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	for roomID, room := range m.rooms {
+		if player, ok := room.FindPlayerBySession(sessionID); ok {
+			return roomID, player, true
+		}
+	}
+	return "", Player{}, false
+}
+
+func (m *Manager) AddPlayer(roomID string, player Player) (*Room, error) {
+	room, ok := m.Get(roomID)
+	if !ok {
+		return nil, errors.New("room not found")
+	}
+	room.mu.RLock()
+	maxPlayers := room.MaxPlayers
+	playerCount := len(room.Players)
+	room.mu.RUnlock()
+	if maxPlayers > 0 && playerCount >= maxPlayers {
+		return nil, errors.New("room full")
+	}
+	room.AddPlayer(player)
+	return room, nil
+}
+
+func (m *Manager) RemovePlayer(roomID string, playerID string) (*Room, error) {
+	room, ok := m.Get(roomID)
+	if !ok {
+		return nil, errors.New("room not found")
+	}
+	room.RemovePlayer(playerID)
+	return room, nil
+}
+
+func (m *Manager) UpdatePlayer(roomID string, playerID string, update func(*Player)) (*Room, error) {
+	room, ok := m.Get(roomID)
+	if !ok {
+		return nil, errors.New("room not found")
+	}
+	if !room.UpdatePlayer(playerID, update) {
+		return nil, errors.New("player not found")
+	}
+	return room, nil
+}
