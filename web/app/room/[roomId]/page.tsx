@@ -340,6 +340,7 @@ const gameSurface = (
     sendAction={room.sendGameAction}
     onFullscreenToggle={() => setFullscreen(!fullscreen)}
     isAdmin={room.isAdmin}
+    onLeave={() => room.leaveRoom()}
   />
 );
 

@@ -10,6 +10,7 @@ type GameSurfaceProps = {
   sendAction: (payload: Record<string, unknown>) => void;
   onFullscreenToggle?: () => void;
   isAdmin?: boolean;
+  onLeave?: () => void;
 };
 
 export function GameSurface({
@@ -22,6 +23,7 @@ export function GameSurface({
   sendAction,
   onFullscreenToggle,
   isAdmin,
+  onLeave,
 }: GameSurfaceProps) {
   if (gameType === "invention") {
     return (
@@ -34,6 +36,7 @@ export function GameSurface({
         sendAction={sendAction}
         onFullscreenToggle={onFullscreenToggle}
         isAdmin={isAdmin}
+        onLeave={onLeave}
       />
     );
   }
