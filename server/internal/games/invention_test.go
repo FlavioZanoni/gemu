@@ -2,6 +2,29 @@ package games
 
 import "testing"
 
+func TestInventionStartSetsStartedFlag(t *testing.T) {
+	game := &InventionGame{}
+	game.Init("room-1")
+
+	if game.started {
+		t.Fatalf("expected started to be false initially")
+	}
+	if state := game.PublicState(); state["started"] != false {
+		t.Fatalf("expected started=false in PublicState")
+	}
+
+	game.Start()
+	if !game.started {
+		t.Fatalf("expected started=true after Start")
+	}
+	if game.phase != "collecting" {
+		t.Fatalf("expected phase to remain collecting after Start, got %s", game.phase)
+	}
+	if state := game.PublicState(); state["started"] != true {
+		t.Fatalf("expected started=true in PublicState after Start")
+	}
+}
+
 func TestInventionInitDefaults(t *testing.T) {
 	game := &InventionGame{}
 	game.Init("room-1")

@@ -464,8 +464,8 @@ func (h *Hub) handleGameStart(client *Client, env Envelope) {
 		return
 	}
 
-	if invention, ok := game.(interface{ StartAssign([]string) }); ok {
-		invention.StartAssign(room.ConnectedPlayerIDs())
+	if invention, ok := game.(interface{ Start() }); ok {
+		invention.Start()
 	}
 
 	h.Broadcast(roomID, Envelope{Type: "game.state", RoomID: roomID, Payload: map[string]any{"public": game.PublicState()}})
@@ -498,7 +498,8 @@ func (h *Hub) handleGameAction(client *Client, env Envelope) {
 				room, _ := h.rooms.Get(roomID)
 				if room != nil {
 					connected := room.ConnectedPlayerIDs()
-					if len(connected) >= 2 {
+					started, _ := game.PublicState()["started"].(bool)
+					if started && len(connected) >= 2 {
 						if submitted, ok := game.PublicState()["problemsSubmitted"].(int); ok {
 							if submitted >= len(connected)*2 {
 								invention.StartAssign(connected)

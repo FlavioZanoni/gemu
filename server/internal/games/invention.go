@@ -36,6 +36,7 @@ const (
 type InventionGame struct {
 	roomID      string
 	phase       string
+	started     bool
 	round       int
 	totalRounds int
 
@@ -77,6 +78,7 @@ func (g *InventionGame) Type() string {
 func (g *InventionGame) Init(roomID string) {
 	g.roomID = roomID
 	g.phase = "collecting"
+	g.started = false
 	g.round = 1
 	g.totalRounds = DefaultTotalRounds
 	g.problems = make(map[string][]string)
@@ -91,6 +93,10 @@ func (g *InventionGame) Init(roomID string) {
 }
 
 func (g *InventionGame) OnPlayerJoin(playerID string) {}
+
+func (g *InventionGame) Start() {
+	g.started = true
+}
 
 func (g *InventionGame) OnPlayerLeave(playerID string) {
 	delete(g.problems, playerID)
@@ -238,6 +244,7 @@ func (g *InventionGame) PublicState() map[string]any {
 	}
 	return map[string]any{
 		"phase":             g.phase,
+		"started":           g.started,
 		"round":             g.round,
 		"totalRounds":       g.totalRounds,
 		"problemsSubmitted": g.countProblems(),
@@ -264,6 +271,7 @@ func (g *InventionGame) StartAssign(players []string) {
 	if len(players) < 2 {
 		return
 	}
+	g.started = true
 	pool := make([]string, 0)
 	for _, problems := range g.problems {
 		for _, problem := range problems {

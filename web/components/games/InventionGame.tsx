@@ -12,6 +12,7 @@ type InventionGameProps = {
   sendAction: (payload: Record<string, unknown>) => void;
   onFullscreenToggle?: () => void;
   isAdmin?: boolean;
+  onLeave?: () => void;
 };
 
 type InventionDrawing = {
@@ -31,6 +32,7 @@ export function InventionGame({
   sendAction,
   onFullscreenToggle,
   isAdmin,
+  onLeave,
 }: InventionGameProps) {
   const phase = (publicState?.phase as string | undefined) ?? "collecting";
   const round = (publicState?.round as number | undefined) ?? 1;
@@ -318,6 +320,13 @@ export function InventionGame({
             >
               Next invention
             </button>
+          ) : isAdmin ? (
+            <button
+              className="retro-btn border-2 border-(--retro-cream) bg-(--surface) px-5 py-2 text-sm font-semibold text-(--retro-cream)"
+              onClick={() => sendAction({ action: "advance" })}
+            >
+              Skip to voting
+            </button>
           ) : null}
         </div>
       ) : null}
@@ -465,6 +474,14 @@ export function InventionGame({
                     : "No winner";
                 })()}
               </h3>
+              {onLeave ? (
+                <button
+                  className="retro-btn mt-6 bg-(--accent) px-5 py-2 text-sm font-semibold text-(--retro-ink)"
+                  onClick={onLeave}
+                >
+                  Back to lobby
+                </button>
+              ) : null}
             </div>
           ) : null}
           {phase === "results" && isAdmin ? (
