@@ -1,11 +1,19 @@
 "use client";
 
-import { useMemo, useState, useRef, useEffect } from "react";
+import { Suspense, useMemo, useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLobbyStore } from "../lib/lobbyStore";
 import { useRoomStore } from "../lib/roomStore";
 
-export default function Home() {
+export default function Page() {
+  return (
+    <Suspense fallback={null}>
+      <HomeContent />
+    </Suspense>
+  );
+}
+
+function HomeContent() {
   const lobby = useLobbyStore();
   const room = useRoomStore();
   const router = useRouter();
