@@ -33,20 +33,40 @@ body,
 }
 
 .glass-panel {
-  background: linear-gradient(160deg, rgba(255, 242, 200, 0.08), rgba(255, 255, 255, 0.02));
+  background: linear-gradient(
+    160deg,
+    rgba(255, 242, 200, 0.08),
+    rgba(255, 255, 255, 0.02)
+  );
   border: 2px solid rgba(255, 210, 63, 0.25);
-  box-shadow: 0 20px 0 rgba(0, 0, 0, 0.25), 0 30px 80px rgba(4, 6, 15, 0.45);
+  box-shadow:
+    0 20px 0 rgba(0, 0, 0, 0.25),
+    0 30px 80px rgba(4, 6, 15, 0.45);
   backdrop-filter: blur(8px);
 }
 
 .radial-glow {
-  background: radial-gradient(circle at top left, rgba(255, 79, 111, 0.35), transparent 55%),
-    radial-gradient(circle at bottom right, rgba(53, 212, 185, 0.28), transparent 50%),
-    radial-gradient(circle at 50% 20%, rgba(255, 210, 63, 0.24), transparent 45%);
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(255, 79, 111, 0.35),
+      transparent 55%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(53, 212, 185, 0.28),
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 50% 20%,
+      rgba(255, 210, 63, 0.24),
+      transparent 45%
+    );
 }
 
 .grid-texture {
-  background-image: linear-gradient(rgba(255, 242, 200, 0.12) 1px, transparent 1px),
+  background-image:
+    linear-gradient(rgba(255, 242, 200, 0.12) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 242, 200, 0.12) 1px, transparent 1px);
   background-size: 40px 40px;
 }
@@ -54,7 +74,11 @@ body,
 .retro-card {
   border-radius: 24px;
   border: 2px solid var(--retro-cream);
-  background: linear-gradient(140deg, rgba(255, 242, 200, 0.1), rgba(255, 255, 255, 0.03));
+  background: linear-gradient(
+    140deg,
+    rgba(255, 242, 200, 0.1),
+    rgba(255, 255, 255, 0.03)
+  );
   box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.3);
 }
 
@@ -68,7 +92,9 @@ body,
   border-radius: 999px;
   border: 2px solid var(--retro-cream);
   box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.35);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .retro-btn:hover {
@@ -79,4 +105,14 @@ body,
 .retro-btn:active {
   transform: translate(2px, 2px);
   box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.35);
+}
+
+button,
+[role="button"],
+[role="checkbox"],
+a[href],
+label[for],
+label:has(input),
+select {
+  cursor: pointer;
 }

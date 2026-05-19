@@ -26,7 +26,7 @@ export function RoomHeader({
   const [copied, setCopied] = useState(false);
 
   const inviteUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/?room=${roomId}${joinCode ? `&code=${joinCode}` : ""}`
+    ? `${window.location.origin}/room/${roomId}${joinCode ? `?code=${joinCode}` : ""}`
     : "";
 
   const copyInvite = async () => {

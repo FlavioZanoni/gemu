@@ -66,9 +66,7 @@ export function InventionGame({
     (publicState?.submissions as
       | Record<string, InventionDrawing>
       | undefined) ?? {};
-  const currentSubmission = presenterId
-    ? submissions[presenterId]
-    : undefined;
+  const currentSubmission = presenterId ? submissions[presenterId] : undefined;
   const playerNames = useMemo(() => {
     const map = new Map<string, string>();
     players.forEach((player) => map.set(player.id, player.name));
@@ -84,8 +82,7 @@ export function InventionGame({
   const connectedCount = players.length;
 
   const totalAllocated = useMemo(
-    () =>
-      Object.values(fundAllocations).reduce((sum, v) => sum + v, 0),
+    () => Object.values(fundAllocations).reduce((sum, v) => sum + v, 0),
     [fundAllocations],
   );
   const remainingBudget = FUNDING_BUDGET - totalAllocated;
@@ -98,7 +95,7 @@ export function InventionGame({
       });
       setFundAllocations(initial);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
   useEffect(() => {
@@ -115,7 +112,7 @@ export function InventionGame({
     if (assigned && drawStep === "idea" && !drawing) {
       setDrawStep("idea");
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assigned]);
 
   return (
@@ -188,7 +185,9 @@ export function InventionGame({
                 className="retro-btn bg-(--accent) px-5 py-2 text-sm font-semibold text-(--retro-ink) disabled:opacity-50"
                 disabled={!problemOne.trim() || !problemTwo.trim()}
                 onClick={() => {
-                  sendAction({ problems: [problemOne.trim(), problemTwo.trim()] });
+                  sendAction({
+                    problems: [problemOne.trim(), problemTwo.trim()],
+                  });
                   setMyProblemsSubmitted(true);
                 }}
               >
@@ -205,7 +204,8 @@ export function InventionGame({
             <div className="grid gap-4">
               {assigned ? (
                 <div className="retro-card border-2 border-(--accent-2) p-4 text-sm text-(--accent-2)">
-                  Your problem: <span className="font-semibold">{assigned}</span>
+                  Your problem:{" "}
+                  <span className="font-semibold">{assigned}</span>
                 </div>
               ) : (
                 <div className="retro-card border-2 border-(--accent-3) p-4 text-sm text-(--retro-cream)/70">
@@ -335,7 +335,11 @@ export function InventionGame({
         <div className="mt-6 grid gap-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-(--retro-cream)/75">
-              Allocate your <span className="font-semibold text-(--accent-2)">${FUNDING_BUDGET}</span> across these inventions
+              Allocate your{" "}
+              <span className="font-semibold text-(--accent-2)">
+                ${FUNDING_BUDGET}
+              </span>{" "}
+              across these inventions
             </p>
             <span
               className={`font-display text-lg ${remainingBudget < 0 ? "text-red-400" : "text-(--accent-2)"}`}
@@ -375,18 +379,21 @@ export function InventionGame({
                       max={FUNDING_BUDGET}
                       step={50}
                       value={currentAmount}
-          onChange={(e) => {
-                const val = Number(e.target.value);
-                const otherTotal = Object.entries(fundAllocations)
-                  .filter(([k]) => k !== id)
-                  .reduce((sum, [, v]) => sum + v, 0);
-                const clamped = Math.min(val, FUNDING_BUDGET - otherTotal);
-                setFundAllocations((prev) => ({
-                  ...prev,
-                  [id]: clamped,
-                }));
-              }}
-                      className="mt-2 w-full accent-[var(--accent-2)]"
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        const otherTotal = Object.entries(fundAllocations)
+                          .filter(([k]) => k !== id)
+                          .reduce((sum, [, v]) => sum + v, 0);
+                        const clamped = Math.min(
+                          val,
+                          FUNDING_BUDGET - otherTotal,
+                        );
+                        setFundAllocations((prev) => ({
+                          ...prev,
+                          [id]: clamped,
+                        }));
+                      }}
+                      className="mt-2 w-full accent-(--accent-2)"
                     />
                   </div>
                 );

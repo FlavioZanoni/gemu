@@ -38,20 +38,27 @@ export default function RoomPage() {
   useEffect(() => {
     setMounted(true);
     const lastRoom = room.loadLastRoom();
+    const inviteCode =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("code")?.trim() || ""
+        : "";
+    if (inviteCode && !joinCode) {
+      setJoinCode(inviteCode);
+    }
     if (lastRoom) {
       setName(lastRoom.displayName || "");
       setAvatarUrl(lastRoom.avatarUrl || "");
       if (lastRoom.roomId === roomId && !room.snapshot) {
         room.joinRoom({
           roomId: lastRoom.roomId,
-          joinCode: lastRoom.joinCode,
+          joinCode: inviteCode || lastRoom.joinCode,
           displayName: lastRoom.displayName,
           avatarUrl: lastRoom.avatarUrl,
         });
         setAttemptedAutoJoin(true);
       }
     }
-  }, [roomId, room, setMounted, setName, setAvatarUrl, setAttemptedAutoJoin]);
+  }, [roomId, room, joinCode, setMounted, setName, setAvatarUrl, setAttemptedAutoJoin, setJoinCode]);
 
   const players = useMemo(() => room.snapshot?.players ?? [], [room.snapshot]);
   const currentPlayer = useMemo(

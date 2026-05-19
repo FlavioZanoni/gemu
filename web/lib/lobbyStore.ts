@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Envelope, GameSummary, PublicRoom } from "./protocol";
 import { getWSClient } from "./ws";
 
@@ -21,6 +21,12 @@ const createRequestId = () =>
 
 export const useLobbyStore = () => {
   const [state, setState] = useState(initialState);
+  const refresh = useCallback(() => {
+    const client = getWSClient();
+    client.connect();
+    client.send({ type: "lobby.games.list", requestId: createRequestId() });
+    client.send({ type: "lobby.rooms.list", requestId: createRequestId() });
+  }, []);
 
   useEffect(() => {
     const client = getWSClient();
@@ -28,8 +34,7 @@ export const useLobbyStore = () => {
 
     const offOpen = client.onOpen(() => {
       setState((prev) => ({ ...prev, connected: true }));
-      client.send({ type: "lobby.games.list", requestId: createRequestId() });
-      client.send({ type: "lobby.rooms.list", requestId: createRequestId() });
+      refresh();
     });
 
     const offClose = client.onClose(() => {
@@ -93,5 +98,5 @@ export const useLobbyStore = () => {
     };
   }, []);
 
-  return state;
+  return { ...state, refresh };
 };

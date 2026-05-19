@@ -1,8 +1,9 @@
 "use client";
 
-import { Suspense, useMemo, useState, useRef, useEffect } from "react";
+import { Suspense, useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLobbyStore } from "../lib/lobbyStore";
+import { gamesCatalog } from "../lib/games";
 import { useRoomStore } from "../lib/roomStore";
 
 export default function Page() {
@@ -86,24 +87,11 @@ function HomeContent() {
     setHasRedirected,
   ]);
 
-  const games = useMemo(() => {
-    if (lobby.games.length === 0) return [];
-    return lobby.games.map((game) => ({
-      ...game,
-      tag: "Adapter ready",
-      players: "2-12",
-      description: "Hosted on the Gemu room shell.",
-    }));
-  }, [lobby.games]);
-
-  const curatedGames = useMemo(
-    () =>
-      games.map((game, index) => ({
-        ...game,
-        palette: index % 3,
-      })),
-    [games],
-  );
+  useEffect(() => {
+    if (room.left && lobby.refresh) {
+      lobby.refresh();
+    }
+  }, [room.left, lobby]);
 
   const createDisabled =
     !roomName.trim() ||
@@ -165,16 +153,10 @@ function HomeContent() {
                   </div>
                 </div>
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  {curatedGames.map((game) => (
+                  {gamesCatalog.map((game) => (
                     <article
                       key={game.type}
-                      className={`retro-card border-2 p-5 transition hover:-translate-y-1 ${
-                        game.palette === 0
-                          ? "border-(--accent)"
-                          : game.palette === 1
-                            ? "border-(--accent-2)"
-                            : "border-(--accent-3)"
-                      }`}
+                      className={`retro-card border-2 p-5 transition hover:-translate-y-1`}
                     >
                       <div className="flex items-center justify-between">
                         <h3 className="text-lg font-semibold text-(--retro-cream)">
@@ -221,36 +203,39 @@ function HomeContent() {
                       No public rooms yet. Be the first!
                     </div>
                   ) : (
-                lobby.rooms.map((roomItem) => (
-                  <div
-                    key={roomItem.id}
-                    className="retro-card flex items-center justify-between border-2 border-(--accent-3) p-4"
-                  >
-                    <div>
-                      <p className="text-sm font-semibold text-(--retro-cream)">
-                        {roomItem.name}
-                      </p>
-                        <p className="text-xs text-(--retro-cream)/65">
-                          {roomItem.gameName || roomItem.gameType}
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="retro-pill bg-(--surface) px-3 py-1 text-xs text-(--retro-cream)">
-                        {roomItem.playerCount}/{roomItem.maxPlayers || "∞"}
-                      </span>
-                      <button
-                        className="retro-btn bg-(--accent) px-4 py-1.5 text-xs font-semibold text-(--retro-ink) disabled:opacity-50"
-                        disabled={roomItem.playerCount >= roomItem.maxPlayers || room.pendingJoin}
-                        onClick={() => {
-                          setJoinRoomId(roomItem.id);
-                          setModalOpen("join");
-                        }}
+                    lobby.rooms.map((roomItem) => (
+                      <div
+                        key={roomItem.id}
+                        className="retro-card flex items-center justify-between border-2 border-(--accent-3) p-4"
                       >
-                        Join
-                      </button>
-                    </div>
-                  </div>
-                ))
+                        <div>
+                          <p className="text-sm font-semibold text-(--retro-cream)">
+                            {roomItem.name}
+                          </p>
+                          <p className="text-xs text-(--retro-cream)/65">
+                            {roomItem.gameName || roomItem.gameType}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="retro-pill bg-(--surface) px-3 py-1 text-xs text-(--retro-cream)">
+                            {roomItem.playerCount}/{roomItem.maxPlayers || "∞"}
+                          </span>
+                          <button
+                            className="retro-btn bg-(--accent) px-4 py-1.5 text-xs font-semibold text-(--retro-ink) disabled:opacity-50"
+                            disabled={
+                              roomItem.playerCount >= roomItem.maxPlayers ||
+                              room.pendingJoin
+                            }
+                            onClick={() => {
+                              setJoinRoomId(roomItem.id);
+                              setModalOpen("join");
+                            }}
+                          >
+                            Join
+                          </button>
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
               </aside>
@@ -334,7 +319,7 @@ function HomeContent() {
                               setLocalError(null);
                             }}
                           >
-                            {curatedGames.map((game) => (
+                            {gamesCatalog.map((game) => (
                               <option key={game.type} value={game.type}>
                                 {game.name}
                               </option>
