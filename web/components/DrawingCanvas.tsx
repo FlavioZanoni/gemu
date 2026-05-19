@@ -40,25 +40,48 @@ export function DrawingCanvas({ value, onChange }: DrawingCanvasProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-  const resize = () => {
-    const parent = canvas.parentElement;
-    if (!parent) return;
-    const { width, height } = parent.getBoundingClientRect();
-    if (width === 0 || height === 0) return;
-    const dpr = window.devicePixelRatio || 1;
-    const saved = canvas.toDataURL();
-    canvas.width = Math.floor(width * dpr);
-    canvas.height = Math.floor(height * dpr);
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.scale(dpr, dpr);
-    ctx.fillStyle = BG_COLOR;
-    ctx.fillRect(0, 0, width, height);
-    const img = new Image();
-    img.onload = () => {
-      ctx.drawImage(img, 0, 0, width, height);
+    let lastW = 0;
+    let lastH = 0;
+    let initialized = false;
+
+    const resize = () => {
+      const parent = canvas.parentElement;
+      if (!parent) return;
+      const { width, height } = parent.getBoundingClientRect();
+      if (width <= 0 || height <= 0) return;
+      const dpr = window.devicePixelRatio || 1;
+      const targetW = Math.floor(width * dpr);
+      const targetH = Math.floor(height * dpr);
+      if (targetW === lastW && targetH === lastH) return;
+      lastW = targetW;
+      lastH = targetH;
+
+      // Capture existing pixels before resizing (which clears the canvas).
+      let snapshot: string | null = null;
+      if (initialized) {
+        try {
+          snapshot = canvas.toDataURL();
+        } catch {
+          snapshot = null;
+        }
+      }
+
+      canvas.width = targetW;
+      canvas.height = targetH;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+      ctx.fillStyle = BG_COLOR;
+      ctx.fillRect(0, 0, width, height);
+      initialized = true;
+
+      if (snapshot) {
+        const img = new Image();
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, width, height);
+        };
+        img.src = snapshot;
+      }
     };
-    img.src = saved;
-  };
 
     resize();
     const observer = new ResizeObserver(() => resize());
@@ -135,7 +158,7 @@ export function DrawingCanvas({ value, onChange }: DrawingCanvasProps) {
   };
 
   return (
-    <div className="flex gap-3">
+    <div className="flex h-full min-h-0 gap-3">
       <div className="flex flex-col gap-2">
         <div className="flex flex-col gap-1.5">
           {PRESET_COLORS.map((c) => (
@@ -200,11 +223,15 @@ export function DrawingCanvas({ value, onChange }: DrawingCanvasProps) {
           </svg>
         </button>
       </div>
-    <div className="flex-1 rounded-2xl border-2 border-(--retro-cream) bg-(--surface) p-1">
-      <canvas
-        ref={canvasRef}
-        className="block h-full w-full rounded-xl"
-          style={{ cursor: eraser ? "cell" : "crosshair" }}
+      <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-2xl border-2 border-(--retro-cream) bg-(--surface) p-1">
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-1 block rounded-xl"
+          style={{
+            width: "calc(100% - 0.5rem)",
+            height: "calc(100% - 0.5rem)",
+            cursor: eraser ? "cell" : "crosshair",
+          }}
           onMouseDown={(e) => {
             const { x, y } = getEventPos(e);
             start(x, y);
