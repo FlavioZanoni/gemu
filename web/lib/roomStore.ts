@@ -117,6 +117,7 @@ const getSessionId = () => {
 export const useRoomStore = () => {
   const [state, setState] = useState(initialState);
   const pendingProfileRef = useRef<RoomState["pendingProfile"]>(null);
+  const reconnectAttemptedRef = useRef(false);
 
   useEffect(() => {
     const client = getWSClient();
@@ -124,6 +125,40 @@ export const useRoomStore = () => {
 
     const offOpen = client.onOpen(() => {
       setState((prev) => ({ ...prev, connected: true }));
+      // Auto-rejoin on reconnect (skips the very first open, which the
+      // room page handles itself based on the URL).
+      if (!reconnectAttemptedRef.current) {
+        reconnectAttemptedRef.current = true;
+        return;
+      }
+      const last = loadLastRoom();
+      if (!last) return;
+      const sessionId = getSessionId();
+      pendingProfileRef.current = {
+        name: last.displayName,
+        avatarUrl: last.avatarUrl,
+        joinCode: last.joinCode,
+      };
+      setState((prev) => ({
+        ...prev,
+        pendingJoin: true,
+        leaving: false,
+        left: false,
+        kicked: false,
+        joinError: null,
+        pendingProfile: pendingProfileRef.current,
+      }));
+      client.send({
+        type: "room.join",
+        requestId: createRequestId(),
+        payload: {
+          roomId: last.roomId,
+          joinCode: last.joinCode,
+          displayName: last.displayName,
+          avatarUrl: last.avatarUrl,
+          sessionId,
+        },
+      });
     });
 
     const offClose = client.onClose(() => {
