@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useI18n } from "@/lib/i18n";
-import { Button, DoodlePad } from "@/components/ui";
-import { playerColors } from "@/components/ui/gameHues";
+import { Button } from "@/components/ui";
+import { AvatarDrawModal } from "./AvatarDrawModal";
 
 export function JoinGateScreen({
   joinError,
@@ -23,7 +23,7 @@ export function JoinGateScreen({
   const [avatarUrl, setAvatarUrl] = useState(defaultAvatarUrl || "");
   const [joinCode, setJoinCode] = useState("");
   const [password, setPassword] = useState("");
-  const [useDoodle, setUseDoodle] = useState(true);
+  const [drawOpen, setDrawOpen] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
   const handleJoin = () => {
@@ -59,50 +59,37 @@ export function JoinGateScreen({
           </p>
 
           <div className="space-y-4">
-            {/* Avatar section */}
-            <div className="flex gap-4 items-start">
-              {useDoodle ? (
-                <div className="flex-1">
-                  <label className="block text-xs font-bold text-(--accent-2) uppercase mb-2">
-                    {t("home.drawYourAvatar")}
-                  </label>
-                  <DoodlePad
-                    strokeColor={playerColors[0]}
-                    onChange={setAvatarUrl}
+            {/* Avatar: click to draw in the full modal */}
+            <div>
+              <label className="mb-2 block text-xs font-bold uppercase text-(--accent-2)">
+                {t("home.drawYourAvatar")}
+              </label>
+              <button
+                type="button"
+                onClick={() => setDrawOpen(true)}
+                className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-(--accent) bg-[#fff8e7] transition hover:brightness-95"
+              >
+                {avatarUrl.trim() ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={avatarUrl.trim()}
+                    alt=""
+                    className="h-full w-full object-cover"
                   />
-                  <button
-                    onClick={() => setUseDoodle(false)}
-                    className="text-xs text-(--accent-2) mt-2 underline"
-                  >
-                    {t("home.cancel")}
-                  </button>
-                </div>
-              ) : (
-                <div className="flex-1">
-                  <label className="block text-xs font-bold text-(--accent-2) uppercase mb-2">
-                    {t("home.avatarPreview")}
-                  </label>
-                  <div className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-(--line) bg-(--panel-raised)">
-                    {avatarUrl.trim() ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={avatarUrl.trim()}
-                        alt="Avatar preview"
-                        className="h-full w-full object-cover rounded-full"
-                      />
-                    ) : (
-                      <span className="text-2xl text-(--ink)/50">?</span>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => setUseDoodle(true)}
-                    className="text-xs text-(--accent-2) mt-2 underline"
-                  >
-                    {t("home.drawYourAvatar")}
-                  </button>
-                </div>
-              )}
+                ) : (
+                  <span className="text-center font-mono text-[9px] leading-tight text-[#8a7f60]">
+                    {t("home.drawFace")}
+                    <br />✏️
+                  </span>
+                )}
+              </button>
             </div>
+            <AvatarDrawModal
+              open={drawOpen}
+              initial={avatarUrl}
+              onClose={() => setDrawOpen(false)}
+              onSave={setAvatarUrl}
+            />
 
             {/* Inputs */}
             <input

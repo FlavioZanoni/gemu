@@ -6,8 +6,9 @@ import { useI18n } from "@/lib/i18n";
 import { useLobbyStore } from "@/lib/lobbyStore";
 import { gamesCatalog } from "@/lib/games";
 import { useRoomStore } from "@/lib/roomStore";
-import { DoodlePad, LangToggle, Bulbs, SfxToggle } from "@/components/ui";
-import { hueFor, playerColors } from "@/components/ui/gameHues";
+import { LangToggle, Bulbs, SfxToggle } from "@/components/ui";
+import { hueFor } from "@/components/ui/gameHues";
+import { AvatarDrawModal } from "@/components/screens/AvatarDrawModal";
 
 export default function Page() {
   return (
@@ -27,6 +28,7 @@ function HomeContent() {
   const [nick, setNick] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [code, setCode] = useState("");
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [hasRedirected, setHasRedirected] = useState(false);
 
   // Prefill nickname/avatar once, and an invite code from the URL.
@@ -136,14 +138,22 @@ function HomeContent() {
 
               <div className="mb-5 flex items-center gap-4">
                 <div className="flex flex-col items-center gap-1">
-                  <DoodlePad
-                    strokeColor={playerColors[0]}
-                    size={80}
-                    onChange={setAvatarUrl}
-                  />
-                  <span className="font-mono text-[8px] text-(--ink)/40">
-                    {t("home.drawFace")}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setAvatarModalOpen(true)}
+                    className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-[20px] border-2 border-(--accent) bg-[#fff8e7] transition hover:brightness-95"
+                    aria-label={t("home.drawFace")}
+                  >
+                    {avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-center font-mono text-[9px] leading-tight text-[#8a7f60]">
+                        {t("home.drawFace")}
+                        <br />✏️
+                      </span>
+                    )}
+                  </button>
                 </div>
                 <div className="flex-1">
                   <div className="mb-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-(--ink)/50">
@@ -284,6 +294,13 @@ function HomeContent() {
           </div>
         </main>
       </div>
+
+      <AvatarDrawModal
+        open={avatarModalOpen}
+        initial={avatarUrl}
+        onClose={() => setAvatarModalOpen(false)}
+        onSave={setAvatarUrl}
+      />
     </div>
   );
 }
