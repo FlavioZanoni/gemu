@@ -88,12 +88,17 @@ export const games = {
     "stop.score": "{points} pts",
 
     // Gartic game UI
-    "gartic.word": "Word to draw",
-    "gartic.guess": "Guess the word",
+    "gartic.word": "Your Secret Word",
+    "gartic.guess": "Guess the word…",
     "gartic.guessedIt": "Guessed it!",
     "gartic.drawer": "{name} is drawing…",
     "gartic.closeGuess": "You were close: {word}",
     "gartic.round": "Round {n} of {total}",
+    "gartic.scoreboard": "Scoreboard",
+    "gartic.guessChat": "Guess Chat",
+    "gartic.gamePoints": "Game Points",
+    "gartic.isDrawing": "is drawing",
+    "gartic.playersGuessing": "Players are guessing your drawing…",
 
     // Gartic Phone game UI
     "garticphone.writePrompt": "Write a prompt",
@@ -215,12 +220,17 @@ export const games = {
     "stop.score": "{points} pts",
 
     // Gartic game UI
-    "gartic.word": "Palavra para desenhar",
-    "gartic.guess": "Adivinhe a palavra",
+    "gartic.word": "Sua Palavra Secreta",
+    "gartic.guess": "Adivinhe a palavra…",
     "gartic.guessedIt": "Adivinhou!",
     "gartic.drawer": "{name} está desenhando…",
     "gartic.closeGuess": "Você estava perto: {word}",
     "gartic.round": "Rodada {n} de {total}",
+    "gartic.scoreboard": "Placar",
+    "gartic.guessChat": "Chat de Palpites",
+    "gartic.gamePoints": "Pontos do Jogo",
+    "gartic.isDrawing": "está desenhando",
+    "gartic.playersGuessing": "Jogadores estão adivinhando seu desenho…",
 
     // Gartic Phone game UI
     "garticphone.writePrompt": "Escreva um prompt",
