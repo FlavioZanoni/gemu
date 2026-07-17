@@ -41,7 +41,10 @@ Payload: `{force?: bool, settings?: {…}}`. Only valid in `lobby` status; start
 Unchanged, but errors with `no_active_game` between games.
 
 ### game.stream (new)
-High-frequency transient channel for canvas strokes. Client sends `{type: "game.stream", payload: {action: "stroke" | "canvas_clear" | "canvas_undo", ...opaque stroke data}}`. The server consults the game (e.g. Gartic accepts these only from the current drawer during the drawing phase), then relays the payload verbatim — plus `playerId` — to everyone else in the room as a `game.stream` push. No full-state broadcast, no ok/error replies (illegal streams are dropped silently). Strokes are not persisted server-side: a reconnecting player gets a blank canvas mid-turn.
+High-frequency transient channel for canvas strokes. Client sends `{type: "game.stream", payload: {action: "stroke" | "canvas_clear" | "canvas_undo", ...opaque stroke data}}`. The `action` MUST be one of that allowlist — the hub rejects anything else outright (so a non-drawer can't route real game actions or arbitrary keys through the relay). For an allowlisted action the server still consults the game (e.g. Gartic accepts strokes only from the current drawer during the drawing phase), then relays the payload verbatim — plus `playerId` — to everyone else in the room as a `game.stream` push. No full-state broadcast, no ok/error replies (illegal streams are dropped silently). Rejected while the room is paused. Strokes are not persisted server-side: a reconnecting player gets a blank canvas mid-turn.
+
+### Limits & validation
+The server caps client input to keep broadcasts bounded: display name ≤40 chars, room name ≤60, password ≤100, avatar/data URL ≤256KB, embedded drawings ≤48KB, guess/answer/title text truncated per game, `maxPlayers` clamped to 2–16. A connection already bound to a room must `room.leave` before creating/joining another (`already_in_room` error). A rejoining client during `voting` is re-sent the open `session.vote` + counts.
 
 ## New requests
 
