@@ -35,6 +35,7 @@ type GarticPhoneGame struct {
 	playerIdx map[string]int // playerID -> index in turnOrder
 	chains    [][]gpEntry
 
+	drawSeconds int
 	step        int // 0 = prompt, then 1..len(turnOrder)-1
 	totalSteps  int
 	phase       string // "prompt" | "drawing" | "writing" | "reveal"
@@ -52,8 +53,9 @@ type GarticPhoneGame struct {
 
 func NewGarticPhoneFactory() Factory {
 	return Factory{
-		Type: "garticphone",
-		Name: "Gartic Phone",
+		Type:       "garticphone",
+		Name:       "Gartic Phone",
+		MinPlayers: 3,
 		New: func() Adapter {
 			return &GarticPhoneGame{}
 		},
@@ -76,6 +78,7 @@ func (g *GarticPhoneGame) Start(roomID string, opts Options) {
 	for i, id := range g.turnOrder {
 		g.playerIdx[id] = i
 	}
+	g.drawSeconds = SettingInt(opts.Settings, "drawSeconds", GPDrawSeconds, 30, 300)
 	g.chains = make([][]gpEntry, len(g.turnOrder))
 	g.totalSteps = len(g.turnOrder)
 	g.step = 0
@@ -153,7 +156,7 @@ func (g *GarticPhoneGame) commitStep() {
 	}
 	if g.stepKind() == "drawing" {
 		g.phase = "drawing"
-		g.deadline = time.Now().Add(GPDrawSeconds * time.Second)
+		g.deadline = time.Now().Add(time.Duration(g.drawSeconds) * time.Second)
 	} else {
 		g.phase = "writing"
 		g.deadline = time.Now().Add(GPWriteSeconds * time.Second)

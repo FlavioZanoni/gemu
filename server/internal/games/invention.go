@@ -84,7 +84,7 @@ func (g *InventionGame) Start(roomID string, opts Options) {
 	g.phase = "collecting"
 	g.started = true
 	g.round = 1
-	g.totalRounds = DefaultTotalRounds
+	g.totalRounds = SettingInt(opts.Settings, "rounds", DefaultTotalRounds, 1, 5)
 	g.problems = make(map[string][]string)
 	g.assignments = make(map[string]string)
 	g.chosen = make(map[string]string)

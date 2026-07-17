@@ -70,8 +70,9 @@ type CahGame struct {
 
 func NewCahFactory() Factory {
 	return Factory{
-		Type: "cah",
-		Name: "Cartas",
+		Type:       "cah",
+		Name:       "Cartas",
+		MinPlayers: 3,
 		New: func() Adapter {
 			return &CahGame{}
 		},
@@ -157,7 +158,7 @@ func (g *CahGame) Start(roomID string, opts Options) {
 	}
 
 	g.round = 1
-	g.totalRounds = CahTotalRounds
+	g.totalRounds = SettingInt(opts.Settings, "rounds", CahTotalRounds, 3, 20)
 	g.finished = false
 	g.scores = make(map[string]int)
 	g.hands = make(map[string][]string)

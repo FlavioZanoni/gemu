@@ -5,7 +5,16 @@ import "sync"
 type Factory struct {
 	Type string
 	Name string
-	New  func() Adapter
+	// MinPlayers below 2 is treated as 2 (the platform-wide floor).
+	MinPlayers int
+	New        func() Adapter
+}
+
+func (f Factory) MinConnected() int {
+	if f.MinPlayers < 2 {
+		return 2
+	}
+	return f.MinPlayers
 }
 
 type Registry struct {
@@ -30,14 +39,15 @@ func (r *Registry) Get(gameType string) (Factory, bool) {
 	return factory, ok
 }
 
-func (r *Registry) List() []map[string]string {
+func (r *Registry) List() []map[string]any {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	out := make([]map[string]string, 0, len(r.games))
+	out := make([]map[string]any, 0, len(r.games))
 	for _, game := range r.games {
-		out = append(out, map[string]string{
-			"type": game.Type,
-			"name": game.Name,
+		out = append(out, map[string]any{
+			"type":       game.Type,
+			"name":       game.Name,
+			"minPlayers": game.MinConnected(),
 		})
 	}
 	return out

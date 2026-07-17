@@ -308,3 +308,57 @@ func TestSessionReplayQueuesSameGame(t *testing.T) {
 		t.Fatalf("expected same game queued, got %q", room.GetNextGameType())
 	}
 }
+
+func TestGameStartRespectsMinPlayers(t *testing.T) {
+	registry := games.NewRegistry()
+	registry.Register(games.Factory{Type: "big", Name: "Big", MinPlayers: 3, New: func() games.Adapter { return &stubAdapter{} }})
+	hub := NewHub(registry)
+
+	host := &Client{ID: "host"}
+	hub.handleRoomCreate(host, Envelope{Type: "room.create", Payload: map[string]any{
+		"name": "Min", "playlist": []any{"big"}, "displayName": "Host", "sessionId": "sess-host",
+	}})
+	joiner := &Client{ID: "joiner"}
+	hub.handleRoomJoin(joiner, Envelope{Type: "room.join", Payload: map[string]any{
+		"roomId": host.RoomID, "displayName": "Joiner", "sessionId": "sess-joiner",
+	}})
+
+	hub.handleGameStart(host, Envelope{Type: "game.start", Payload: map[string]any{"force": true}})
+	s, _ := hub.session(host.RoomID)
+	if s.adapter != nil {
+		t.Fatalf("expected start rejected with 2 players for a 3-player game")
+	}
+
+	third := &Client{ID: "third"}
+	hub.handleRoomJoin(third, Envelope{Type: "room.join", Payload: map[string]any{
+		"roomId": host.RoomID, "displayName": "Third", "sessionId": "sess-third",
+	}})
+	hub.handleGameStart(host, Envelope{Type: "game.start", Payload: map[string]any{"force": true}})
+	if s.adapter == nil {
+		t.Fatalf("expected start allowed with 3 players")
+	}
+}
+
+func TestRoomJoinRejectsDuplicateName(t *testing.T) {
+	hub := newSessionTestHub()
+	host := &Client{ID: "host"}
+	hub.handleRoomCreate(host, Envelope{Type: "room.create", Payload: map[string]any{
+		"name": "Names", "playlist": []any{"stub"}, "displayName": "Ana", "sessionId": "sess-host",
+	}})
+
+	dup := &Client{ID: "dup"}
+	hub.handleRoomJoin(dup, Envelope{Type: "room.join", Payload: map[string]any{
+		"roomId": host.RoomID, "displayName": "  ana ", "sessionId": "sess-dup",
+	}})
+	if dup.RoomID != "" {
+		t.Fatalf("expected duplicate name rejected")
+	}
+
+	ok := &Client{ID: "ok"}
+	hub.handleRoomJoin(ok, Envelope{Type: "room.join", Payload: map[string]any{
+		"roomId": host.RoomID, "displayName": "Bia", "sessionId": "sess-ok",
+	}})
+	if ok.RoomID == "" {
+		t.Fatalf("expected distinct name accepted")
+	}
+}

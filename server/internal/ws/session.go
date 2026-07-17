@@ -207,8 +207,18 @@ func (h *Hub) startVote(roomID string, room *rooms.Room, s *gameSession) {
 		return
 	}
 
-	options := make([]string, len(playlist))
-	copy(options, playlist)
+	// Offer only games the current group is big enough for; if that filters
+	// everything out, fall back to the full playlist so the flow never stalls.
+	connectedCount := len(room.ConnectedPlayerIDs())
+	options := make([]string, 0, len(playlist))
+	for _, gameType := range playlist {
+		if factory, ok := h.registry.Get(gameType); ok && connectedCount >= factory.MinConnected() {
+			options = append(options, gameType)
+		}
+	}
+	if len(options) == 0 {
+		options = append(options, playlist...)
+	}
 	rand.Shuffle(len(options), func(i, j int) { options[i], options[j] = options[j], options[i] })
 	if len(options) > maxVoteOptions {
 		options = options[:maxVoteOptions]

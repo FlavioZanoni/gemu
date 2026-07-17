@@ -23,10 +23,19 @@ New payload fields:
 
 ### room.join
 - `password?: string` — required when the room snapshot/public view has `hasPassword: true` (not needed on rejoin of an existing session).
-- New error code: `invalid_password`.
+- New error codes: `invalid_password`; `name_taken` when another player already uses the display name (case-insensitive). On a rejoin, a conflicting rename silently keeps the old name instead of blocking the reconnect.
 
 ### game.start (admin)
-Unchanged payload (`{force?: bool}`). Now: only valid in `lobby` status; starts `nextGameType` if set, else a random playlist game. Resets ready flags. `game.start.ok` payload: `{gameType, gameName}`. Error codes: `wrong_status`, `empty_playlist`, plus the old ones.
+Payload: `{force?: bool, settings?: {…}}`. Only valid in `lobby` status; starts `nextGameType` if set, else a random playlist game. Resets ready flags. `game.start.ok` payload: `{gameType, gameName}`. Error codes: `wrong_status`, `empty_playlist`, `not_enough_players` (payload includes `minPlayers`), plus the old ones.
+
+**Game settings** (host options panel; all optional ints, server clamps to sane ranges):
+- invention: `rounds` (1–5, default 3)
+- stop: `rounds` (1–10, default 3), `answerSeconds` (30–300, default 90)
+- gartic: `rounds` (1–10, default 2), `turnSeconds` (30–180, default 75)
+- garticphone: `drawSeconds` (30–300, default 120)
+- cah: `rounds` (3–20, default 8)
+
+**Minimum players**: `lobby.games.list` entries now include `minPlayers` (garticphone and cah need 3, the rest 2). `game.start` enforces it, and the next-game vote only offers games the current group is big enough for (falling back to the full playlist if none qualify).
 
 ### game.action
 Unchanged, but errors with `no_active_game` between games.

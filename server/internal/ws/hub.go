@@ -343,10 +343,15 @@ func (h *Hub) handleRoomJoin(client *Client, env Envelope) {
 	if existing, ok := room.FindPlayerBySession(sessionID); ok {
 		player = existing
 		isRejoin = true
+		// On rejoin a conflicting rename silently keeps the old name rather
+		// than blocking the reconnect.
+		nameConflict := room.NameTaken(displayName, existing.ID)
 		if _, err := h.rooms.UpdatePlayer(room.ID, player.ID, func(p *rooms.Player) {
 			p.Connected = true
 			p.LastSeen = time.Now()
-			p.Name = displayName
+			if !nameConflict {
+				p.Name = displayName
+			}
 			if avatarURL != "" {
 				p.AvatarURL = avatarURL
 			}
@@ -357,6 +362,10 @@ func (h *Hub) handleRoomJoin(client *Client, env Envelope) {
 	} else {
 		if _, ok := h.findClientBySession(sessionID); ok {
 			h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "session_in_room", "message": "session already in room"}})
+			return
+		}
+		if room.NameTaken(displayName, "") {
+			h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "name_taken", "message": "display name already in use"}})
 			return
 		}
 		player = rooms.Player{ID: uuid.NewString(), Name: displayName, AvatarURL: avatarURL, SessionID: sessionID, Connected: true, Ready: false, LastSeen: time.Now()}
@@ -598,9 +607,14 @@ func (h *Hub) handleGameStart(client *Client, env Envelope) {
 		h.Send(client, Envelope{Type: "game.start.error", RequestID: env.RequestID, Payload: map[string]any{"code": "invalid_game", "message": "game not found"}})
 		return
 	}
+	if len(room.ConnectedPlayerIDs()) < factory.MinConnected() {
+		h.Send(client, Envelope{Type: "game.start.error", RequestID: env.RequestID, Payload: map[string]any{"code": "not_enough_players", "message": "not enough players for this game", "minPlayers": factory.MinConnected()}})
+		return
+	}
 
+	settings, _ := env.Payload["settings"].(map[string]any)
 	adapter := factory.New()
-	adapter.Start(roomID, games.Options{Room: room, Locale: room.Locale})
+	adapter.Start(roomID, games.Options{Room: room, Locale: room.Locale, Settings: settings})
 	s.adapter = adapter
 	room.SetCurrentGame(factory.Type, factory.Name)
 	room.SetNextGame("", "")

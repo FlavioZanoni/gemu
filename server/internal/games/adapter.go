@@ -19,6 +19,28 @@ type RoomInfo interface {
 type Options struct {
 	Room   RoomInfo
 	Locale string
+	// Settings are host-chosen knobs from game.start (rounds, timers, ...).
+	// Games read what they understand via SettingInt and clamp to sane ranges.
+	Settings map[string]any
+}
+
+// SettingInt reads an integer knob from host-provided settings, falling back
+// to def and clamping to [min, max] — host input is untrusted.
+func SettingInt(settings map[string]any, key string, def, min, max int) int {
+	value := def
+	switch v := settings[key].(type) {
+	case float64:
+		value = int(v)
+	case int:
+		value = v
+	}
+	if value < min {
+		return min
+	}
+	if value > max {
+		return max
+	}
+	return value
 }
 
 // Standing is a player's final result in one game. Score is game-native and

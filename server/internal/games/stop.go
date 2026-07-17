@@ -37,12 +37,13 @@ var stopLetters = map[string][]string{
 }
 
 type StopGame struct {
-	roomID      string
-	room        RoomInfo
-	locale      string
-	phase       string
-	round       int
-	totalRounds int
+	roomID        string
+	room          RoomInfo
+	locale        string
+	phase         string
+	round         int
+	totalRounds   int
+	answerSeconds int
 
 	// Round state
 	letter       string
@@ -94,7 +95,8 @@ func (g *StopGame) Start(roomID string, opts Options) {
 
 	g.phase = ""
 	g.round = 1
-	g.totalRounds = StopTotalRounds
+	g.totalRounds = SettingInt(opts.Settings, "rounds", StopTotalRounds, 1, 10)
+	g.answerSeconds = SettingInt(opts.Settings, "answerSeconds", StopAnswerSeconds, 30, 300)
 	g.usedLetters = make(map[string]bool)
 	g.answers = make(map[string]map[string]string)
 	g.stopped = false
@@ -142,7 +144,7 @@ func (g *StopGame) startRound() {
 
 	// Enter answering phase
 	g.phase = "answering"
-	g.deadline = time.Now().Add(StopAnswerSeconds * time.Second)
+	g.deadline = time.Now().Add(time.Duration(g.answerSeconds) * time.Second)
 	g.deadlineName = "answers"
 }
 

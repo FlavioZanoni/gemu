@@ -51,6 +51,7 @@ type GarticGame struct {
 	deck        []string
 	round       int
 	totalRounds int
+	turnSeconds int
 	turnOrder   []string
 	turnIdx     int
 	drawer      string
@@ -88,7 +89,8 @@ func (g *GarticGame) Start(roomID string, opts Options) {
 		g.locale = "en"
 	}
 	g.round = 1
-	g.totalRounds = GarticTotalRounds
+	g.totalRounds = SettingInt(opts.Settings, "rounds", GarticTotalRounds, 1, 10)
+	g.turnSeconds = SettingInt(opts.Settings, "turnSeconds", GarticTurnSeconds, 30, 180)
 	g.scores = make(map[string]int)
 	g.shuffleDeck()
 	g.turnOrder = g.connected()
@@ -131,7 +133,7 @@ func (g *GarticGame) startTurn() {
 	g.guessedOrder = nil
 	g.guesses = nil
 	g.closeFor = make(map[string]string)
-	g.deadline = time.Now().Add(GarticTurnSeconds * time.Second)
+	g.deadline = time.Now().Add(time.Duration(g.turnSeconds) * time.Second)
 	g.deadlineTag = "turn"
 }
 

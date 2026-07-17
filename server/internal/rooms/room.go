@@ -1,6 +1,7 @@
 package rooms
 
 import (
+	"strings"
 	"sync"
 	"time"
 )
@@ -172,6 +173,23 @@ func (r *Room) AddPlayer(player Player) {
 	defer r.mu.Unlock()
 	r.Players[player.ID] = player
 	r.AdminChain = append(r.AdminChain, player.ID)
+}
+
+// NameTaken reports whether another player (excluding excludePlayerID)
+// already uses this display name, case-insensitively.
+func (r *Room) NameTaken(name string, excludePlayerID string) bool {
+	name = strings.TrimSpace(name)
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for id, player := range r.Players {
+		if id == excludePlayerID {
+			continue
+		}
+		if strings.EqualFold(strings.TrimSpace(player.Name), name) {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *Room) FindPlayerBySession(sessionID string) (Player, bool) {
