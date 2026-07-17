@@ -72,22 +72,9 @@ All messages use an envelope:
 
 ## Game adapters
 
-Adapters let you plug in new game logic without modifying the core lobby/room features.
+Adapters let you plug in new game logic without modifying the core lobby/room features. The authoritative interface lives in `server/internal/games/adapter.go`; how to implement one (self-driving phases, timers, standings) is documented in `docs/session-protocol.md`.
 
-```go
-type Adapter interface {
-  Type() string
-  Name() string
-  Init(roomID string)
-  OnPlayerJoin(playerID string)
-  OnPlayerLeave(playerID string)
-  OnAction(playerID string, payload map[string]any) error
-  PublicState() map[string]any
-  PrivateState(playerID string) map[string]any
-}
-```
-
-Register adapters in `cmd/server/main.go`. The current placeholder adapter is `invention`.
+Register adapters in `cmd/server/main.go`. The first adapter is `invention` ("Patently Silly").
 
 ## Session identity
 

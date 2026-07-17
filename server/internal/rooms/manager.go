@@ -22,6 +22,12 @@ func (m *Manager) Create(room *Room) {
 	if room.Players == nil {
 		room.Players = make(map[string]Player)
 	}
+	if room.Status == "" {
+		room.Status = StatusLobby
+	}
+	if room.SessionScores == nil {
+		room.SessionScores = make(map[string]int)
+	}
 	m.rooms[room.ID] = room
 }
 

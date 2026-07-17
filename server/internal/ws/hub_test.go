@@ -48,7 +48,7 @@ func TestRoomCreateDefaultsVisibilityAndJoinCode(t *testing.T) {
 		t.Fatalf("expected no join code for public room")
 	}
 
-	if _, ok := hub.games[client.RoomID]; !ok {
+	if _, ok := hub.sessions[client.RoomID]; !ok {
 		t.Fatalf("expected game initialized for room")
 	}
 }
@@ -81,12 +81,12 @@ func TestGameStartRequiresAdmin(t *testing.T) {
 
 	hub.handleGameStart(joiner, Envelope{Type: "game.start"})
 
-	if game, ok := hub.games[host.RoomID]; ok {
-		if game.PublicState()["phase"] != "collecting" {
-			t.Fatalf("expected game phase to remain collecting for non-admin start")
-		}
-	} else {
-		t.Fatalf("expected game initialized")
+	session, ok := hub.sessions[host.RoomID]
+	if !ok {
+		t.Fatalf("expected session initialized")
+	}
+	if session.adapter != nil {
+		t.Fatalf("expected no adapter to start for non-admin start")
 	}
 }
 
@@ -105,6 +105,19 @@ func TestGameActionUpdatesState(t *testing.T) {
 	}
 	hub.handleRoomCreate(host, createEnv)
 
+	joiner := &Client{ID: "joiner"}
+	joinEnv := Envelope{
+		Type: "room.join",
+		Payload: map[string]any{
+			"roomId":      host.RoomID,
+			"displayName": "Joiner",
+			"sessionId":   "sess-joiner",
+		},
+	}
+	hub.handleRoomJoin(joiner, joinEnv)
+
+	hub.handleGameStart(host, Envelope{Type: "game.start", Payload: map[string]any{"force": true}})
+
 	hub.handleGameAction(host, Envelope{
 		Type: "game.action",
 		Payload: map[string]any{
@@ -112,11 +125,11 @@ func TestGameActionUpdatesState(t *testing.T) {
 		},
 	})
 
-	game, ok := hub.games[host.RoomID]
-	if !ok {
+	session, ok := hub.sessions[host.RoomID]
+	if !ok || session.adapter == nil {
 		t.Fatalf("expected game initialized")
 	}
-	submitted, ok := game.PublicState()["problemsSubmitted"].(int)
+	submitted, ok := session.adapter.PublicState()["problemsSubmitted"].(int)
 	if !ok || submitted != 1 {
 		t.Fatalf("expected one problem submitted")
 	}
@@ -153,7 +166,7 @@ func TestRoomCreatePrivateAssignsJoinCode(t *testing.T) {
 		t.Fatalf("expected join code for private room")
 	}
 
-	if _, ok := hub.games[client.RoomID]; !ok {
+	if _, ok := hub.sessions[client.RoomID]; !ok {
 		t.Fatalf("expected game initialized for room")
 	}
 }
@@ -184,7 +197,7 @@ func TestRoomLeaveRemovesRoomWhenEmpty(t *testing.T) {
 		t.Fatalf("expected room to be removed when empty")
 	}
 
-	if _, ok := hub.games[roomID]; ok {
+	if _, ok := hub.sessions[roomID]; ok {
 		t.Fatalf("expected game to be removed when empty")
 	}
 }
@@ -209,7 +222,7 @@ func TestRoomCreateInvalidVisibility(t *testing.T) {
 		t.Fatalf("expected room not to be created with invalid visibility")
 	}
 
-	if len(hub.games) != 0 {
+	if len(hub.sessions) != 0 {
 		t.Fatalf("expected no game initialized on invalid room create")
 	}
 }
@@ -247,7 +260,7 @@ func TestRoomJoinRejectsInvalidCode(t *testing.T) {
 		t.Fatalf("expected joiner not to join with invalid code")
 	}
 
-	if _, ok := hub.games[roomID]; !ok {
+	if _, ok := hub.sessions[roomID]; !ok {
 		t.Fatalf("expected game initialized for room")
 	}
 }
@@ -287,7 +300,7 @@ func TestRoomJoinCaseInsensitiveCode(t *testing.T) {
 		t.Fatalf("expected joiner to join with lowercase join code")
 	}
 
-	if _, ok := hub.games[room.ID]; !ok {
+	if _, ok := hub.sessions[room.ID]; !ok {
 		t.Fatalf("expected game initialized for room")
 	}
 }
@@ -323,7 +336,7 @@ func TestRoomJoinRespectsMaxPlayers(t *testing.T) {
 		t.Fatalf("expected joiner to be rejected when room is full")
 	}
 
-	if _, ok := hub.games[host.RoomID]; !ok {
+	if _, ok := hub.sessions[host.RoomID]; !ok {
 		t.Fatalf("expected game initialized for room")
 	}
 }
@@ -375,7 +388,7 @@ func TestRoomKickRequiresAdmin(t *testing.T) {
 		t.Fatalf("expected non-admin kick to be rejected")
 	}
 
-	if _, ok := hub.games[host.RoomID]; !ok {
+	if _, ok := hub.sessions[host.RoomID]; !ok {
 		t.Fatalf("expected game initialized for room")
 	}
 }
@@ -426,7 +439,7 @@ func TestRoomKickRemovesPlayerAndClearsClient(t *testing.T) {
 		t.Fatalf("expected kicked client player to be cleared")
 	}
 
-	if _, ok := hub.games[host.RoomID]; !ok {
+	if _, ok := hub.sessions[host.RoomID]; !ok {
 		t.Fatalf("expected game to remain while room has players")
 	}
 }
@@ -506,7 +519,7 @@ func TestAdminChainPromotesNextPlayer(t *testing.T) {
 		t.Fatalf("expected joiner to be promoted to admin")
 	}
 
-	if _, ok := hub.games[room.ID]; !ok {
+	if _, ok := hub.sessions[room.ID]; !ok {
 		t.Fatalf("expected game initialized for room")
 	}
 }
@@ -546,7 +559,7 @@ func TestLobbyRoomsListReturnsOnlyPublic(t *testing.T) {
 		t.Fatalf("expected public room to be listed")
 	}
 
-	if _, ok := hub.games[publicClient.RoomID]; !ok {
+	if _, ok := hub.sessions[publicClient.RoomID]; !ok {
 		t.Fatalf("expected game initialized for public room")
 	}
 }
@@ -739,16 +752,27 @@ func TestGameStartRequiresReadyUnlessForced(t *testing.T) {
 	})
 
 	hub.handleGameStart(host, Envelope{Type: "game.start"})
-	game, ok := hub.games[host.RoomID]
+	session, ok := hub.sessions[host.RoomID]
 	if !ok {
-		t.Fatalf("expected game initialized")
+		t.Fatalf("expected session initialized")
 	}
-	if game.PublicState()["phase"] != "collecting" {
-		t.Fatalf("expected game to remain collecting when not ready")
+	if session.adapter != nil {
+		t.Fatalf("expected no adapter to start when not ready")
 	}
 
 	hub.handleGameStart(host, Envelope{Type: "game.start", Payload: map[string]any{"force": true}})
-	if game.PublicState()["phase"] != "drawing" {
+	if session.adapter == nil {
 		t.Fatalf("expected game to start when forced")
+	}
+
+	room, ok := hub.rooms.Get(host.RoomID)
+	if !ok {
+		t.Fatalf("expected room to exist")
+	}
+	if room.GetStatus() != rooms.StatusPlaying {
+		t.Fatalf("expected room status playing, got %s", room.GetStatus())
+	}
+	if session.adapter.PublicState()["phase"] != "collecting" {
+		t.Fatalf("expected game to start in collecting phase")
 	}
 }

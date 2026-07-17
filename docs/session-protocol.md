@@ -1,0 +1,68 @@
+# Session protocol (playlist, voting, scoring)
+
+Additions to the WS protocol for the party-session layer. Envelope format is unchanged: `{type, requestId?, roomId?, payload?}`; requests get `<type>.ok` / `<type>.error` replies, server pushes have no `requestId`.
+
+## Room lifecycle
+
+`room.status` (in every room snapshot): `lobby → playing → results → voting → lobby → …`
+
+- **lobby** — ready-up. If `nextGameType` is set, that game is queued; otherwise the first `game.start` picks randomly from the playlist.
+- **playing** — a game adapter is running; `gameType`/`gameName` describe it.
+- **results** — last game finished; its standings were pushed via `session.gameResult`. Admin advances with `session.vote.start` (or `session.end` to end the night).
+- **voting** — next-game vote is open.
+
+## Changed requests
+
+### room.create
+New payload fields:
+- `playlist: string[]` — game types for the night (≥1, all must be registered). Back-compat: a lone `gameType` string still works and becomes a 1-game playlist.
+- `password?: string` — optional room password.
+- `locale?: string` — `"en"` (default) or `"pt-BR"`; used for game content.
+
+`gameType`/`gameName` in snapshots are now the *currently running* game (empty in lobby).
+
+### room.join
+- `password?: string` — required when the room snapshot/public view has `hasPassword: true` (not needed on rejoin of an existing session).
+- New error code: `invalid_password`.
+
+### game.start (admin)
+Unchanged payload (`{force?: bool}`). Now: only valid in `lobby` status; starts `nextGameType` if set, else a random playlist game. Resets ready flags. `game.start.ok` payload: `{gameType, gameName}`. Error codes: `wrong_status`, `empty_playlist`, plus the old ones.
+
+### game.action
+Unchanged, but errors with `no_active_game` between games.
+
+### game.stream (new)
+High-frequency transient channel for canvas strokes. Client sends `{type: "game.stream", payload: {action: "stroke" | "canvas_clear" | "canvas_undo", ...opaque stroke data}}`. The server consults the game (e.g. Gartic accepts these only from the current drawer during the drawing phase), then relays the payload verbatim — plus `playerId` — to everyone else in the room as a `game.stream` push. No full-state broadcast, no ok/error replies (illegal streams are dropped silently). Strokes are not persisted server-side: a reconnecting player gets a blank canvas mid-turn.
+
+## New requests
+
+- `session.playlist.set` `{playlist: string[]}` — admin, in `lobby`/`results`. Replaces the playlist (≥1 registered games). If the queued `nextGameType` is removed, it is cleared.
+- `session.vote.start` — admin, in `results`. Opens the next-game vote. If the playlist has ≤1 game there is nothing to vote on: the room goes straight to `lobby` with `nextGameType` queued.
+- `session.vote.cast` `{gameType}` — any player, in `voting`. One vote per player, revotable until resolved. Errors: `no_vote_active`, `invalid_option`.
+- `session.end` — admin, any status except `playing`. Pushes the final podium then resets scores/history to a fresh lobby.
+
+## New pushes
+
+- `session.gameResult` `{gameType, gameName, standings: PlacementRow[]}` — after a game finishes. Also implies status → `results` (see the `room.updated` that follows).
+- `session.vote` `{options: [{type, name}], deadline: epochMillis}` — vote opened; up to 5 options sampled from the playlist, 30s window.
+- `session.vote.update` `{counts: {gameType: n}}` — live tally after each cast.
+- `session.vote.result` `{gameType, gameName, counts}` — winner (most votes; tie → random). Status → `lobby` with `nextGameType` set and ready flags cleared.
+- `session.final` `{standings: PlacementRow[], playedGames: PlayedGame[]}` — final podium for the night.
+
+`PlacementRow = {playerId, name, place, score, points}` — `score` is game-native (raw), `points` are session points: place 1→100, 2→75, 3→60, 4→50, then −5 per place (floor 10). Tied raw scores share a place and its points.
+
+`PlayedGame = {gameType, gameName, standings: PlacementRow[]}`
+
+## Room snapshot additions
+
+`status`, `playlist`, `nextGameType`, `nextGameName`, `sessionScores: {playerId: points}`, `playedGames`, `hasPassword`, `locale`. Public room list entries add `hasPassword`, `status`, `playlist`.
+
+## Implemented games
+
+- **invention** ("Patently Silly") — phases `collecting → drawing → presenting → voting → results → finalResults`; unchanged from before, standings = total funding.
+- **gartic** ("Gartic") — phases `drawing → turnResults`, rotating drawer, 2 rounds (everyone draws once per round), 75s turns, 6s reveal. Public state: `drawer`, `deadline` (ms), `wordLength` (or `word` during reveal), `scores`, `guessed`, masked `guesses` chat (last 30). Private: the drawer gets `word`; a near-miss guesser gets `closeGuess`. Actions: `{action:"guess", text}` via `game.action`; strokes via `game.stream`. Scoring: 1st correct guess 100, then −10 each (floor 50); drawer +25 per correct guesser.
+- **stop** ("Stop!") — phases `answering → validating → roundResults`, 3 rounds. See the constants and per-phase payloads in `server/internal/games/stop.go`. Answers via `{action:"set_answers", answers:{category: text}}`, early stop via `{action:"stop"}` (5s grace for everyone else), validity votes via `{action:"validate", rejected:["category|playerId"]}`, admin `{action:"next_round"}`. Scoring: unique valid 10, duplicate 5, invalid 0.
+
+## For game implementers (backend)
+
+Games implement `games.Adapter` (`server/internal/games/adapter.go`): a self-driving state machine. Advance phases inside `OnAction`/`OnTimer`/`OnRoomChange` (roster via `Options.Room.ConnectedPlayerIDs()`), report a single pending countdown via `NextDeadline()` (the hub re-arms it after every call and calls `OnTimer(name)` when it fires), flip `Status()` to finished and expose `Standings()` when done. The hub handles everything else: scoring, results, votes. No hub changes needed to add a game — register a `Factory` in `cmd/server/main.go` and add the frontend component in `web/components/GameSurface.tsx`.

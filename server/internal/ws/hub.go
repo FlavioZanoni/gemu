@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"math/rand"
 	"strings"
 	"sync"
 	"time"
@@ -25,7 +26,7 @@ type Hub struct {
 	clients  map[string]*Client
 	rooms    *rooms.Manager
 	registry *games.Registry
-	games    map[string]games.Adapter
+	sessions map[string]*gameSession
 }
 
 func NewHub(registry *games.Registry) *Hub {
@@ -33,7 +34,7 @@ func NewHub(registry *games.Registry) *Hub {
 		clients:  make(map[string]*Client),
 		rooms:    rooms.NewManager(),
 		registry: registry,
-		games:    make(map[string]games.Adapter),
+		sessions: make(map[string]*gameSession),
 	}
 }
 
@@ -61,6 +62,15 @@ func (h *Hub) RemoveClient(clientID string) {
 		if err == nil {
 			h.Broadcast(roomID, Envelope{Type: "room.updated", RoomID: roomID, Payload: encodeRoomSnapshot(room)})
 			h.Broadcast(roomID, Envelope{Type: "room.playerDisconnected", RoomID: roomID, Payload: map[string]any{"playerId": playerID}})
+			// A disconnect can complete an "everyone submitted" gate.
+			if s, ok := h.session(roomID); ok {
+				s.mu.Lock()
+				if s.adapter != nil {
+					s.adapter.OnRoomChange()
+					h.afterAdapterCall(roomID, s)
+				}
+				s.mu.Unlock()
+			}
 		}
 	}
 }
@@ -96,6 +106,51 @@ func (h *Hub) Broadcast(roomID string, env Envelope) {
 	}
 }
 
+func (h *Hub) BroadcastExcept(roomID string, exceptClientID string, env Envelope) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for _, client := range h.clients {
+		if client.RoomID == roomID && client.ID != exceptClientID {
+			if client.Conn == nil {
+				continue
+			}
+			_ = client.Conn.WriteJSON(env)
+		}
+	}
+}
+
+// handleGameStream relays high-frequency transient payloads (canvas strokes)
+// to the rest of the room WITHOUT the full-state broadcast game.action does.
+// The adapter's OnAction is still consulted so games can reject illegal
+// senders (e.g. strokes from a non-drawer); rejected or gameless streams are
+// dropped silently — no error replies at stroke frequency.
+func (h *Hub) handleGameStream(client *Client, env Envelope) {
+	roomID := client.RoomID
+	if roomID == "" {
+		return
+	}
+	s, ok := h.session(roomID)
+	if !ok {
+		return
+	}
+	s.mu.Lock()
+	if s.adapter == nil {
+		s.mu.Unlock()
+		return
+	}
+	err := s.adapter.OnAction(client.Player.ID, env.Payload)
+	s.mu.Unlock()
+	if err != nil {
+		return
+	}
+	payload := make(map[string]any, len(env.Payload)+1)
+	for k, v := range env.Payload {
+		payload[k] = v
+	}
+	payload["playerId"] = client.Player.ID
+	h.BroadcastExcept(roomID, client.ID, Envelope{Type: "game.stream", RoomID: roomID, Payload: payload})
+}
+
 func (h *Hub) HandleMessage(client *Client, env Envelope) {
 	switch env.Type {
 	case "lobby.games.list":
@@ -116,6 +171,16 @@ func (h *Hub) HandleMessage(client *Client, env Envelope) {
 		h.handleGameStart(client, env)
 	case "game.action":
 		h.handleGameAction(client, env)
+	case "game.stream":
+		h.handleGameStream(client, env)
+	case "session.playlist.set":
+		h.handleSessionPlaylistSet(client, env)
+	case "session.vote.start":
+		h.handleSessionVoteStart(client, env)
+	case "session.vote.cast":
+		h.handleSessionVoteCast(client, env)
+	case "session.end":
+		h.handleSessionEnd(client, env)
 	default:
 		h.Send(client, Envelope{Type: "system.error", RequestID: env.RequestID, Payload: map[string]any{"code": "unknown_type", "message": "unknown message type"}})
 	}
@@ -154,21 +219,34 @@ func encodeRoomSnapshot(room *rooms.Room) map[string]any {
 
 func (h *Hub) handleRoomCreate(client *Client, env Envelope) {
 	name := decodeString(env.Payload, "name")
-	gameType := decodeString(env.Payload, "gameType")
 	visibility := decodeString(env.Payload, "visibility")
 	maxPlayers := decodeInt(env.Payload, "maxPlayers")
 	displayName := decodeString(env.Payload, "displayName")
 	avatarURL := decodeString(env.Payload, "avatarUrl")
 	sessionID := decodeString(env.Payload, "sessionId")
+	password := decodeString(env.Payload, "password")
+	locale := decodeString(env.Payload, "locale")
+	if locale == "" {
+		locale = "en"
+	}
 
-	if name == "" || gameType == "" || displayName == "" || sessionID == "" {
+	playlist := decodeStringSlice(env.Payload, "playlist")
+	if len(playlist) == 0 {
+		// Back-compat: a single gameType becomes a one-game playlist.
+		if gameType := decodeString(env.Payload, "gameType"); gameType != "" {
+			playlist = []string{gameType}
+		}
+	}
+
+	if name == "" || len(playlist) == 0 || displayName == "" || sessionID == "" {
 		h.Send(client, Envelope{Type: "room.create.error", RequestID: env.RequestID, Payload: map[string]any{"code": "invalid_payload", "message": "missing required fields"}})
 		return
 	}
-	factory, ok := h.registry.Get(gameType)
-	if !ok {
-		h.Send(client, Envelope{Type: "room.create.error", RequestID: env.RequestID, Payload: map[string]any{"code": "invalid_game", "message": "game not found"}})
-		return
+	for _, gameType := range playlist {
+		if _, ok := h.registry.Get(gameType); !ok {
+			h.Send(client, Envelope{Type: "room.create.error", RequestID: env.RequestID, Payload: map[string]any{"code": "invalid_game", "message": "game not found"}})
+			return
+		}
 	}
 
 	if visibility == "" {
@@ -190,19 +268,20 @@ func (h *Hub) handleRoomCreate(client *Client, env Envelope) {
 	}
 
 	room := &rooms.Room{
-		ID: uuid.NewString(),
-		Name: name,
-		GameType: gameType,
-		GameName: factory.Name,
+		ID:         uuid.NewString(),
+		Name:       name,
 		Visibility: rooms.Visibility(visibility),
-		JoinCode: joinCode,
+		JoinCode:   joinCode,
+		Password:   password,
 		MaxPlayers: maxPlayers,
+		Locale:     locale,
+		Playlist:   playlist,
 	}
 	h.rooms.Create(room)
 
-	game := factory.New()
-	game.Init(room.ID)
-	h.games[room.ID] = game
+	h.mu.Lock()
+	h.sessions[room.ID] = &gameSession{}
+	h.mu.Unlock()
 
 	if _, ok := h.findClientBySession(sessionID); ok {
 		h.Send(client, Envelope{Type: "room.create.error", RequestID: env.RequestID, Payload: map[string]any{"code": "session_in_room", "message": "session already in room"}})
@@ -219,13 +298,8 @@ func (h *Hub) handleRoomCreate(client *Client, env Envelope) {
 	client.Player = player
 	client.SessionID = sessionID
 
-	if game, ok := h.games[room.ID]; ok {
-		game.OnPlayerJoin(player.ID)
-	}
-
 	h.Send(client, Envelope{Type: "room.create.ok", RequestID: env.RequestID, RoomID: room.ID, Payload: encodeRoomSnapshot(room)})
 	h.Broadcast(room.ID, Envelope{Type: "room.updated", RoomID: room.ID, Payload: encodeRoomSnapshot(room)})
-	h.Broadcast(room.ID, Envelope{Type: "game.state", RoomID: room.ID, Payload: map[string]any{"public": game.PublicState(), "private": game.PrivateState(player.ID)}})
 }
 
 func (h *Hub) handleRoomJoin(client *Client, env Envelope) {
@@ -257,6 +331,12 @@ func (h *Hub) handleRoomJoin(client *Client, env Envelope) {
 		return
 	}
 
+	_, alreadyMember := room.FindPlayerBySession(sessionID)
+	if !alreadyMember && room.Password != "" && decodeString(env.Payload, "password") != room.Password {
+		h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "invalid_password", "message": "invalid password"}})
+		return
+	}
+
 	var player rooms.Player
 	if existing, ok := room.FindPlayerBySession(sessionID); ok {
 		player = existing
@@ -282,8 +362,12 @@ func (h *Hub) handleRoomJoin(client *Client, env Envelope) {
 			h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "room_full", "message": "room full"}})
 			return
 		}
-		if game, ok := h.games[room.ID]; ok {
-			game.OnPlayerJoin(player.ID)
+		if s, ok := h.session(room.ID); ok {
+			s.mu.Lock()
+			if s.adapter != nil {
+				s.adapter.OnPlayerJoin(player.ID)
+			}
+			s.mu.Unlock()
 		}
 	}
 
@@ -302,8 +386,12 @@ func (h *Hub) handleRoomJoin(client *Client, env Envelope) {
 		h.Broadcast(room.ID, Envelope{Type: "room.playerJoined", RoomID: room.ID, Payload: map[string]any{"player": player}})
 	}
 	h.Broadcast(room.ID, Envelope{Type: "room.updated", RoomID: room.ID, Payload: room.Snapshot()})
-	if game, ok := h.games[room.ID]; ok {
-		h.Send(client, Envelope{Type: "game.state", RoomID: room.ID, Payload: map[string]any{"public": game.PublicState(), "private": game.PrivateState(player.ID)}})
+	if s, ok := h.session(room.ID); ok {
+		s.mu.Lock()
+		if s.adapter != nil {
+			h.Send(client, Envelope{Type: "game.state", RoomID: room.ID, Payload: map[string]any{"public": s.adapter.PublicState(), "private": s.adapter.PrivateState(player.ID)}})
+		}
+		s.mu.Unlock()
 	}
 }
 
@@ -324,15 +412,41 @@ func (h *Hub) handleRoomLeave(client *Client, env Envelope) {
 	client.RoomID = ""
 	client.Player = rooms.Player{}
 	client.SessionID = ""
-	if game, ok := h.games[roomID]; ok {
-		game.OnPlayerLeave(playerID)
-	}
+	h.notifyPlayerLeft(roomID, playerID)
 	h.Send(client, Envelope{Type: "room.leave.ok", RequestID: env.RequestID})
 	h.Broadcast(roomID, Envelope{Type: "room.playerLeft", RoomID: roomID, Payload: map[string]any{"playerId": playerID}})
 	h.Broadcast(roomID, Envelope{Type: "room.updated", RoomID: roomID, Payload: encodeRoomSnapshot(room)})
-	if room.PlayerCount() == 0 {
-		h.rooms.Remove(roomID)
-		delete(h.games, roomID)
+	h.cleanupIfEmpty(roomID, room)
+}
+
+// notifyPlayerLeft forwards a permanent leave to the running game, if any.
+func (h *Hub) notifyPlayerLeft(roomID, playerID string) {
+	s, ok := h.session(roomID)
+	if !ok {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.adapter != nil {
+		s.adapter.OnPlayerLeave(playerID)
+		h.afterAdapterCall(roomID, s)
+	}
+}
+
+func (h *Hub) cleanupIfEmpty(roomID string, room *rooms.Room) {
+	if room.PlayerCount() != 0 {
+		return
+	}
+	h.rooms.Remove(roomID)
+	h.mu.Lock()
+	s, ok := h.sessions[roomID]
+	delete(h.sessions, roomID)
+	h.mu.Unlock()
+	if ok {
+		s.mu.Lock()
+		s.adapter = nil
+		s.stopTimer()
+		s.mu.Unlock()
 	}
 }
 
@@ -360,9 +474,7 @@ func (h *Hub) handleRoomKick(client *Client, env Envelope) {
 		return
 	}
 
-	if game, ok := h.games[roomID]; ok {
-		game.OnPlayerLeave(targetID)
-	}
+	h.notifyPlayerLeft(roomID, targetID)
 
 	var kickedClient *Client
 	h.mu.Lock()
@@ -383,10 +495,7 @@ func (h *Hub) handleRoomKick(client *Client, env Envelope) {
 	}
 	h.Broadcast(roomID, Envelope{Type: "room.playerLeft", RoomID: roomID, Payload: map[string]any{"playerId": targetID}})
 	h.Broadcast(roomID, Envelope{Type: "room.updated", RoomID: roomID, Payload: room.Snapshot()})
-	if room.PlayerCount() == 0 {
-		h.rooms.Remove(roomID)
-		delete(h.games, roomID)
-	}
+	h.cleanupIfEmpty(roomID, room)
 }
 
 func (h *Hub) handleRoomReadySet(client *Client, env Envelope) {
@@ -458,19 +567,48 @@ func (h *Hub) handleGameStart(client *Client, env Envelope) {
 		return
 	}
 
-	game, ok := h.games[roomID]
+	s, ok := h.session(roomID)
 	if !ok {
-		h.Send(client, Envelope{Type: "game.start.error", RequestID: env.RequestID, Payload: map[string]any{"code": "game_missing", "message": "game not initialized"}})
+		h.Send(client, Envelope{Type: "game.start.error", RequestID: env.RequestID, Payload: map[string]any{"code": "game_missing", "message": "session not initialized"}})
 		return
 	}
 
-	if invention, ok := game.(interface{ Start() }); ok {
-		invention.Start()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if room.GetStatus() != rooms.StatusLobby || s.adapter != nil {
+		h.Send(client, Envelope{Type: "game.start.error", RequestID: env.RequestID, Payload: map[string]any{"code": "wrong_status", "message": "game already running"}})
+		return
 	}
 
-	h.Broadcast(roomID, Envelope{Type: "game.state", RoomID: roomID, Payload: map[string]any{"public": game.PublicState()}})
-	h.hydratePrivateState(roomID, game)
-	h.Send(client, Envelope{Type: "game.start.ok", RequestID: env.RequestID})
+	// The next game is either the vote winner or a random playlist pick.
+	gameType := room.GetNextGameType()
+	if gameType == "" {
+		playlist := room.GetPlaylist()
+		if len(playlist) == 0 {
+			h.Send(client, Envelope{Type: "game.start.error", RequestID: env.RequestID, Payload: map[string]any{"code": "empty_playlist", "message": "no games in playlist"}})
+			return
+		}
+		gameType = playlist[rand.Intn(len(playlist))]
+	}
+	factory, ok := h.registry.Get(gameType)
+	if !ok {
+		h.Send(client, Envelope{Type: "game.start.error", RequestID: env.RequestID, Payload: map[string]any{"code": "invalid_game", "message": "game not found"}})
+		return
+	}
+
+	adapter := factory.New()
+	adapter.Start(roomID, games.Options{Room: room, Locale: room.Locale})
+	s.adapter = adapter
+	room.SetCurrentGame(factory.Type, factory.Name)
+	room.SetNextGame("", "")
+	room.SetStatus(rooms.StatusPlaying)
+	room.ResetReady()
+
+	h.Send(client, Envelope{Type: "game.start.ok", RequestID: env.RequestID, Payload: map[string]any{"gameType": factory.Type, "gameName": factory.Name}})
+	h.broadcastRoom(roomID)
+	h.broadcastGameState(roomID, adapter)
+	h.armGameTimer(roomID, s)
 }
 
 func (h *Hub) handleGameAction(client *Client, env Envelope) {
@@ -480,76 +618,25 @@ func (h *Hub) handleGameAction(client *Client, env Envelope) {
 		return
 	}
 
-	game, ok := h.games[roomID]
+	s, ok := h.session(roomID)
 	if !ok {
-		h.Send(client, Envelope{Type: "game.action.error", RequestID: env.RequestID, Payload: map[string]any{"code": "game_missing", "message": "game not initialized"}})
+		h.Send(client, Envelope{Type: "game.action.error", RequestID: env.RequestID, Payload: map[string]any{"code": "game_missing", "message": "session not initialized"}})
 		return
 	}
 
-	if err := game.OnAction(client.Player.ID, env.Payload); err != nil {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.adapter == nil {
+		h.Send(client, Envelope{Type: "game.action.error", RequestID: env.RequestID, Payload: map[string]any{"code": "no_active_game", "message": "no game running"}})
+		return
+	}
+
+	if err := s.adapter.OnAction(client.Player.ID, env.Payload); err != nil {
 		h.Send(client, Envelope{Type: "game.action.error", RequestID: env.RequestID, Payload: map[string]any{"code": "bad_action", "message": "invalid action"}})
 		return
 	}
 
-	if phase, ok := game.PublicState()["phase"].(string); ok {
-		switch phase {
-		case "collecting":
-			if invention, ok := game.(interface{ StartAssign([]string) }); ok {
-				room, _ := h.rooms.Get(roomID)
-				if room != nil {
-					connected := room.ConnectedPlayerIDs()
-					started, _ := game.PublicState()["started"].(bool)
-					if started && len(connected) >= 2 {
-						if submitted, ok := game.PublicState()["problemsSubmitted"].(int); ok {
-							if submitted >= len(connected)*2 {
-								invention.StartAssign(connected)
-							}
-						}
-					}
-				}
-			}
-		case "drawing":
-			if invention, ok := game.(interface{ AdvanceToPresenting() error }); ok {
-				room, _ := h.rooms.Get(roomID)
-				if room != nil {
-					connected := room.ConnectedPlayerIDs()
-					if len(connected) >= 2 {
-						if submitted, ok := game.PublicState()["drawingsSubmitted"].(int); ok {
-							if submitted >= len(connected) {
-								_ = invention.AdvanceToPresenting()
-							}
-						}
-					}
-				}
-			}
-		case "voting":
-			if invention, ok := game.(interface{ FinalizeFunding() }); ok {
-				room, _ := h.rooms.Get(roomID)
-				if room != nil {
-					connected := room.ConnectedPlayerIDs()
-					if len(connected) >= 2 {
-						if count, ok := game.PublicState()["voteCount"].(int); ok {
-							if count >= len(connected) {
-								invention.FinalizeFunding()
-							}
-						}
-					}
-				}
-			}
-		case "results":
-			if invention, ok := game.(interface{ StartNextRound([]string) }); ok {
-				if action, _ := env.Payload["action"].(string); action == "next_round" {
-					room, _ := h.rooms.Get(roomID)
-					if room != nil && room.AdminID() == client.Player.ID {
-						invention.StartNextRound(room.ConnectedPlayerIDs())
-					}
-				}
-			}
-		}
-	}
-
-	h.Broadcast(roomID, Envelope{Type: "game.state", RoomID: roomID, Payload: map[string]any{"public": game.PublicState()}})
-	h.hydratePrivateState(roomID, game)
+	h.afterAdapterCall(roomID, s)
 	h.Send(client, Envelope{Type: "game.action.ok", RequestID: env.RequestID})
 }
 

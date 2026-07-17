@@ -12,6 +12,35 @@ const (
 	Private Visibility = "private"
 )
 
+type Status string
+
+const (
+	// StatusLobby: waiting/ready-up, possibly with a NextGameType decided.
+	StatusLobby Status = "lobby"
+	// StatusPlaying: a game adapter is running.
+	StatusPlaying Status = "playing"
+	// StatusResults: last game finished, showing its result screen.
+	StatusResults Status = "results"
+	// StatusVoting: voting on the next game.
+	StatusVoting Status = "voting"
+)
+
+// PlacementRow is one player's final result in one played game. Name is
+// captured at finish time so the row survives the player leaving.
+type PlacementRow struct {
+	PlayerID string `json:"playerId"`
+	Name     string `json:"name"`
+	Place    int    `json:"place"`
+	Score    int    `json:"score"`
+	Points   int    `json:"points"`
+}
+
+type PlayedGame struct {
+	GameType  string         `json:"gameType"`
+	GameName  string         `json:"gameName"`
+	Standings []PlacementRow `json:"standings"`
+}
+
 type Player struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
@@ -23,18 +52,28 @@ type Player struct {
 }
 
 type Room struct {
-	ID string `json:"id"`
+	ID   string `json:"id"`
 	Name string `json:"name"`
-	GameType string `json:"gameType"`
-	GameName string `json:"gameName"`
+	// GameType/GameName describe the currently running game; empty in lobby.
+	GameType   string     `json:"gameType"`
+	GameName   string     `json:"gameName"`
 	Visibility Visibility `json:"visibility"`
-	JoinCode string `json:"joinCode"`
-	MaxPlayers int `json:"maxPlayers"`
-	CreatedAt time.Time `json:"createdAt"`
+	JoinCode   string     `json:"joinCode"`
+	Password   string     `json:"-"`
+	MaxPlayers int        `json:"maxPlayers"`
+	Locale     string     `json:"locale"`
+	CreatedAt  time.Time  `json:"createdAt"`
 
-	mu sync.RWMutex
-	Players map[string]Player `json:"players"`
-	AdminChain []string `json:"adminChain"`
+	mu         sync.RWMutex
+	Players    map[string]Player `json:"players"`
+	AdminChain []string          `json:"adminChain"`
+
+	Status        Status         `json:"status"`
+	Playlist      []string       `json:"playlist"`
+	NextGameType  string         `json:"nextGameType"`
+	NextGameName  string         `json:"nextGameName"`
+	SessionScores map[string]int `json:"sessionScores"`
+	PlayedGames   []PlayedGame   `json:"playedGames"`
 }
 
 func (r *Room) Snapshot() map[string]any {
@@ -62,16 +101,32 @@ func (r *Room) Snapshot() map[string]any {
 	if adminID == "" && len(r.AdminChain) > 0 {
 		adminID = r.AdminChain[0]
 	}
+	scores := make(map[string]int, len(r.SessionScores))
+	for id, points := range r.SessionScores {
+		scores[id] = points
+	}
+	played := make([]PlayedGame, len(r.PlayedGames))
+	copy(played, r.PlayedGames)
+	playlist := make([]string, len(r.Playlist))
+	copy(playlist, r.Playlist)
 	return map[string]any{
-		"id": r.ID,
-		"name": r.Name,
-		"gameType": r.GameType,
-		"gameName": r.GameName,
-		"visibility": r.Visibility,
-		"maxPlayers": r.MaxPlayers,
-		"joinCode": r.JoinCode,
-		"adminId": adminID,
-		"players": players,
+		"id":            r.ID,
+		"name":          r.Name,
+		"gameType":      r.GameType,
+		"gameName":      r.GameName,
+		"visibility":    r.Visibility,
+		"maxPlayers":    r.MaxPlayers,
+		"joinCode":      r.JoinCode,
+		"hasPassword":   r.Password != "",
+		"locale":        r.Locale,
+		"adminId":       adminID,
+		"players":       players,
+		"status":        r.Status,
+		"playlist":      playlist,
+		"nextGameType":  r.NextGameType,
+		"nextGameName":  r.NextGameName,
+		"sessionScores": scores,
+		"playedGames":   played,
 	}
 }
 
@@ -79,13 +134,16 @@ func (r *Room) PublicView() map[string]any {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return map[string]any{
-		"id": r.ID,
-		"name": r.Name,
-		"gameType": r.GameType,
-		"gameName": r.GameName,
-		"visibility": r.Visibility,
-		"maxPlayers": r.MaxPlayers,
+		"id":          r.ID,
+		"name":        r.Name,
+		"gameType":    r.GameType,
+		"gameName":    r.GameName,
+		"visibility":  r.Visibility,
+		"maxPlayers":  r.MaxPlayers,
 		"playerCount": len(r.Players),
+		"hasPassword": r.Password != "",
+		"status":      r.Status,
+		"playlist":    r.Playlist,
 	}
 }
 
@@ -172,6 +230,115 @@ func (r *Room) ConnectedPlayerIDs() []string {
 		}
 	}
 	return ids
+}
+
+func (r *Room) IsAdmin(playerID string) bool {
+	return r.AdminID() == playerID
+}
+
+func (r *Room) GetStatus() Status {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.Status
+}
+
+func (r *Room) SetStatus(status Status) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.Status = status
+}
+
+func (r *Room) SetPlaylist(playlist []string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.Playlist = playlist
+	if r.NextGameType != "" {
+		found := false
+		for _, t := range playlist {
+			if t == r.NextGameType {
+				found = true
+				break
+			}
+		}
+		if !found {
+			r.NextGameType = ""
+			r.NextGameName = ""
+		}
+	}
+}
+
+func (r *Room) GetPlaylist() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]string, len(r.Playlist))
+	copy(out, r.Playlist)
+	return out
+}
+
+func (r *Room) SetNextGame(gameType, gameName string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.NextGameType = gameType
+	r.NextGameName = gameName
+}
+
+func (r *Room) GetNextGameType() string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.NextGameType
+}
+
+func (r *Room) SetCurrentGame(gameType, gameName string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.GameType = gameType
+	r.GameName = gameName
+}
+
+// RecordPlayedGame appends the game record and adds its points to the
+// session totals.
+func (r *Room) RecordPlayedGame(pg PlayedGame) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.PlayedGames = append(r.PlayedGames, pg)
+	if r.SessionScores == nil {
+		r.SessionScores = make(map[string]int)
+	}
+	for _, row := range pg.Standings {
+		r.SessionScores[row.PlayerID] += row.Points
+	}
+}
+
+func (r *Room) ResetReady() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for id, player := range r.Players {
+		player.Ready = false
+		r.Players[id] = player
+	}
+}
+
+// ResetSession clears scores and history for a fresh game night.
+func (r *Room) ResetSession() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.Status = StatusLobby
+	r.GameType = ""
+	r.GameName = ""
+	r.NextGameType = ""
+	r.NextGameName = ""
+	r.SessionScores = make(map[string]int)
+	r.PlayedGames = nil
+	for id, player := range r.Players {
+		player.Ready = false
+		r.Players[id] = player
+	}
+}
+
+func (r *Room) PlayerName(playerID string) string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.Players[playerID].Name
 }
 
 func (r *Room) AllConnectedReady() bool {

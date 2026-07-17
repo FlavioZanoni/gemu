@@ -3,6 +3,8 @@ package games
 import (
 	"errors"
 	"math/rand"
+	"sort"
+	"time"
 )
 
 var fallbackProblems = []string{
@@ -35,15 +37,16 @@ const (
 
 type InventionGame struct {
 	roomID      string
+	room        RoomInfo
 	phase       string
 	started     bool
 	round       int
 	totalRounds int
 
-	problems   map[string][]string
+	problems    map[string][]string
 	assignments map[string]string
-	chosen     map[string]string
-	drawings   map[string]InventionDrawing
+	chosen      map[string]string
+	drawings    map[string]InventionDrawing
 
 	votes   map[string]map[string]int
 	funding map[string]int
@@ -75,10 +78,11 @@ func (g *InventionGame) Type() string {
 	return "invention"
 }
 
-func (g *InventionGame) Init(roomID string) {
+func (g *InventionGame) Start(roomID string, opts Options) {
 	g.roomID = roomID
+	g.room = opts.Room
 	g.phase = "collecting"
-	g.started = false
+	g.started = true
 	g.round = 1
 	g.totalRounds = DefaultTotalRounds
 	g.problems = make(map[string][]string)
@@ -93,10 +97,6 @@ func (g *InventionGame) Init(roomID string) {
 }
 
 func (g *InventionGame) OnPlayerJoin(playerID string) {}
-
-func (g *InventionGame) Start() {
-	g.started = true
-}
 
 func (g *InventionGame) OnPlayerLeave(playerID string) {
 	delete(g.problems, playerID)
@@ -114,9 +114,72 @@ func (g *InventionGame) OnPlayerLeave(playerID string) {
 	if g.presentIdx >= len(g.presenters) {
 		g.presentIdx = len(g.presenters)
 	}
+	g.checkAdvance()
+}
+
+func (g *InventionGame) OnRoomChange() {
+	g.checkAdvance()
+}
+
+func (g *InventionGame) OnTimer(name string) {}
+
+func (g *InventionGame) NextDeadline() (string, time.Time, bool) {
+	return "", time.Time{}, false
+}
+
+func (g *InventionGame) Status() Status {
+	if g.phase == "finalResults" {
+		return StatusFinished
+	}
+	return StatusRunning
+}
+
+func (g *InventionGame) Standings() []Standing {
+	seen := make(map[string]bool)
+	standings := make([]Standing, 0, len(g.totalFunding))
+	for id, amount := range g.totalFunding {
+		standings = append(standings, Standing{PlayerID: id, Score: amount})
+		seen[id] = true
+	}
+	if g.room != nil {
+		for _, id := range g.room.ConnectedPlayerIDs() {
+			if !seen[id] {
+				standings = append(standings, Standing{PlayerID: id, Score: 0})
+			}
+		}
+	}
+	sort.SliceStable(standings, func(i, j int) bool { return standings[i].Score > standings[j].Score })
+	return standings
+}
+
+// checkAdvance moves the game forward whenever the current phase's completion
+// condition is met. Replaces the phase logic that used to live in the ws hub.
+func (g *InventionGame) checkAdvance() {
+	if g.room == nil {
+		return
+	}
+	connected := g.room.ConnectedPlayerIDs()
+	if len(connected) < 2 {
+		return
+	}
+	switch g.phase {
+	case "collecting":
+		if g.countProblems() >= len(connected)*2 {
+			g.startAssign(connected)
+		}
+	case "drawing":
+		if len(g.drawings) >= len(connected) {
+			_ = g.advanceToPresenting()
+		}
+	case "voting":
+		if len(g.votes) >= len(connected) {
+			g.finalizeFunding()
+		}
+	}
 }
 
 func (g *InventionGame) OnAction(playerID string, payload map[string]any) error {
+	defer g.checkAdvance()
 	switch g.phase {
 	case "collecting":
 		if p, ok := payload["problems"]; ok {
@@ -224,6 +287,11 @@ func (g *InventionGame) OnAction(playerID string, payload map[string]any) error 
 		return nil
 
 	case "results":
+		if action, _ := payload["action"].(string); action == "next_round" {
+			if g.room != nil && g.room.IsAdmin(playerID) {
+				g.startNextRound()
+			}
+		}
 		return nil
 
 	default:
@@ -267,11 +335,10 @@ func (g *InventionGame) PrivateState(playerID string) map[string]any {
 	}
 }
 
-func (g *InventionGame) StartAssign(players []string) {
+func (g *InventionGame) startAssign(players []string) {
 	if len(players) < 2 {
 		return
 	}
-	g.started = true
 	pool := make([]string, 0)
 	for _, problems := range g.problems {
 		for _, problem := range problems {
@@ -306,7 +373,7 @@ func (g *InventionGame) StartAssign(players []string) {
 	g.phase = "drawing"
 }
 
-func (g *InventionGame) AdvanceToPresenting() error {
+func (g *InventionGame) advanceToPresenting() error {
 	if g.phase != "drawing" {
 		return errors.New("invalid phase")
 	}
@@ -323,7 +390,7 @@ func (g *InventionGame) AdvanceToPresenting() error {
 	return nil
 }
 
-func (g *InventionGame) FinalizeFunding() {
+func (g *InventionGame) finalizeFunding() {
 	funding := make(map[string]int)
 	for _, vote := range g.votes {
 		for target, amount := range vote {
@@ -341,7 +408,7 @@ func (g *InventionGame) FinalizeFunding() {
 	}
 }
 
-func (g *InventionGame) StartNextRound(players []string) {
+func (g *InventionGame) startNextRound() {
 	if g.phase != "results" {
 		return
 	}

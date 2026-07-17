@@ -2,50 +2,47 @@ package games
 
 import "testing"
 
-func TestInventionStartSetsStartedFlag(t *testing.T) {
+// fakeRoom is a minimal RoomInfo implementation for driving checkAdvance.
+type fakeRoom struct {
+	players []string
+	admin   string
+}
+
+func (r fakeRoom) ConnectedPlayerIDs() []string {
+	return r.players
+}
+
+func (r fakeRoom) IsAdmin(playerID string) bool {
+	return playerID == r.admin
+}
+
+func TestInventionStartDefaults(t *testing.T) {
 	game := &InventionGame{}
-	game.Init("room-1")
+	game.Start("room-1", Options{})
 
-	if game.started {
-		t.Fatalf("expected started to be false initially")
-	}
-	if state := game.PublicState(); state["started"] != false {
-		t.Fatalf("expected started=false in PublicState")
-	}
-
-	game.Start()
 	if !game.started {
 		t.Fatalf("expected started=true after Start")
 	}
 	if game.phase != "collecting" {
-		t.Fatalf("expected phase to remain collecting after Start, got %s", game.phase)
-	}
-	if state := game.PublicState(); state["started"] != true {
-		t.Fatalf("expected started=true in PublicState after Start")
-	}
-}
-
-func TestInventionInitDefaults(t *testing.T) {
-	game := &InventionGame{}
-	game.Init("room-1")
-
-	if game.phase != "collecting" {
-		t.Fatalf("expected default phase collecting")
+		t.Fatalf("expected phase collecting, got %s", game.phase)
 	}
 	if game.roomID != "room-1" {
 		t.Fatalf("expected roomID to be set")
 	}
 	if game.round != 1 {
-		t.Fatalf("expected round 1")
+		t.Fatalf("expected round 1, got %d", game.round)
 	}
 	if game.totalRounds != DefaultTotalRounds {
-		t.Fatalf("expected totalRounds %d", DefaultTotalRounds)
+		t.Fatalf("expected totalRounds %d, got %d", DefaultTotalRounds, game.totalRounds)
+	}
+	if state := game.PublicState(); state["started"] != true {
+		t.Fatalf("expected started=true in PublicState")
 	}
 }
 
 func TestInventionCollectingAddsProblem(t *testing.T) {
 	game := &InventionGame{}
-	game.Init("room-1")
+	game.Start("room-1", Options{})
 
 	_ = game.OnAction("p1", map[string]any{"problem": "Need coffee"})
 	_ = game.OnAction("p1", map[string]any{"problem": "Need naps"})
@@ -56,14 +53,14 @@ func TestInventionCollectingAddsProblem(t *testing.T) {
 
 func TestInventionStartAssignSetsPhase(t *testing.T) {
 	game := &InventionGame{}
-	game.Init("room-1")
+	game.Start("room-1", Options{})
 
-	game.StartAssign([]string{"p1"})
+	game.startAssign([]string{"p1"})
 	if game.phase == "drawing" {
 		t.Fatalf("expected phase to remain collecting when not enough players")
 	}
 
-	game.StartAssign([]string{"p1", "p2"})
+	game.startAssign([]string{"p1", "p2"})
 	if game.phase != "drawing" {
 		t.Fatalf("expected phase drawing")
 	}
@@ -77,11 +74,11 @@ func TestInventionStartAssignSetsPhase(t *testing.T) {
 
 func TestInventionAdvanceToPresenting(t *testing.T) {
 	game := &InventionGame{}
-	game.Init("room-1")
+	game.Start("room-1", Options{})
 	game.phase = "drawing"
 	game.drawings["p1"] = InventionDrawing{Title: "A", DataURL: "data"}
 
-	if err := game.AdvanceToPresenting(); err != nil {
+	if err := game.advanceToPresenting(); err != nil {
 		t.Fatalf("expected advance to presenting to succeed")
 	}
 	if game.phase != "presenting" {
@@ -91,7 +88,7 @@ func TestInventionAdvanceToPresenting(t *testing.T) {
 
 func TestInventionVotingFundingAllocation(t *testing.T) {
 	game := &InventionGame{}
-	game.Init("room-1")
+	game.Start("room-1", Options{})
 	game.phase = "voting"
 	game.drawings["p2"] = InventionDrawing{Title: "B", DataURL: "data2"}
 	game.drawings["p3"] = InventionDrawing{Title: "C", DataURL: "data3"}
@@ -110,7 +107,7 @@ func TestInventionVotingFundingAllocation(t *testing.T) {
 
 func TestInventionVotingExceedsBudget(t *testing.T) {
 	game := &InventionGame{}
-	game.Init("room-1")
+	game.Start("room-1", Options{})
 	game.phase = "voting"
 	game.drawings["p2"] = InventionDrawing{Title: "B", DataURL: "data2"}
 
@@ -122,7 +119,7 @@ func TestInventionVotingExceedsBudget(t *testing.T) {
 
 func TestInventionVotingCannotFundSelf(t *testing.T) {
 	game := &InventionGame{}
-	game.Init("room-1")
+	game.Start("room-1", Options{})
 	game.phase = "voting"
 	game.drawings["p1"] = InventionDrawing{Title: "A", DataURL: "data1"}
 	game.drawings["p2"] = InventionDrawing{Title: "B", DataURL: "data2"}
@@ -135,12 +132,12 @@ func TestInventionVotingCannotFundSelf(t *testing.T) {
 
 func TestInventionFinalizeFunding(t *testing.T) {
 	game := &InventionGame{}
-	game.Init("room-1")
+	game.Start("room-1", Options{})
 	game.drawings["p2"] = InventionDrawing{Title: "B", DataURL: "data2"}
 	game.votes["p1"] = map[string]int{"p2": 600}
 	game.votes["p3"] = map[string]int{"p2": 400}
 
-	game.FinalizeFunding()
+	game.finalizeFunding()
 	if game.phase != "results" {
 		t.Fatalf("expected results phase")
 	}
@@ -154,12 +151,12 @@ func TestInventionFinalizeFunding(t *testing.T) {
 
 func TestInventionFinalResultsAfterLastRound(t *testing.T) {
 	game := &InventionGame{}
-	game.Init("room-1")
+	game.Start("room-1", Options{})
 	game.round = 3
 	game.drawings["p2"] = InventionDrawing{Title: "B", DataURL: "data2"}
 	game.votes["p1"] = map[string]int{"p2": 1000}
 
-	game.FinalizeFunding()
+	game.finalizeFunding()
 	if game.phase != "finalResults" {
 		t.Fatalf("expected finalResults phase, got %s", game.phase)
 	}
@@ -167,7 +164,7 @@ func TestInventionFinalResultsAfterLastRound(t *testing.T) {
 
 func TestInventionStartNextRound(t *testing.T) {
 	game := &InventionGame{}
-	game.Init("room-1")
+	game.Start("room-1", Options{})
 	game.phase = "results"
 	game.round = 1
 	game.drawings["p1"] = InventionDrawing{Title: "A", DataURL: "data"}
@@ -177,7 +174,7 @@ func TestInventionStartNextRound(t *testing.T) {
 	game.funding["p1"] = 1000
 	game.totalFunding["p1"] = 1000
 
-	game.StartNextRound([]string{"p1", "p2"})
+	game.startNextRound()
 	if game.round != 2 {
 		t.Fatalf("expected round 2, got %d", game.round)
 	}
@@ -194,7 +191,7 @@ func TestInventionStartNextRound(t *testing.T) {
 
 func TestInventionOnPlayerLeaveClearsState(t *testing.T) {
 	game := &InventionGame{}
-	game.Init("room-1")
+	game.Start("room-1", Options{})
 	_ = game.OnAction("p1", map[string]any{"problem": "Need coffee"})
 	game.chosen["p1"] = "Problem"
 	game.drawings["p1"] = InventionDrawing{Title: "X", DataURL: "Y"}
@@ -204,5 +201,55 @@ func TestInventionOnPlayerLeaveClearsState(t *testing.T) {
 	game.OnPlayerLeave("p1")
 	if len(game.problems) != 0 || len(game.chosen) != 0 || len(game.drawings) != 0 || len(game.votes) != 0 || len(game.assignments) != 0 {
 		t.Fatalf("expected player state to be cleared")
+	}
+}
+
+func TestInventionAutoAdvanceToDrawing(t *testing.T) {
+	room := fakeRoom{players: []string{"p1", "p2"}, admin: "p1"}
+	game := &InventionGame{}
+	game.Start("room-1", Options{Room: room})
+
+	_ = game.OnAction("p1", map[string]any{"problems": []any{"Problem A", "Problem B"}})
+	if game.phase != "collecting" {
+		t.Fatalf("expected phase to remain collecting after only one player submits, got %s", game.phase)
+	}
+
+	_ = game.OnAction("p2", map[string]any{"problems": []any{"Problem C", "Problem D"}})
+	if game.phase != "drawing" {
+		t.Fatalf("expected phase drawing after both players submit, got %s", game.phase)
+	}
+	if game.assignments["p1"] == "" {
+		t.Fatalf("expected p1 to be assigned a problem")
+	}
+	if game.assignments["p2"] == "" {
+		t.Fatalf("expected p2 to be assigned a problem")
+	}
+}
+
+func TestInventionStatusAndStandings(t *testing.T) {
+	room := fakeRoom{players: []string{"p1", "p2"}, admin: "p1"}
+	game := &InventionGame{}
+	game.Start("room-1", Options{Room: room})
+	game.round = game.totalRounds
+	game.drawings["p1"] = InventionDrawing{Title: "A", DataURL: "data1"}
+	game.drawings["p2"] = InventionDrawing{Title: "B", DataURL: "data2"}
+	game.votes["p1"] = map[string]int{"p2": 900}
+	game.votes["p2"] = map[string]int{"p1": 300}
+
+	game.finalizeFunding()
+
+	if game.Status() != StatusFinished {
+		t.Fatalf("expected StatusFinished, got %v", game.Status())
+	}
+
+	standings := game.Standings()
+	if len(standings) != 2 {
+		t.Fatalf("expected 2 standings, got %d", len(standings))
+	}
+	if standings[0].PlayerID != "p2" || standings[0].Score != 900 {
+		t.Fatalf("expected p2 first with score 900, got %+v", standings[0])
+	}
+	if standings[1].PlayerID != "p1" || standings[1].Score != 300 {
+		t.Fatalf("expected p1 second with score 300, got %+v", standings[1])
 	}
 }
