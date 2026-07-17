@@ -44,9 +44,10 @@ type GarticPhoneGame struct {
 	deadlineTag string
 
 	revealChain int
-	revealPos   int             // entries revealed in the current chain
-	reacted     map[string]bool // "player|chain|entry"
-	likes       map[string]int  // "chain|entry"
+	revealPos   int                       // entries revealed in the current chain
+	reacted     map[string]bool           // "player|chain|entry"
+	likes       map[string]int            // "chain|entry" (total)
+	reactions   map[string]map[string]int // "chain|entry" -> emoji -> count
 	scores      map[string]int
 	finished    bool
 }
@@ -85,6 +86,7 @@ func (g *GarticPhoneGame) Start(roomID string, opts Options) {
 	g.pending = make(map[string]gpEntry)
 	g.reacted = make(map[string]bool)
 	g.likes = make(map[string]int)
+	g.reactions = make(map[string]map[string]int)
 	g.scores = make(map[string]int)
 	for _, id := range g.turnOrder {
 		g.scores[id] = 0
@@ -280,6 +282,16 @@ func (g *GarticPhoneGame) OnAction(playerID string, payload map[string]any) erro
 			g.reacted[key] = true
 			likeKey := fmt.Sprintf("%d|%d", chainIdx, entryIdx)
 			g.likes[likeKey]++
+			// Optional emoji flavor (😂/💀/⭐ pills in the reveal design);
+			// scoring is emoji-agnostic.
+			emoji, _ := payload["emoji"].(string)
+			if emoji == "" {
+				emoji = "⭐"
+			}
+			if g.reactions[likeKey] == nil {
+				g.reactions[likeKey] = make(map[string]int)
+			}
+			g.reactions[likeKey][emoji]++
 			g.scores[entry.Author] += GPPointsPerLike
 			return nil
 		}
@@ -338,6 +350,7 @@ func (g *GarticPhoneGame) PublicState() map[string]any {
 		state["revealChain"] = g.revealChain
 		state["revealPos"] = g.revealPos
 		state["likes"] = g.likes
+		state["reactions"] = g.reactions
 		revealed := make([]map[string]any, 0, len(g.chains))
 		for i, chain := range g.chains {
 			entries := make([]gpEntry, 0, len(chain))
