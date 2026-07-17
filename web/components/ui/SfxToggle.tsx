@@ -19,6 +19,7 @@ export function SfxToggle({ className = "" }: { className?: string }) {
       onClick={toggleMuted}
       aria-label={muted ? "Unmute sound" : "Mute sound"}
       className={`inline-flex h-9 w-9 items-center justify-center rounded-full border-2 border-(--line) bg-(--panel) text-base ${className}`}
+      data-testid="sfx-toggle"
     >
       {muted ? "🔇" : "🔊"}
     </button>

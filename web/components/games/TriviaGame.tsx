@@ -90,6 +90,7 @@ export function TriviaGame(props: GameProps) {
                     : "var(--panel)",
                 opacity: answered && !isMine && pub.phase === "question" ? 0.6 : 1,
               }}
+              data-testid={`trivia-option-${i}`}
             >
               <span
                 className="flex h-8 w-8 flex-none items-center justify-center rounded-lg font-display text-sm text-white"

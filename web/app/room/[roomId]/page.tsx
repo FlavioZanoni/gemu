@@ -285,6 +285,7 @@ export default function RoomPage() {
                 {room.isAdmin && (
                   <div className="flex justify-center">
                     <button
+                      data-testid="intro-start"
                       className="buzzer rounded-2xl px-8 py-3.5 text-base"
                       style={{
                         background: "linear-gradient(180deg,#ffd23f,#f5b32a)",

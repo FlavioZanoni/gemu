@@ -101,6 +101,7 @@ export function VotingScreen({
                 boxShadow: `0 5px 0 ${hue.drop}`,
                 color: hue.ink,
               }}
+              data-testid={`vote-option-${option.type}`}
             >
               <div className="text-xs font-bold opacity-75 mb-2 uppercase tracking-widest">
                 {option.type}

@@ -18,7 +18,7 @@ export function ScoreStrip({
   if (standings.length === 0) return null;
   const nameOf = (id: string) => players.find((p) => p.id === id)?.name ?? "?";
   return (
-    <div className={`flex items-center gap-2 overflow-x-auto ${className}`}>
+    <div className={`flex items-center gap-2 overflow-x-auto ${className}`} data-testid="score-strip">
       {standings.map((standing, i) => {
         const leader = i === 0 && standing.score > 0;
         const you = standing.playerId === playerId;

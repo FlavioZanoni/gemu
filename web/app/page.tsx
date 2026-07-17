@@ -214,7 +214,7 @@ function HomeContent() {
               </div>
 
               {errorText && (
-                <p className="mt-3 rounded-lg bg-(--danger)/10 px-3 py-2 text-center text-xs font-semibold text-[#ffb3c1]">
+                <p className="mt-3 rounded-lg bg-(--danger)/10 px-3 py-2 text-center text-xs font-semibold text-[#ffb3c1]" data-testid="home-join-error">
                   {errorText}
                 </p>
               )}

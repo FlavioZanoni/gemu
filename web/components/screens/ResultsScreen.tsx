@@ -68,11 +68,14 @@ export function ResultsScreen({
       {/* Admin actions */}
       {isAdmin ? (
         <div className="flex gap-3 flex-wrap justify-center">
-          <Button variant="secondary" onClick={onPlayAgain}>
+          <Button variant="secondary" onClick={onPlayAgain} data-testid="results-play-again">
             🔁 Play again
           </Button>
-          <Button variant="primary" onClick={onVoteNext}>
+          <Button variant="primary" onClick={onVoteNext} data-testid="results-vote-next">
             Vote on the next game →
+          </Button>
+          <Button variant="danger" onClick={onEndSession} data-testid="results-end-night">
+            {t("results.endTheNight")}
           </Button>
         </div>
       ) : (

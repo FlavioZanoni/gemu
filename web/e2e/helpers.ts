@@ -118,3 +118,26 @@ export async function startGame(room: Room, game: GameType): Promise<Room> {
   }
   return room;
 }
+
+// Drive a running Trivia game to the results screen. Every player answers each
+// round (answer correctness is irrelevant); the option button's built-in
+// actionability wait naturally rides out the ~6s reveal between rounds. Returns
+// when the host sees the results actions. Trivia defaults to 8 rounds, so this
+// takes ~50s — give callers a generous per-test timeout.
+export async function playTriviaToResults(room: Room) {
+  const voteNext = room.host.getByTestId("results-vote-next");
+  for (let round = 0; round < 12; round++) {
+    if (await voteNext.isVisible().catch(() => false)) return;
+    const opt0 = room.host.getByTestId("trivia-option-0");
+    // Next question answerable, or the game finished into results.
+    await Promise.race([
+      expect(opt0).toBeEnabled({ timeout: 15_000 }),
+      voteNext.waitFor({ state: "visible", timeout: 15_000 }),
+    ]).catch(() => {});
+    if (await voteNext.isVisible().catch(() => false)) return;
+    for (const page of room.pages) {
+      await page.getByTestId("trivia-option-0").click({ timeout: 15_000 }).catch(() => {});
+    }
+  }
+  await expect(voteNext).toBeVisible();
+}

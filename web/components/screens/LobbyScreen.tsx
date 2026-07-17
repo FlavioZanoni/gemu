@@ -178,6 +178,7 @@ export function LobbyScreen({
                           }}
                           className="mt-2 rounded-full border-2 px-2.5 py-1 font-mono text-[10px] font-bold"
                           style={{ borderColor: hue.ink, color: hue.ink }}
+                          data-testid="open-decks"
                         >
                           🃏 {t("decks.button")}
                           {snapshot.cahDeckIds.length > 0

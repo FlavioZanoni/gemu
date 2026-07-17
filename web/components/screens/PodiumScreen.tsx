@@ -112,6 +112,7 @@ export function PodiumScreen({
                           : "linear-gradient(180deg, #ffb56b, #f28e35)",
                     color: idx === 0 ? "#3d1f0e" : idx === 1 ? "#0c3d33" : "#3d1f0e",
                   }}
+                  data-testid={idx === 0 ? "podium-winner" : undefined}
                 >
                   {idx + 1}
                 </div>
@@ -144,7 +145,7 @@ export function PodiumScreen({
       </div>
 
       {/* Button */}
-      <Button variant="primary" size="lg" onClick={onBackToLobby}>
+      <Button variant="primary" size="lg" onClick={onBackToLobby} data-testid="podium-continue">
         Same time next week? · New room
       </Button>
     </div>

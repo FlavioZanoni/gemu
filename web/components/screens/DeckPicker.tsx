@@ -58,7 +58,7 @@ export function DeckPicker({
 
   return (
     <Modal open={open} onClose={onClose}>
-      <div className="overflow-hidden rounded-[20px] border-[3px] border-(--hue-cah) bg-(--panel)">
+      <div className="overflow-hidden rounded-[20px] border-[3px] border-(--hue-cah) bg-(--panel)" data-testid="deck-picker">
         <div className="flex items-center justify-between bg-[linear-gradient(180deg,#ff6b85,#e84863)] px-5 py-4">
           <div className="font-display text-lg text-white">{t("decks.title")}</div>
           <button onClick={onClose} className="font-display text-white/90">
@@ -83,6 +83,7 @@ export function DeckPicker({
                       ? "border-(--hue-cah) bg-(--hue-cah)/10"
                       : "border-(--line) opacity-70"
                   }`}
+                  data-testid={`deck-${deck.id}`}
                 >
                   <span
                     className={`flex h-5 w-5 flex-none items-center justify-center rounded-md border-2 ${
@@ -130,12 +131,13 @@ export function DeckPicker({
                 rows={6}
                 placeholder={t("decks.pastePlaceholder")}
                 className="w-full rounded-lg border-2 border-(--line) bg-(--panel) p-2 font-mono text-xs text-(--ink) focus:border-(--accent-2) focus:outline-none"
+                data-testid="deck-paste-textarea"
               />
               {pasteError ? (
                 <p className="mt-1 text-xs text-[#ffb3c1]">{pasteError}</p>
               ) : null}
               <div className="mt-2 flex gap-2">
-                <Button variant="hue" gameType="cah" size="sm" onClick={submitPaste}>
+                <Button variant="hue" gameType="cah" size="sm" onClick={submitPaste} data-testid="deck-add">
                   {t("decks.addDeck")}
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => setShowPaste(false)}>
@@ -148,6 +150,7 @@ export function DeckPicker({
               type="button"
               onClick={() => setShowPaste(true)}
               className="mt-4 w-full rounded-xl border-2 border-dashed border-(--line) px-3 py-2.5 font-mono text-[11px] font-bold uppercase tracking-wider text-(--ink)/60 hover:border-(--accent-2) hover:text-(--accent-2)"
+              data-testid="deck-import-toggle"
             >
               + {t("decks.importCustom")}
             </button>
