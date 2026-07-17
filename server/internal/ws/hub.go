@@ -19,6 +19,7 @@ type Client struct {
 	RoomID    string
 	Player    rooms.Player
 	SessionID string
+	IP        string
 	// writeMu serializes writes to Conn: gorilla/websocket forbids concurrent
 	// WriteJSON on one connection, and any goroutine can broadcast to any
 	// client. Without this, ordinary concurrent traffic panics the process.
@@ -38,28 +39,51 @@ func (c *Client) write(env Envelope) {
 }
 
 type Hub struct {
-	mu       sync.RWMutex
-	clients  map[string]*Client
-	rooms    *rooms.Manager
-	registry *games.Registry
-	sessions map[string]*gameSession
+	mu         sync.RWMutex
+	clients    map[string]*Client
+	rooms      *rooms.Manager
+	registry   *games.Registry
+	sessions   map[string]*gameSession
+	connLimit  *ipLimiters // per-IP new connections
+	createLimit *ipLimiters // per-IP room creation
 }
 
 func NewHub(registry *games.Registry) *Hub {
 	return &Hub{
-		clients:  make(map[string]*Client),
-		rooms:    rooms.NewManager(),
-		registry: registry,
-		sessions: make(map[string]*gameSession),
+		clients:     make(map[string]*Client),
+		rooms:       rooms.NewManager(),
+		registry:    registry,
+		sessions:    make(map[string]*gameSession),
+		connLimit:   newIPLimiters(connRatePerSec, connBurst),
+		createLimit: newIPLimiters(roomCreateRatePerSec, roomCreateBurst),
 	}
 }
 
-func (h *Hub) AddClient(conn *websocket.Conn) *Client {
-	client := &Client{ID: uuid.NewString(), Conn: conn}
+func (h *Hub) AddClient(conn *websocket.Conn, ip string) *Client {
+	client := &Client{
+		ID:   uuid.NewString(),
+		Conn: conn,
+		IP:   ip,
+	}
 	h.mu.Lock()
 	h.clients[client.ID] = client
 	h.mu.Unlock()
 	return client
+}
+
+// ClientCount reports the number of live connections, for the global cap.
+func (h *Hub) ClientCount() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return len(h.clients)
+}
+
+// AllowConnection rate-limits new connections per client IP (loopback exempt).
+func (h *Hub) AllowConnection(ip string) bool {
+	if isLoopback(ip) {
+		return true
+	}
+	return h.connLimit.allow(ip)
 }
 
 // bindClient sets a connection's room identity under h.mu, which is the same
@@ -342,6 +366,14 @@ func (h *Hub) handleRoomCreate(client *Client, env Envelope) {
 	// rebinding orphans a connected ghost player that never gets cleaned up.
 	if client.RoomID != "" {
 		h.Send(client, Envelope{Type: "room.create.error", RequestID: env.RequestID, Payload: map[string]any{"code": "already_in_room", "message": "leave your current room first"}})
+		return
+	}
+	if !isLoopback(client.IP) && !h.createLimit.allow(client.IP) {
+		h.Send(client, Envelope{Type: "room.create.error", RequestID: env.RequestID, Payload: map[string]any{"code": "rate_limited", "message": "too many rooms created, slow down"}})
+		return
+	}
+	if h.rooms.Count() >= maxRooms {
+		h.Send(client, Envelope{Type: "room.create.error", RequestID: env.RequestID, Payload: map[string]any{"code": "server_full", "message": "server is at capacity, try again later"}})
 		return
 	}
 	name := truncate(decodeString(env.Payload, "name"), maxRoomNameLen)

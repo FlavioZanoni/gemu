@@ -45,6 +45,13 @@ func (m *Manager) Remove(roomID string) {
 	delete(m.rooms, roomID)
 }
 
+// Count returns the number of live rooms, for the global room cap.
+func (m *Manager) Count() int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return len(m.rooms)
+}
+
 // AbandonedRooms returns the ids of rooms whose players are all disconnected
 // and whose last activity predates cutoff.
 func (m *Manager) AbandonedRooms(cutoff time.Time) []string {

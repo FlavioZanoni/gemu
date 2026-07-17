@@ -27,6 +27,16 @@ func NewRouter(hub *Hub) *Router {
 }
 
 func (r *Router) HandleWS(w http.ResponseWriter, req *http.Request) {
+	ip := clientIP(req)
+	// Reject abusive/over-capacity connections before spending an upgrade.
+	if !r.hub.AllowConnection(ip) {
+		http.Error(w, "too many requests", http.StatusTooManyRequests)
+		return
+	}
+	if r.hub.ClientCount() >= maxClients {
+		http.Error(w, "server at capacity", http.StatusServiceUnavailable)
+		return
+	}
 	conn, err := r.upgrader.Upgrade(w, req, nil)
 	if err != nil {
 		log.Println("upgrade error:", err)
@@ -39,7 +49,7 @@ func (r *Router) HandleWS(w http.ResponseWriter, req *http.Request) {
 		return nil
 	})
 
-	client := r.hub.AddClient(conn)
+	client := r.hub.AddClient(conn, ip)
 	log.Printf("client connected: %s", client.ID)
 
 	go func() {
