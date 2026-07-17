@@ -313,3 +313,34 @@ func TestLiveSessionBlockedFromSecondRoom(t *testing.T) {
 		t.Fatalf("expected a live session to be blocked from a second room")
 	}
 }
+
+func TestJoinByCodeOnly(t *testing.T) {
+	hub := newSessionTestHub()
+	host := &Client{ID: "host"}
+	hub.handleRoomCreate(host, Envelope{Type: "room.create", Payload: map[string]any{
+		"name": "Party", "playlist": []any{"stub"}, "displayName": "Host", "sessionId": "s1",
+	}})
+	room, _ := hub.rooms.Get(host.RoomID)
+	code := room.JoinCode
+	if code == "" {
+		t.Fatalf("expected a join code")
+	}
+
+	// Friend joins with the code only (no roomId), lowercased.
+	friend := &Client{ID: "friend"}
+	hub.handleRoomJoin(friend, Envelope{Type: "room.join", Payload: map[string]any{
+		"joinCode": strings.ToLower(code), "displayName": "Friend", "sessionId": "s2",
+	}})
+	if friend.RoomID != host.RoomID {
+		t.Fatalf("expected join-by-code to land in the room, got %q", friend.RoomID)
+	}
+
+	// A bogus code is not_found.
+	stranger := &Client{ID: "stranger"}
+	hub.handleRoomJoin(stranger, Envelope{Type: "room.join", Payload: map[string]any{
+		"joinCode": "ZZZZZZ", "displayName": "Nobody", "sessionId": "s3",
+	}})
+	if stranger.RoomID != "" {
+		t.Fatalf("expected bad code rejected")
+	}
+}

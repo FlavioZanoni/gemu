@@ -2,11 +2,25 @@
 // implementation; add keys here as screens need them.
 export const screens = {
   en: {
-    // Home screen
+    // Home screen (ticket-booth layout)
+    "home.stepRightUp": "Step right up",
+    "home.tagline1": "One room. A playlist of games.",
+    "home.tagline2": "A champion crowned by midnight.",
+    "home.drawFace": "draw your face",
+    "home.yourNickname": "Your nickname",
+    "home.typeIt": "type it…",
+    "home.createRoom": "Create a room",
+    "home.orJoin": "or join the party",
+    "home.codePlaceholder": "CODE…",
+    "home.join": "Join",
+    "home.onAir": "On air now · public rooms",
+    "home.playlistCount": "Playlist · {n} games",
+    "home.full": "Full",
+    "home.nickFirst": "Pick a nickname to create or join",
+    "home.autoRoomName": "{name}'s room",
     "home.brand": "Gemu Multiplayer Hub",
     "home.tagline": "Party games, zero setup.",
     "home.subtitle": "Pick a game, join a room, play.",
-    "home.createRoom": "Create room",
     "home.joinByCode": "Join by code",
     "home.gamesSection": "Games",
     "home.gameInfo": "{name} · {players} players",
@@ -114,7 +128,21 @@ export const screens = {
     "edge.errorNotEnoughPlayers": "Not enough players to start this game.",
   },
   "pt-BR": {
-    // Home screen
+    // Home screen (ticket-booth layout)
+    "home.stepRightUp": "Chegou, jogou",
+    "home.tagline1": "Uma sala. Uma playlist de jogos.",
+    "home.tagline2": "Um campeão coroado até a meia-noite.",
+    "home.drawFace": "desenhe sua cara",
+    "home.yourNickname": "Seu apelido",
+    "home.typeIt": "digite aqui…",
+    "home.orJoin": "ou entre na festa",
+    "home.codePlaceholder": "CÓDIGO…",
+    "home.join": "Entrar",
+    "home.onAir": "No ar agora · salas públicas",
+    "home.playlistCount": "Playlist · {n} jogos",
+    "home.full": "Cheia",
+    "home.nickFirst": "Escolha um apelido para criar ou entrar",
+    "home.autoRoomName": "Sala de {name}",
     "home.brand": "Gemu Multiplayer Hub",
     "home.tagline": "Jogos de festa, zero configuração.",
     "home.subtitle": "Escolha um jogo, entre em uma sala, jogue.",

@@ -2,6 +2,7 @@ package rooms
 
 import (
 	"errors"
+	"strings"
 	"sync"
 	"time"
 )
@@ -57,6 +58,22 @@ func (m *Manager) AbandonedRooms(cutoff time.Time) []string {
 		}
 	}
 	return ids
+}
+
+// FindByCode returns the room whose join code matches (case-insensitive).
+func (m *Manager) FindByCode(code string) (*Room, bool) {
+	code = strings.ToUpper(strings.TrimSpace(code))
+	if code == "" {
+		return nil, false
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	for _, room := range m.rooms {
+		if room.JoinCode == code {
+			return room, true
+		}
+	}
+	return nil, false
 }
 
 func (m *Manager) ListPublic() []map[string]any {

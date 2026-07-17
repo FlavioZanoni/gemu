@@ -393,7 +393,7 @@ export const useRoomStore = () => {
   };
 
   const joinRoom = (payload: {
-    roomId: string;
+    roomId?: string;
     joinCode?: string;
     password?: string;
     displayName: string;

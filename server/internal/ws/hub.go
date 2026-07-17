@@ -369,10 +369,9 @@ func (h *Hub) handleRoomCreate(client *Client, env Envelope) {
 		return
 	}
 
-	joinCode := ""
-	if visibility == string(rooms.Private) {
-		joinCode = strings.ToUpper(uuid.NewString()[:6])
-	}
+	// Every room gets a shareable code so friends can join by code alone
+	// (design's "OR JOIN THE PARTY"), regardless of public/private listing.
+	joinCode := strings.ToUpper(uuid.NewString()[:6])
 
 	room := &rooms.Room{
 		ID:         uuid.NewString(),
@@ -403,27 +402,37 @@ func (h *Hub) handleRoomCreate(client *Client, env Envelope) {
 }
 
 func (h *Hub) handleRoomJoin(client *Client, env Envelope) {
-	// Reject a join from a connection already bound to a different room; without
-	// this, rebinding strands a connected ghost player in the old room.
 	roomID := decodeString(env.Payload, "roomId")
-	if client.RoomID != "" && client.RoomID != roomID {
-		h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "already_in_room", "message": "leave your current room first"}})
-		return
-	}
 	joinCode := decodeString(env.Payload, "joinCode")
 	displayName := truncate(decodeString(env.Payload, "displayName"), maxNameLen)
 	avatarURL := sanitizeAvatar(truncate(decodeString(env.Payload, "avatarUrl"), maxAvatarLen))
 	sessionID := decodeString(env.Payload, "sessionId")
 	isRejoin := false
 
-	if roomID == "" || displayName == "" || sessionID == "" {
+	if displayName == "" || sessionID == "" {
 		h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "invalid_payload", "message": "missing required fields"}})
 		return
 	}
 
-	room, ok := h.rooms.Get(roomID)
-	if !ok {
+	// Resolve the room by id, or by join code when only a code is supplied
+	// (the "join the party" flow enters just a code).
+	var room *rooms.Room
+	var ok bool
+	if roomID != "" {
+		room, ok = h.rooms.Get(roomID)
+	} else if joinCode != "" {
+		room, ok = h.rooms.FindByCode(joinCode)
+	}
+	if !ok || room == nil {
 		h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "not_found", "message": "room not found"}})
+		return
+	}
+	roomID = room.ID
+
+	// Reject a join from a connection already bound to a different room; without
+	// this, rebinding strands a connected ghost player in the old room.
+	if client.RoomID != "" && client.RoomID != roomID {
+		h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "already_in_room", "message": "leave your current room first"}})
 		return
 	}
 

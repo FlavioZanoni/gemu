@@ -1,20 +1,13 @@
 "use client";
 
-import { Suspense, useState, useRef, useEffect } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import { useLobbyStore } from "@/lib/lobbyStore";
 import { gamesCatalog } from "@/lib/games";
 import { useRoomStore } from "@/lib/roomStore";
-import {
-  Button,
-  Card,
-  Marquee,
-  DoodlePad,
-  LangToggle,
-  Pill,
-} from "@/components/ui";
-import { playerColors, hueFor } from "@/components/ui/gameHues";
+import { DoodlePad, LangToggle, Bulbs } from "@/components/ui";
+import { hueFor, playerColors } from "@/components/ui/gameHues";
 
 export default function Page() {
   return (
@@ -25,651 +18,285 @@ export default function Page() {
 }
 
 function HomeContent() {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const lobby = useLobbyStore();
   const room = useRoomStore();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const modalRef = useRef<HTMLDivElement>(null);
 
-  const [modalOpen, setModalOpen] = useState<"create" | "join" | null>(null);
-  const [roomName, setRoomName] = useState("");
-  const [displayName, setDisplayName] = useState("");
+  const [nick, setNick] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
-  const [useDoodle, setUseDoodle] = useState(false);
-  const [maxPlayers, setMaxPlayers] = useState("8");
-  const [visibility, setVisibility] = useState<"public" | "private">("public");
-  const [password, setPassword] = useState("");
-  // The room's playlist — the whole point: a night is many games, not one.
-  // Defaults to everything; the host trims it here or in the green-room lobby.
-  const [selectedPlaylist, setSelectedPlaylist] = useState<string[]>(() =>
-    gamesCatalog.map((g) => g.type),
-  );
-  const togglePlaylistGame = (type: string) =>
-    setSelectedPlaylist((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
-    );
-  const [joinRoomId, setJoinRoomId] = useState("");
-  const [joinCode, setJoinCode] = useState("");
-  const [localError, setLocalError] = useState<string | null>(null);
+  const [code, setCode] = useState("");
   const [hasRedirected, setHasRedirected] = useState(false);
 
-  // Load last user from localStorage — once; re-running would clobber typing.
-  const profileLoaded = useRef(false);
+  // Prefill nickname/avatar once, and an invite code from the URL.
+  const loadedRef = useRef(false);
   useEffect(() => {
-    if (profileLoaded.current) return;
-    profileLoaded.current = true;
+    if (loadedRef.current) return;
+    loadedRef.current = true;
     const last = room.loadLastRoom();
     if (last) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setDisplayName(last.displayName || "");
+      setNick(last.displayName || "");
       setAvatarUrl(last.avatarUrl || "");
     }
+    const invite = searchParams.get("code");
+    if (invite) setCode(invite.toUpperCase());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Redirect into the room once we're in one.
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        modalRef.current &&
-        !modalRef.current.contains(event.target as Node)
-      ) {
-        setModalOpen(null);
-      }
-    };
-
-    if (modalOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [modalOpen]);
-
-  useEffect(() => {
-    if (searchParams) {
-      const inviteRoom = searchParams.get("room");
-      const inviteCode = searchParams.get("code");
-      if (inviteRoom && !room.pendingJoin && !room.snapshot && !hasRedirected) {
-        setJoinRoomId(inviteRoom);
-        if (inviteCode) setJoinCode(inviteCode);
-        setModalOpen("join");
-        setHasRedirected(true);
-      }
-    }
-  }, [searchParams, room.pendingJoin, room.snapshot, hasRedirected]);
-
-  useEffect(() => {
-    if (room.snapshot && room.snapshot.id && !hasRedirected) {
+    if (room.snapshot?.id && !hasRedirected) {
       setHasRedirected(true);
       router.replace(`/room/${room.snapshot.id}`);
     }
-  }, [room.snapshot, room.snapshot?.id, hasRedirected, router]);
+  }, [room.snapshot?.id, hasRedirected, router]);
 
-  useEffect(() => {
-    if (room.left && lobby.refresh) {
-      lobby.refresh();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [room.left]);
+  const nickReady = nick.trim().length > 0 && !room.pendingJoin;
 
-  const createDisabled =
-    !roomName.trim() ||
-    !displayName.trim() ||
-    selectedPlaylist.length === 0 ||
-    Number.isNaN(Number(maxPlayers)) ||
-    Number(maxPlayers) < 2 ||
-    room.pendingJoin;
+  const handleCreate = () => {
+    if (!nickReady) return;
+    room.createRoom({
+      name: t("home.autoRoomName", { name: nick.trim() }),
+      playlist: gamesCatalog.map((g) => g.type),
+      visibility: "public",
+      maxPlayers: 10,
+      displayName: nick.trim(),
+      avatarUrl,
+    });
+  };
 
-  const joinDisabled =
-    !joinRoomId.trim() || !displayName.trim() || room.pendingJoin;
+  const handleJoin = () => {
+    if (!nickReady || !code.trim()) return;
+    room.joinRoom({
+      joinCode: code.trim().toUpperCase(),
+      displayName: nick.trim(),
+      avatarUrl,
+    });
+  };
 
-  if (hasRedirected) {
-    return null;
-  }
+  if (hasRedirected) return null;
+
+  const errorText = room.joinError ? errorMessage(room.joinError, t) : null;
 
   return (
-    <div className="min-h-screen bg-(--bg)">
-      <div className="radial-glow min-h-screen">
-        <div className="grid-texture min-h-screen">
-          <main className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 pb-16 pt-12">
-            {/* Header */}
-            <header className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-              <div className="flex flex-col gap-4">
-                <Marquee caption="Gemu">
-                  {t("home.brand")}
-                </Marquee>
-                <h1 className="slab text-4xl leading-tight md:text-6xl">
-                  {t("home.tagline")}
-                </h1>
-                <p className="max-w-2xl text-lg text-(--ink)/80">
-                  {t("home.subtitle")}
-                </p>
-              </div>
-              <div className="flex flex-col gap-3">
-                <Button
-                  variant="primary"
-                  size="md"
-                  onClick={() => setModalOpen("create")}
-                >
-                  {t("home.createRoom")}
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="md"
-                  onClick={() => setModalOpen("join")}
-                >
-                  {t("home.joinByCode")}
-                </Button>
-                <LangToggle />
-              </div>
-            </header>
+    <div className="min-h-screen bg-(--bg-deep)">
+      <div className="radial-glow min-h-screen flex flex-col">
+        <div className="flex justify-end px-6 pt-5">
+          <LangToggle />
+        </div>
 
-            {/* Games and Rooms */}
-            <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-              {/* Games section */}
-              <div className="rounded-2xl border-2 border-(--line) bg-(--panel) p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="slab text-2xl">{t("home.gamesSection")}</h2>
-                  <Pill variant="neutral" className="text-[11px]">
-                    {lobby.connected ? t("home.live") : t("home.offline")}
-                  </Pill>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {gamesCatalog.map((game) => (
-                    <Card
+        <main className="flex-1 flex flex-col justify-center gap-12 px-6 pb-12">
+          {/* Hero: marquee + ticket card */}
+          <div className="flex flex-col items-center justify-center gap-12 lg:flex-row lg:items-center lg:gap-16">
+            {/* GEMU marquee + tagline + pills */}
+            <div>
+              <div
+                className="relative inline-block rounded-[26px] border-4 border-(--accent) bg-(--panel) px-12 pb-8 pt-7"
+                style={{ transform: "rotate(-1.5deg)" }}
+              >
+                <Bulbs count={4} size={12} className="absolute -top-2 left-6 right-6" />
+                <Bulbs count={4} size={12} className="absolute -bottom-2 left-6 right-6" />
+                <div className="slab text-7xl leading-none sm:text-8xl">GEMU</div>
+              </div>
+              <p className="mt-5 max-w-md text-lg font-semibold leading-relaxed text-(--ink)/85">
+                {t("home.tagline1")}
+                <br />
+                {t("home.tagline2")}
+              </p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                {gamesCatalog.map((game, i) => {
+                  const hue = hueFor(game.type);
+                  const tilt = [-2, 1.5, -1, 2, -1.5][i % 5];
+                  return (
+                    <span
                       key={game.type}
-                      variant="panel"
-                      gameType={game.type}
-                      className="flex flex-col gap-3 cursor-pointer transition hover:-translate-y-1"
+                      className="font-display text-xs"
+                      style={{
+                        color: hue.ink,
+                        background: `linear-gradient(180deg,${hue.gradFrom},${hue.gradTo})`,
+                        borderRadius: 10,
+                        padding: "7px 14px",
+                        boxShadow: `0 3px 0 ${hue.drop}`,
+                        transform: `rotate(${tilt}deg)`,
+                      }}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="text-sm font-bold text-(--ink)">
-                          {game.name}
-                        </h3>
-                        <Pill variant="neutral" className="text-[11px]">
-                          {game.players}
-                        </Pill>
-                      </div>
-                      <p className="text-xs text-(--ink)/75 flex-1">
-                        {game.description[locale as keyof typeof game.description] || ""}
-                      </p>
-                      <div className="flex items-center justify-between pt-2 border-t border-(--line)">
-                        <span className="mono-caption">{game.tag}</span>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => {
-                            // Ensure this game is in the night's playlist,
-                            // then open create to finish setup.
-                            setSelectedPlaylist((prev) =>
-                              prev.includes(game.type)
-                                ? prev
-                                : [...prev, game.type],
-                            );
-                            setModalOpen("create");
-                          }}
-                        >
-                          {t("home.gameHost")}
-                        </Button>
-                      </div>
-                    </Card>
-                  ))}
+                      {game.name.toUpperCase()}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* STEP RIGHT UP ticket card */}
+            <div className="w-full max-w-sm rounded-3xl border-2 border-(--line) bg-(--panel) p-7 shadow-[0_20px_60px_rgba(0,0,0,.4)]">
+              <div className="mono-caption mb-4">{t("home.stepRightUp")}</div>
+
+              <div className="mb-5 flex items-center gap-4">
+                <div className="flex flex-col items-center gap-1">
+                  <DoodlePad
+                    strokeColor={playerColors[0]}
+                    size={80}
+                    onChange={setAvatarUrl}
+                  />
+                  <span className="font-mono text-[8px] text-(--ink)/40">
+                    {t("home.drawFace")}
+                  </span>
+                </div>
+                <div className="flex-1">
+                  <div className="mb-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-(--ink)/50">
+                    {t("home.yourNickname")}
+                  </div>
+                  <input
+                    value={nick}
+                    onChange={(e) => setNick(e.target.value)}
+                    placeholder={t("home.typeIt")}
+                    maxLength={40}
+                    className="w-full rounded-xl border-2 border-(--line) bg-(--bg-deep) px-3.5 py-3 text-base font-semibold text-(--ink) placeholder:text-(--ink)/40 focus:border-(--accent-2) focus:outline-none"
+                  />
                 </div>
               </div>
 
-              {/* Rooms section */}
-              <aside className="rounded-2xl border-2 border-(--line) bg-(--panel) p-6">
-                <h2 className="slab text-xl mb-2">{t("home.roomsSection")}</h2>
-                <p className="text-xs text-(--ink)/75 mb-4">
-                  {t("home.roomsDesc")}
-                </p>
-                <div className="space-y-3">
-                  {lobby.rooms.length === 0 ? (
-                    <Card variant="panel" className="text-center py-6">
-                      <p className="text-xs text-(--ink)/75">
-                        {t("home.noRooms")}
-                      </p>
-                    </Card>
-                  ) : (
-                    lobby.rooms.map((roomItem) => (
-                      <Card
-                        key={roomItem.id}
-                        variant="panel"
-                        className="flex items-center justify-between cursor-pointer transition hover:bg-(--panel-raised)"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-(--ink)">
-                            {roomItem.name}
-                          </p>
-                          <p className="text-xs text-(--ink)/60">
-                            {roomItem.gameName || roomItem.gameType}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 ml-2 flex-none">
-                          <Pill variant="neutral" className="text-[11px]">
-                            {roomItem.playerCount}/{roomItem.maxPlayers}
-                          </Pill>
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            disabled={
-                              roomItem.playerCount >= roomItem.maxPlayers ||
-                              room.pendingJoin
-                            }
-                            onClick={() => {
-                              setJoinRoomId(roomItem.id);
-                              setModalOpen("join");
-                            }}
-                          >
-                            Join
-                          </Button>
-                        </div>
-                      </Card>
-                    ))
-                  )}
-                </div>
-              </aside>
-            </section>
+              <button
+                type="button"
+                onClick={handleCreate}
+                disabled={!nickReady}
+                className="buzzer w-full rounded-2xl py-4 font-display text-xl"
+                style={{
+                  background: "linear-gradient(180deg,#ffd23f,#f5b32a)",
+                  color: "var(--dark-ink)",
+                }}
+              >
+                {room.pendingJoin ? t("home.starting") : t("home.createRoom")}
+              </button>
 
-            {/* Modals */}
-            {(modalOpen === "create" || modalOpen === "join") && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6">
-                <div
-                  ref={modalRef}
-                  className="rounded-2xl border-2 border-(--line) bg-(--panel) w-full max-w-2xl p-8 max-h-[90vh] overflow-y-auto"
+              <div className="my-3.5 flex items-center gap-3">
+                <div className="h-px flex-1 bg-(--line)" />
+                <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-(--ink)/40">
+                  {t("home.orJoin")}
+                </span>
+                <div className="h-px flex-1 bg-(--line)" />
+              </div>
+
+              <div className="flex gap-2.5">
+                <input
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => e.key === "Enter" && handleJoin()}
+                  placeholder={t("home.codePlaceholder")}
+                  maxLength={6}
+                  className="flex-1 rounded-xl border-2 border-(--line) bg-(--bg-deep) px-3 py-3 text-center font-mono text-[15px] font-bold uppercase tracking-[0.25em] text-(--ink) placeholder:text-(--ink)/30 focus:border-(--accent-2) focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleJoin}
+                  disabled={!nickReady || !code.trim()}
+                  className="rounded-xl border-2 border-(--ink) bg-(--panel) px-6 font-display text-[15px] text-(--ink) shadow-[0_4px_0_rgba(0,0,0,.4)] disabled:opacity-40"
                 >
-                  {modalOpen === "create" ? (
-                    <>
-                      <h2 className="slab text-2xl mb-1">
-                        {t("home.createRoomTitle")}
-                      </h2>
-                      <p className="text-sm text-(--ink)/75 mb-6">
-                        {t("home.createRoomDesc")}
-                      </p>
+                  {t("home.join")}
+                </button>
+              </div>
 
-                      <div className="space-y-4">
-                        {/* Avatar section */}
-                        <div className="flex gap-4 items-start">
-                          {useDoodle ? (
-                            <div className="flex-1">
-                              <label className="mono-caption mb-2 block">
-                                {t("home.drawYourAvatar")}
-                              </label>
-                              <DoodlePad
-                                strokeColor={playerColors[0]}
-                                onChange={setAvatarUrl}
-                              />
-                              <button
-                                onClick={() => setUseDoodle(false)}
-                                className="text-xs text-(--accent-2) mt-2 underline hover:opacity-75"
-                              >
-                                {t("home.cancel")}
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex-1">
-                              <label className="mono-caption mb-2 block">
-                                {t("home.avatarPreview")}
-                              </label>
-                              <div className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-(--line) bg-(--panel-raised) mb-2">
-                                {avatarUrl.trim() ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img
-                                    src={avatarUrl.trim()}
-                                    alt="Avatar preview"
-                                    className="h-full w-full object-cover rounded-full"
-                                  />
-                                ) : (
-                                  <span className="text-2xl text-(--ink)/50">
-                                    ?
-                                  </span>
-                                )}
-                              </div>
-                              <button
-                                onClick={() => setUseDoodle(true)}
-                                className="text-xs text-(--accent-2) underline hover:opacity-75"
-                              >
-                                {t("home.drawYourAvatar")}
-                              </button>
-                            </div>
-                          )}
+              {errorText && (
+                <p className="mt-3 rounded-lg bg-(--danger)/10 px-3 py-2 text-center text-xs font-semibold text-[#ffb3c1]">
+                  {errorText}
+                </p>
+              )}
+              {!nick.trim() && (
+                <p className="mt-3 text-center font-mono text-[9px] text-(--ink)/35">
+                  {t("home.nickFirst")}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* On air now — public rooms */}
+          <div className="mx-auto w-full max-w-4xl">
+            <div className="mb-2.5 flex items-baseline justify-between">
+              <span className="font-mono text-[11px] font-bold uppercase tracking-[0.3em] text-(--ink)/45">
+                📺 {t("home.onAir")}
+              </span>
+              <span className="font-mono text-[10px] text-(--ink)/30">
+                {lobby.connected ? t("home.live") : t("home.offline")}
+              </span>
+            </div>
+            {lobby.rooms.length === 0 ? (
+              <div className="rounded-2xl border-2 border-dashed border-(--line) bg-(--panel)/50 px-4 py-6 text-center text-sm text-(--ink)/50">
+                {t("home.noRooms")}
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {lobby.rooms.map((r) => {
+                  const full = r.maxPlayers > 0 && r.playerCount >= r.maxPlayers;
+                  return (
+                    <div
+                      key={r.id}
+                      className="flex items-center gap-3 rounded-2xl border-2 border-(--line) bg-(--panel) px-4 py-3"
+                      style={full ? { opacity: 0.6 } : undefined}
+                    >
+                      <span
+                        className="h-2.5 w-2.5 flex-none rounded-full"
+                        style={{
+                          background: r.hasPassword ? "var(--warn)" : "var(--accent-2)",
+                          animation: full ? "none" : "bulb 1.4s infinite",
+                        }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[15px] font-bold text-(--ink)">
+                          {r.name} {r.hasPassword ? "🔒" : ""}
                         </div>
-
-                        {/* Room name */}
-                        <input
-                          type="text"
-                          placeholder={t("home.roomName")}
-                          value={roomName}
-                          onChange={(e) => {
-                            setRoomName(e.target.value);
-                            setLocalError(null);
-                          }}
-                          className="w-full px-4 py-3 rounded-xl border-2 border-(--line) bg-(--panel-raised) text-(--ink) placeholder:text-(--ink)/50 focus:outline-none focus:border-(--accent-2)"
-                        />
-
-                        {/* Display name and avatar URL */}
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <input
-                            type="text"
-                            placeholder={t("home.displayName")}
-                            value={displayName}
-                            onChange={(e) => {
-                              setDisplayName(e.target.value);
-                              setLocalError(null);
-                            }}
-                            className="w-full px-4 py-3 rounded-xl border-2 border-(--line) bg-(--panel-raised) text-(--ink) placeholder:text-(--ink)/50 focus:outline-none focus:border-(--accent-2)"
-                          />
-                          <input
-                            type="text"
-                            placeholder={t("home.avatarUrl")}
-                            value={avatarUrl}
-                            onChange={(e) => {
-                              setAvatarUrl(e.target.value);
-                              setLocalError(null);
-                            }}
-                            className="w-full px-4 py-3 rounded-xl border-2 border-(--line) bg-(--panel-raised) text-(--ink) placeholder:text-(--ink)/50 focus:outline-none focus:border-(--accent-2)"
-                          />
-                        </div>
-
-                        {/* Playlist: pick the games for the night (multi). */}
-                        <div>
-                          <div className="mono-caption mb-2">
-                            {t("home.playlistLabel")}
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {gamesCatalog.map((game) => {
-                              const on = selectedPlaylist.includes(game.type);
-                              const hue = hueFor(game.type);
-                              return (
-                                <button
-                                  key={game.type}
-                                  type="button"
-                                  onClick={() => {
-                                    togglePlaylistGame(game.type);
-                                    setLocalError(null);
-                                  }}
-                                  className="rounded-full px-3.5 py-1.5 text-xs font-bold transition"
-                                  style={
-                                    on
-                                      ? { background: hue.base, color: hue.ink }
-                                      : {
-                                          background: "var(--panel-raised)",
-                                          color: "var(--ink)",
-                                          border: "2px solid var(--line)",
-                                        }
-                                  }
-                                >
-                                  {on ? "✓ " : ""}
-                                  {game.name}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          <div className="mt-1.5 font-mono text-[10px] text-(--ink)/40">
-                            {t("home.playlistHint", {
-                              n: selectedPlaylist.length,
-                            })}
-                          </div>
-                        </div>
-
-                        {/* Visibility, max players */}
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <select
-                            value={visibility}
-                            onChange={(e) => {
-                              setVisibility(
-                                e.target.value as "public" | "private"
-                              );
-                              setLocalError(null);
-                            }}
-                            className="w-full px-4 py-3 rounded-xl border-2 border-(--line) bg-(--panel-raised) text-(--ink) focus:outline-none focus:border-(--accent-2)"
-                          >
-                            <option value="public">{t("home.public")}</option>
-                            <option value="private">{t("home.private")}</option>
-                          </select>
-                          <input
-                            type="number"
-                            min="2"
-                            placeholder={t("home.maxPlayers")}
-                            value={maxPlayers}
-                            onChange={(e) => {
-                              setMaxPlayers(e.target.value);
-                              setLocalError(null);
-                            }}
-                            className="w-full px-4 py-3 rounded-xl border-2 border-(--line) bg-(--panel-raised) text-(--ink) placeholder:text-(--ink)/50 focus:outline-none focus:border-(--accent-2)"
-                          />
-                        </div>
-
-                        {visibility === "private" && (
-                          <input
-                            type="password"
-                            placeholder={t("home.password")}
-                            value={password}
-                            onChange={(e) => {
-                              setPassword(e.target.value);
-                              setLocalError(null);
-                            }}
-                            className="w-full px-4 py-3 rounded-xl border-2 border-(--line) bg-(--panel-raised) text-(--ink) placeholder:text-(--ink)/50 focus:outline-none focus:border-(--accent-2)"
-                          />
-                        )}
-
-                        {/* Errors */}
-                        {localError && (
-                          <p className="text-sm text-red-400 bg-red-400/10 px-3 py-2 rounded">
-                            {localError}
-                          </p>
-                        )}
-                        {room.joinError && (
-                          <p className="text-sm text-red-400 bg-red-400/10 px-3 py-2 rounded">
-                            {room.joinError}
-                          </p>
-                        )}
-
-                        {/* Buttons */}
-                        <div className="flex gap-3 pt-4">
-                          <Button
-                            variant="primary"
-                            size="md"
-                            disabled={createDisabled}
-                            onClick={() => {
-                              if (Number(maxPlayers) < 2) {
-                                setLocalError(t("home.maxPlayers") + " must be at least 2.");
-                                return;
-                              }
-                              setLocalError(null);
-                              room.createRoom({
-                                name: roomName.trim(),
-                                playlist: selectedPlaylist,
-                                visibility,
-                                maxPlayers: Number(maxPlayers),
-                                displayName: displayName.trim(),
-                                avatarUrl: avatarUrl.trim(),
-                                password:
-                                  password.trim() || undefined,
-                              });
-                            }}
-                          >
-                            {room.pendingJoin ? t("home.starting") : t("home.startRoom")}
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            size="md"
-                            onClick={() => setModalOpen(null)}
-                          >
-                            {t("home.cancel")}
-                          </Button>
+                        <div className="font-mono text-[10px] text-(--ink)/45">
+                          {t("home.playlistCount", { n: r.playlist?.length ?? 1 })}
                         </div>
                       </div>
-                    </>
-                  ) : (
-                    <>
-                      <h2 className="slab text-2xl mb-1">
-                        {t("home.joinRoomTitle")}
-                      </h2>
-                      <p className="text-sm text-(--ink)/75 mb-6">
-                        {t("home.joinRoomDesc")}
-                      </p>
-
-                      <div className="space-y-4">
-                        {/* Avatar section */}
-                        <div className="flex gap-4 items-start">
-                          {useDoodle ? (
-                            <div className="flex-1">
-                              <label className="mono-caption mb-2 block">
-                                {t("home.drawYourAvatar")}
-                              </label>
-                              <DoodlePad
-                                strokeColor={playerColors[0]}
-                                onChange={setAvatarUrl}
-                              />
-                              <button
-                                onClick={() => setUseDoodle(false)}
-                                className="text-xs text-(--accent-2) mt-2 underline hover:opacity-75"
-                              >
-                                {t("home.cancel")}
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex-1">
-                              <label className="mono-caption mb-2 block">
-                                {t("home.avatarPreview")}
-                              </label>
-                              <div className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-(--line) bg-(--panel-raised) mb-2">
-                                {avatarUrl.trim() ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img
-                                    src={avatarUrl.trim()}
-                                    alt="Avatar preview"
-                                    className="h-full w-full object-cover rounded-full"
-                                  />
-                                ) : (
-                                  <span className="text-2xl text-(--ink)/50">
-                                    ?
-                                  </span>
-                                )}
-                              </div>
-                              <button
-                                onClick={() => setUseDoodle(true)}
-                                className="text-xs text-(--accent-2) underline hover:opacity-75"
-                              >
-                                {t("home.drawYourAvatar")}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Room ID */}
-                        <input
-                          type="text"
-                          placeholder={t("home.roomId")}
-                          value={joinRoomId}
-                          onChange={(e) => {
-                            setJoinRoomId(e.target.value);
-                            setLocalError(null);
+                      <span className="font-mono text-xs font-bold text-(--accent-2)">
+                        {r.playerCount}
+                        {r.maxPlayers > 0 ? `/${r.maxPlayers}` : ""}
+                      </span>
+                      {full ? (
+                        <span className="rounded-[10px] border-2 border-(--line) px-3 py-1.5 font-mono text-[11px] font-bold text-(--ink)/35">
+                          {t("home.full")}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!nickReady) return;
+                            room.joinRoom({
+                              roomId: r.id,
+                              displayName: nick.trim(),
+                              avatarUrl,
+                            });
                           }}
-                          className="w-full px-4 py-3 rounded-xl border-2 border-(--line) bg-(--panel-raised) text-(--ink) placeholder:text-(--ink)/50 focus:outline-none focus:border-(--accent-2)"
-                        />
-
-                        {/* Display name and avatar URL */}
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <input
-                            type="text"
-                            placeholder={t("home.displayName")}
-                            value={displayName}
-                            onChange={(e) => {
-                              setDisplayName(e.target.value);
-                              setLocalError(null);
-                            }}
-                            className="w-full px-4 py-3 rounded-xl border-2 border-(--line) bg-(--panel-raised) text-(--ink) placeholder:text-(--ink)/50 focus:outline-none focus:border-(--accent-2)"
-                          />
-                          <input
-                            type="text"
-                            placeholder={t("home.avatarUrl")}
-                            value={avatarUrl}
-                            onChange={(e) => {
-                              setAvatarUrl(e.target.value);
-                              setLocalError(null);
-                            }}
-                            className="w-full px-4 py-3 rounded-xl border-2 border-(--line) bg-(--panel-raised) text-(--ink) placeholder:text-(--ink)/50 focus:outline-none focus:border-(--accent-2)"
-                          />
-                        </div>
-
-                        {/* Join code and password */}
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <input
-                            type="text"
-                            placeholder={t("home.joinCode")}
-                            value={joinCode}
-                            onChange={(e) => {
-                              setJoinCode(e.target.value);
-                              setLocalError(null);
-                            }}
-                            className="w-full px-4 py-3 rounded-xl border-2 border-(--line) bg-(--panel-raised) text-(--ink) placeholder:text-(--ink)/50 focus:outline-none focus:border-(--accent-2)"
-                          />
-                          <input
-                            type="password"
-                            placeholder={t("home.password")}
-                            value={password}
-                            onChange={(e) => {
-                              setPassword(e.target.value);
-                              setLocalError(null);
-                            }}
-                            className="w-full px-4 py-3 rounded-xl border-2 border-(--line) bg-(--panel-raised) text-(--ink) placeholder:text-(--ink)/50 focus:outline-none focus:border-(--accent-2)"
-                          />
-                        </div>
-
-                        {/* Errors */}
-                        {localError && (
-                          <p className="text-sm text-red-400 bg-red-400/10 px-3 py-2 rounded">
-                            {localError}
-                          </p>
-                        )}
-                        {room.joinError && (
-                          <p className="text-sm text-red-400 bg-red-400/10 px-3 py-2 rounded">
-                            {room.joinError}
-                          </p>
-                        )}
-
-                        {/* Buttons */}
-                        <div className="flex gap-3 pt-4">
-                          <Button
-                            variant="primary"
-                            size="md"
-                            disabled={joinDisabled}
-                            onClick={() => {
-                              setLocalError(null);
-                              room.joinRoom({
-                                roomId: joinRoomId.trim(),
-                                joinCode: joinCode.trim() || undefined,
-                                password: password.trim() || undefined,
-                                displayName: displayName.trim(),
-                                avatarUrl: avatarUrl.trim(),
-                              });
-                            }}
-                          >
-                            {room.pendingJoin
-                              ? t("home.joining")
-                              : t("home.joinRoom")}
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            size="md"
-                            onClick={() => setModalOpen(null)}
-                          >
-                            {t("home.cancel")}
-                          </Button>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
+                          disabled={!nickReady}
+                          className="rounded-[10px] bg-(--accent) px-4 py-1.5 font-display text-xs text-(--dark-ink) shadow-[0_3px_0_var(--drop)] disabled:opacity-40"
+                        >
+                          {t("home.join")}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
-          </main>
-        </div>
+          </div>
+        </main>
       </div>
     </div>
   );
+}
+
+function errorMessage(code: string, t: (k: string) => string): string {
+  const map: Record<string, string> = {
+    not_found: "edge.errorNotFound",
+    invalid_code: "edge.errorInvalidCode",
+    invalid_password: "edge.errorInvalidPassword",
+    name_taken: "edge.errorNameTaken",
+    room_full: "edge.errorRoomFull",
+    session_in_room: "edge.errorSessionInRoom",
+    already_in_room: "edge.errorSessionInRoom",
+    not_enough_players: "edge.errorNotEnoughPlayers",
+  };
+  return map[code] ? t(map[code]) : code;
 }

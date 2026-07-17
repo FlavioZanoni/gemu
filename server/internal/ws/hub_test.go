@@ -44,8 +44,8 @@ func TestRoomCreateDefaultsVisibilityAndJoinCode(t *testing.T) {
 		t.Fatalf("expected default visibility to be public, got %s", room.Visibility)
 	}
 
-	if room.JoinCode != "" {
-		t.Fatalf("expected no join code for public room")
+	if room.JoinCode == "" {
+		t.Fatalf("expected every room to get a shareable join code")
 	}
 
 	if _, ok := hub.sessions[client.RoomID]; !ok {
