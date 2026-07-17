@@ -21,6 +21,8 @@ func main() {
 	registry.Register(games.NewStopFactory())
 	registry.Register(games.NewGarticPhoneFactory())
 	registry.Register(games.NewCahFactory())
+	registry.Register(games.NewTriviaFactory())
+	registry.Register(games.NewFibberFactory())
 
 	hub := ws.NewHub(registry)
 	hub.StartSweeper()
