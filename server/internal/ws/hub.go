@@ -120,6 +120,28 @@ func (h *Hub) findClientBySession(sessionID string) (*Client, bool) {
 	return nil, false
 }
 
+// sessionBlocked reports whether a session may NOT bind to a new room. A
+// session actively held by a live connection (a second open tab) is blocked;
+// a session left only as a disconnected ghost in some old room (the common
+// "closed the tab earlier" case) is evicted from that room and allowed
+// through, so the player isn't trapped by an abandoned session.
+func (h *Hub) sessionBlocked(sessionID string, exceptRoomID string) bool {
+	if _, ok := h.findClientBySession(sessionID); ok {
+		return true
+	}
+	roomID, player, ok := h.rooms.FindPlayerBySession(sessionID)
+	if !ok || roomID == exceptRoomID {
+		return false
+	}
+	if room, err := h.rooms.RemovePlayer(roomID, player.ID); err == nil {
+		h.notifyPlayerLeft(roomID, player.ID)
+		h.Broadcast(roomID, Envelope{Type: "room.playerLeft", RoomID: roomID, Payload: map[string]any{"playerId": player.ID}})
+		h.Broadcast(roomID, Envelope{Type: "room.updated", RoomID: roomID, Payload: room.Snapshot()})
+		h.cleanupIfEmpty(roomID, room)
+	}
+	return false
+}
+
 func (h *Hub) Broadcast(roomID string, env Envelope) {
 	h.BroadcastExcept(roomID, "", env)
 }
@@ -342,7 +364,7 @@ func (h *Hub) handleRoomCreate(client *Client, env Envelope) {
 		return
 	}
 
-	if _, _, ok := h.rooms.FindPlayerBySession(sessionID); ok {
+	if h.sessionBlocked(sessionID, "") {
 		h.Send(client, Envelope{Type: "room.create.error", RequestID: env.RequestID, Payload: map[string]any{"code": "session_in_room", "message": "session already in room"}})
 		return
 	}
@@ -367,11 +389,6 @@ func (h *Hub) handleRoomCreate(client *Client, env Envelope) {
 	h.mu.Lock()
 	h.sessions[room.ID] = &gameSession{}
 	h.mu.Unlock()
-
-	if _, ok := h.findClientBySession(sessionID); ok {
-		h.Send(client, Envelope{Type: "room.create.error", RequestID: env.RequestID, Payload: map[string]any{"code": "session_in_room", "message": "session already in room"}})
-		return
-	}
 
 	player := rooms.Player{ID: uuid.NewString(), Name: displayName, AvatarURL: avatarURL, SessionID: sessionID, Connected: true, Ready: false, LastSeen: time.Now()}
 	if _, err := h.rooms.AddPlayer(room.ID, player); err != nil {
@@ -410,7 +427,9 @@ func (h *Hub) handleRoomJoin(client *Client, env Envelope) {
 		return
 	}
 
-	if existingRoomID, _, ok := h.rooms.FindPlayerBySession(sessionID); ok && existingRoomID != roomID {
+	// Evict a stale session from a different old room; block only if a live
+	// connection still holds it (a second tab).
+	if h.sessionBlocked(sessionID, roomID) {
 		h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "session_in_room", "message": "session already in room"}})
 		return
 	}
@@ -447,10 +466,6 @@ func (h *Hub) handleRoomJoin(client *Client, env Envelope) {
 			return
 		}
 	} else {
-		if _, ok := h.findClientBySession(sessionID); ok {
-			h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "session_in_room", "message": "session already in room"}})
-			return
-		}
 		if room.NameTaken(displayName, "") {
 			h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "name_taken", "message": "display name already in use"}})
 			return

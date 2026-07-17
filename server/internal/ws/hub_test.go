@@ -673,6 +673,11 @@ func TestRoomJoinRejectsSessionAlreadyInOtherRoom(t *testing.T) {
 		},
 	})
 
+	// hostA is a LIVE connection holding sess-same.
+	hub.mu.Lock()
+	hub.clients[hostA.ID] = hostA
+	hub.mu.Unlock()
+
 	hostB := &Client{ID: "host-b"}
 	hub.handleRoomCreate(hostB, Envelope{
 		Type: "room.create",
@@ -694,8 +699,10 @@ func TestRoomJoinRejectsSessionAlreadyInOtherRoom(t *testing.T) {
 		},
 	})
 
+	// A session actively held by a live connection is still rejected from a
+	// second room (stale sessions, by contrast, are evicted — see hardening_test).
 	if joiner.RoomID != "" {
-		t.Fatalf("expected join rejected when session already in another room")
+		t.Fatalf("expected join rejected when session is live in another room")
 	}
 }
 

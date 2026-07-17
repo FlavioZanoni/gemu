@@ -267,3 +267,49 @@ func TestAvatarSanitizedOnJoin(t *testing.T) {
 		t.Fatalf("expected disallowed avatar dropped, got %q", host.Player.AvatarURL)
 	}
 }
+
+func TestStaleSessionCanJoinNewRoom(t *testing.T) {
+	hub := newSessionTestHub()
+	// Host creates room A and "closes the tab" (disconnect, not leave).
+	host := &Client{ID: "c1"}
+	hub.mu.Lock()
+	hub.clients[host.ID] = host
+	hub.mu.Unlock()
+	hub.handleRoomCreate(host, Envelope{Type: "room.create", Payload: map[string]any{
+		"name": "A", "playlist": []any{"stub"}, "displayName": "Host", "sessionId": "sess",
+	}})
+	roomA := host.RoomID
+	hub.RemoveClient(host.ID) // socket closed: player stays in A, disconnected
+
+	// Same session, new connection, wants a different room B.
+	c2 := &Client{ID: "c2"}
+	hub.handleRoomCreate(c2, Envelope{Type: "room.create", Payload: map[string]any{
+		"name": "B", "playlist": []any{"stub"}, "displayName": "Host", "sessionId": "sess",
+	}})
+	if c2.RoomID == "" || c2.RoomID == roomA {
+		t.Fatalf("expected stale session to create a fresh room, got %q (A=%q)", c2.RoomID, roomA)
+	}
+	// Room A is now empty (ghost evicted) and cleaned up.
+	if _, ok := hub.rooms.Get(roomA); ok {
+		t.Fatalf("expected the abandoned room evicted/cleaned")
+	}
+}
+
+func TestLiveSessionBlockedFromSecondRoom(t *testing.T) {
+	hub := newSessionTestHub()
+	live := &Client{ID: "c1"}
+	hub.mu.Lock()
+	hub.clients[live.ID] = live
+	hub.mu.Unlock()
+	hub.handleRoomCreate(live, Envelope{Type: "room.create", Payload: map[string]any{
+		"name": "A", "playlist": []any{"stub"}, "displayName": "Host", "sessionId": "sess",
+	}})
+	// A DIFFERENT connection with the same live session tries a second room.
+	c2 := &Client{ID: "c2"}
+	hub.handleRoomCreate(c2, Envelope{Type: "room.create", Payload: map[string]any{
+		"name": "B", "playlist": []any{"stub"}, "displayName": "Host", "sessionId": "sess",
+	}})
+	if c2.RoomID != "" {
+		t.Fatalf("expected a live session to be blocked from a second room")
+	}
+}
