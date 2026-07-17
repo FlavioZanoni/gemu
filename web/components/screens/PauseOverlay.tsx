@@ -1,5 +1,6 @@
 "use client";
 
+import { Pizza } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui";
 
@@ -16,8 +17,8 @@ export function PauseOverlay({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6">
       <div className="pop-in w-full max-w-sm rounded-[20px] border-[3px] border-(--accent) bg-(--panel) p-8 text-center shadow-[0_12px_0_rgba(0,0,0,.35)]">
-        <div className="text-5xl" aria-hidden>
-          🍕
+        <div className="text-5xl flex justify-center" aria-hidden>
+          <Pizza size={56} strokeWidth={2.5} />
         </div>
         <div className="slab mt-3 text-3xl">{t("pause.title")}</div>
         <p className="mt-3 text-sm leading-relaxed text-(--ink)/70">

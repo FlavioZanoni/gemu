@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
+import { Rocket, Trash2, Coins } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { DrawingCanvas } from "../DrawingCanvas";
 import { Card, Button, Banner, HowToPlayModal, ScoreStrip } from "../ui";
@@ -366,13 +367,16 @@ export function InventionGame(props: GameProps & { onFullscreenToggle?: () => vo
           {currentSubmission && (
             <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "12px" }}>
               <span style={{ fontSize: "16px", background: "#2b1a3d", border: "2px solid #5a3f7a", borderRadius: "99px", padding: "6px 14px", display: "flex", alignItems: "center", gap: "4px" }}>
-                💰 <b style={{ fontFamily: "'Space Mono'", fontSize: "11px", fontWeight: 700, color: "#ffe9a8" }}>3</b>
+                <Coins size={16} strokeWidth={2.5} style={{ color: "#ffe9a8" }} />
+                <b style={{ fontFamily: "'Space Mono'", fontSize: "11px", fontWeight: 700, color: "#ffe9a8" }}>3</b>
               </span>
               <span style={{ fontSize: "16px", background: "#2b1a3d", border: "2px solid #5a3f7a", borderRadius: "99px", padding: "6px 14px", display: "flex", alignItems: "center", gap: "4px" }}>
-                🗑 <b style={{ fontFamily: "'Space Mono'", fontSize: "11px", fontWeight: 700, color: "#ffe9a8" }}>1</b>
+                <Trash2 size={16} strokeWidth={2.5} style={{ color: "#ffe9a8" }} />
+                <b style={{ fontFamily: "'Space Mono'", fontSize: "11px", fontWeight: 700, color: "#ffe9a8" }}>1</b>
               </span>
               <span style={{ fontSize: "16px", background: "#2b1a3d", border: "2px solid #ff9d3f", borderRadius: "99px", padding: "6px 14px", boxShadow: "0 0 12px rgba(255,157,63,.3)", display: "flex", alignItems: "center", gap: "4px" }}>
-                🚀 <b style={{ fontFamily: "'Space Mono'", fontSize: "11px", fontWeight: 700, color: "#ff9d3f" }}>4</b>
+                <Rocket size={16} strokeWidth={2.5} style={{ color: "#ff9d3f" }} />
+                <b style={{ fontFamily: "'Space Mono'", fontSize: "11px", fontWeight: 700, color: "#ff9d3f" }}>4</b>
               </span>
             </div>
           )}

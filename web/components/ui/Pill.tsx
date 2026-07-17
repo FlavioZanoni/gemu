@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type HTMLAttributes } from "react";
+import { Check, Copy } from "lucide-react";
 
 type PillProps = HTMLAttributes<HTMLSpanElement> & {
   variant?: "code" | "ready" | "host" | "waiting" | "neutral";
@@ -42,7 +43,9 @@ export function CodePill({ code, label }: { code: string; label?: string }) {
     >
       {label ? <span>{label} ·</span> : null}
       <b className="tracking-[0.2em]">{code}</b>
-      <span aria-hidden>{copied ? "✓" : "⧉"}</span>
+      <span aria-hidden className="flex items-center">
+        {copied ? <Check size={14} strokeWidth={2.5} /> : <Copy size={14} strokeWidth={2.5} />}
+      </span>
     </button>
   );
 }

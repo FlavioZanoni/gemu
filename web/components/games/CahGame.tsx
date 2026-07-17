@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { Crown, Sparkles } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Button, TimerBadge, Banner, HowToPlayModal } from "../ui";
 import type { GameProps } from "./types";
@@ -112,8 +113,9 @@ export function CahGame(props: GameProps) {
               <div style={{ width: "34px", height: "34px", borderRadius: "99px", background: "#fff8e7", border: "2px solid var(--hue-cah)", display: "flex", alignItems: "center", justifyContent: "center", font: "400 6px 'Space Mono',monospace", color: "#8a7f60" }}>
                 {judgeeName?.slice(0, 2).toUpperCase() || "?"}
               </div>
-              <span style={{ font: "700 12px 'Space Mono',monospace", color: "var(--hue-cah)" }}>
-                {judgeeName?.toUpperCase()} JUDGES THIS ROUND 👑
+              <span style={{ font: "700 12px 'Space Mono',monospace", color: "var(--hue-cah)", display: "flex", alignItems: "center", gap: "6px" }}>
+                {judgeeName?.toUpperCase()} JUDGES THIS ROUND
+                <Crown size={16} strokeWidth={2.5} style={{ color: "#ffd23f" }} />
               </span>
             </div>
             <TimerBadge deadline={deadline} />
@@ -299,8 +301,10 @@ export function CahGame(props: GameProps) {
           stepCount={3}
           onClose={() => setShowHowTo(false)}
         />
-        <div style={{ font: "700 12px 'Space Mono',monospace", letterSpacing: ".3em", color: "var(--hue-cah)", marginBottom: "16px" }}>
-          ROUND {round} · YOU&apos;RE THE JUDGE 👑 · WAITING…
+        <div style={{ font: "700 12px 'Space Mono',monospace", letterSpacing: ".3em", color: "var(--hue-cah)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "6px" }}>
+          ROUND {round} · YOU&apos;RE THE JUDGE
+          <Crown size={16} strokeWidth={2.5} style={{ color: "#ffd23f" }} />
+          · WAITING…
         </div>
         <Banner variant="waiting">
           Waiting for players to submit their cards…
@@ -313,8 +317,10 @@ export function CahGame(props: GameProps) {
   if (phase === "judging") {
     return (
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "26px 0 40px" }}>
-        <div style={{ font: "700 12px 'Space Mono',monospace", letterSpacing: ".3em", color: "var(--hue-cah)", marginBottom: "16px" }}>
-          ROUND {round} · YOU&apos;RE THE JUDGE 👑 · READ THEM OUT LOUD
+        <div style={{ font: "700 12px 'Space Mono',monospace", letterSpacing: ".3em", color: "var(--hue-cah)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "6px" }}>
+          ROUND {round} · YOU&apos;RE THE JUDGE
+          <Crown size={16} strokeWidth={2.5} style={{ color: "#ffd23f" }} />
+          · READ THEM OUT LOUD
         </div>
         <div style={{ width: "560px", background: "#131320", border: "2px solid #ff4f6f", borderRadius: "14px", padding: "13px 16px", marginBottom: "18px" }}>
           <div style={{ font: "700 18px/1.35 'Space Grotesk'", color: "#fff" }}>
@@ -429,8 +435,9 @@ export function CahGame(props: GameProps) {
               </div>
             )}
             {item.winner && (
-              <div style={{ font: "700 11px 'Space Mono',monospace", color: "#ffd23f", textAlign: "center", marginTop: "8px" }}>
-                ✨ THAT WAS {playerNames.get(item.playerId)?.toUpperCase()}'S CARD · +1 AWESOME POINT
+              <div style={{ font: "700 11px 'Space Mono',monospace", color: "#ffd23f", textAlign: "center", marginTop: "8px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                <Sparkles size={14} strokeWidth={2.5} />
+                THAT WAS {playerNames.get(item.playerId)?.toUpperCase()}'S CARD · +1 AWESOME POINT
               </div>
             )}
           </div>

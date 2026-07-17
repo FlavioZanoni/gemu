@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Pause } from "lucide-react";
 import { playSfx } from "@/lib/sfx";
 import { useI18n } from "@/lib/i18n";
 import type { Player, RoomSnapshot, Standing } from "@/lib/protocol";
@@ -64,10 +65,10 @@ export function PlayingScreen({
           {isAdmin && onPause && (
             <button
               onClick={onPause}
-              className="text-xs px-3 py-2 rounded border border-(--line) text-(--ink)/70 hover:bg-(--panel-raised) transition"
+              className="text-xs px-3 py-2 rounded border border-(--line) text-(--ink)/70 hover:bg-(--panel-raised) transition flex items-center gap-2"
               title={t("pause.caption")}
             >
-              ⏸ {t("pause.pause")}
+              <Pause size={16} strokeWidth={2.5} /> {t("pause.pause")}
             </button>
           )}
           <button

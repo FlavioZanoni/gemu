@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useMemo } from "react";
+import { Check, X, Hand } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Card, Button, TimerBadge, TimerBar, Banner, ScoreStrip, PlayerChip, HowToPlayModal } from "../ui";
 import type { GameProps } from "./types";
@@ -243,7 +244,7 @@ export function StopGame(props: GameProps) {
                     }}
                   />
                   {hasAnswer && (
-                    <span style={{ color: "#35d4b9", fontSize: "12px", flexShrink: 0 }}>✓</span>
+                    <Check size={16} strokeWidth={2.5} style={{ color: "#35d4b9", flexShrink: 0 }} />
                   )}
                 </div>
               );
@@ -269,9 +270,15 @@ export function StopGame(props: GameProps) {
               cursor: !allAnswered || stopped ? "not-allowed" : "pointer",
               opacity: !allAnswered || stopped ? 0.5 : 1,
               transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
             }}
+            data-testid="stop-button"
           >
-            🛑 STOP!
+            <Hand size={24} strokeWidth={2.5} />
+            STOP!
           </button>
           <div className="text-center text-xs font-mono text-(--ink)/35">
             SLAMMING STOP GIVES EVERYONE ELSE 5 SECONDS
@@ -384,9 +391,14 @@ export function StopGame(props: GameProps) {
                 boxShadow: "0 5px 0 #0f6e5c",
                 cursor: "pointer",
                 transition: "all 0.2s ease",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "6px",
               }}
             >
-              ✓ VALID
+              <Check size={18} strokeWidth={2.5} />
+              VALID
             </button>
             <button
               onClick={() => {
@@ -414,9 +426,14 @@ export function StopGame(props: GameProps) {
                 boxShadow: "0 5px 0 #8f1f33",
                 cursor: "pointer",
                 transition: "all 0.2s ease",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "6px",
               }}
             >
-              ✗ NONSENSE
+              <X size={18} strokeWidth={2.5} />
+              NONSENSE
             </button>
           </div>
 

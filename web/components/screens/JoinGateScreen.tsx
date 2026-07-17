@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Pencil } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui";
 import { AvatarDrawModal } from "./AvatarDrawModal";
@@ -77,9 +78,10 @@ export function JoinGateScreen({
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <span className="text-center font-mono text-[9px] leading-tight text-[#8a7f60]">
+                  <span className="text-center font-mono text-[9px] leading-tight text-[#8a7f60] flex flex-col items-center">
                     {t("home.drawFace")}
-                    <br />✏️
+                    <br />
+                    <Pencil size={16} strokeWidth={2.5} style={{ color: "#8a7f60" }} />
                   </span>
                 )}
               </button>

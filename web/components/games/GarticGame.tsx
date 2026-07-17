@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useMemo } from "react";
+import { Check, Cloud } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Button, TimerBadge, Banner, HowToPlayModal } from "../ui";
 import { DrawingCanvas } from "../DrawingCanvas";
@@ -189,9 +190,13 @@ export function GarticGame(props: GameProps) {
                       font: "600 13px 'Space Grotesk'",
                       color: g.correct ? "var(--hue-gartic)" : "#ffe9a8",
                       animation: "rise 0.3s ease-out",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
                     }}
                   >
-                    {g.correct ? `✓ ${playerNames.get(g.playerId)} guessed!` : g.text}
+                    {g.correct && <Check size={16} strokeWidth={2.5} />}
+                    {g.correct ? `${playerNames.get(g.playerId)} guessed!` : g.text}
                   </div>
                 ))}
                 {closeGuess && (
@@ -203,9 +208,13 @@ export function GarticGame(props: GameProps) {
                       borderLeft: "3px solid var(--hue-gartic)",
                       paddingLeft: "8px",
                       opacity: 0.7,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
                     }}
                   >
-                    💭 {closeGuess}
+                    <Cloud size={16} strokeWidth={2.5} />
+                    {closeGuess}
                   </div>
                 )}
                 <div ref={guessesEndRef} />
@@ -316,7 +325,10 @@ export function GarticGame(props: GameProps) {
                 border: g.correct ? "none" : "1px solid #5a3f7a",
               }}
             >
-              <span>{g.correct ? "✓ Guessed!" : g.text}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                {g.correct && <Check size={16} strokeWidth={2.5} />}
+                {g.correct ? "Guessed!" : g.text}
+              </span>
               <span style={{ fontSize: "11px", opacity: 0.7 }}>{playerNames.get(g.playerId)}</span>
             </div>
           ))}

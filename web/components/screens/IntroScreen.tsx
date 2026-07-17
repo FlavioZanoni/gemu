@@ -1,5 +1,6 @@
 "use client";
 
+import { Star } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { gamesCatalog } from "@/lib/games";
 import { hueFor } from "@/components/ui/gameHues";
@@ -106,7 +107,9 @@ export function IntroScreen({
             <div className="rounded-2xl border-2 border-(--line) bg-(--panel) p-4 mb-5">
               <div className="flex justify-between items-baseline mb-3">
                 <span className="mono-caption">Game Options</span>
-                <span className="text-xs font-bold text-(--accent)">★ Host Only</span>
+                <span className="text-xs font-bold text-(--accent) flex items-center gap-1">
+                  <Star size={14} strokeWidth={2.5} style={{ color: "#ffd23f" }} /> Host Only
+                </span>
               </div>
 
               <div className="mb-4">

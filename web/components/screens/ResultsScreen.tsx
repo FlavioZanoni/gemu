@@ -1,5 +1,6 @@
 "use client";
 
+import { Volume2, Repeat, ArrowRight } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { GameResult, Player } from "@/lib/protocol";
 import { Button } from "@/components/ui";
@@ -30,7 +31,9 @@ export function ResultsScreen({
     <div className="flex flex-col items-center justify-center min-h-screen gap-6 px-6 py-12">
       {/* Header */}
       <div className="text-center mb-6">
-        <div className="mono-caption mb-2">🔊 Game Over</div>
+        <div className="mono-caption mb-2 flex items-center justify-center gap-2">
+          <Volume2 size={14} strokeWidth={2.5} /> Game Over
+        </div>
         <h1 className="slab text-5xl">{t("results.title")}</h1>
       </div>
 
@@ -68,11 +71,11 @@ export function ResultsScreen({
       {/* Admin actions */}
       {isAdmin ? (
         <div className="flex gap-3 flex-wrap justify-center">
-          <Button variant="secondary" onClick={onPlayAgain} data-testid="results-play-again">
-            🔁 Play again
+          <Button variant="secondary" onClick={onPlayAgain} data-testid="results-play-again" className="flex items-center gap-2">
+            <Repeat size={16} strokeWidth={2.5} /> Play again
           </Button>
-          <Button variant="primary" onClick={onVoteNext} data-testid="results-vote-next">
-            Vote on the next game →
+          <Button variant="primary" onClick={onVoteNext} data-testid="results-vote-next" className="flex items-center gap-2">
+            Vote on the next game <ArrowRight size={16} strokeWidth={2.5} />
           </Button>
           <Button variant="danger" onClick={onEndSession} data-testid="results-end-night">
             {t("results.endTheNight")}

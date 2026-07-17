@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Check, Layers } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { CustomDeck, DeckMeta, Player, RoomSnapshot } from "@/lib/protocol";
 import { gamesCatalog } from "@/lib/games";
@@ -162,10 +163,10 @@ export function LobbyScreen({
                       </div>
                       {selected && (
                         <div
-                          className="text-xs font-bold mt-2"
+                          className="text-xs font-bold mt-2 flex items-center gap-1"
                           style={{ color: hue.ink }}
                         >
-                          ✓ in playlist
+                          <Check size={14} strokeWidth={2.5} /> in playlist
                         </div>
                       )}
                       {/* CAH: a decks button (host tunes the deck set). */}
@@ -176,11 +177,11 @@ export function LobbyScreen({
                             e.stopPropagation();
                             setDeckPickerOpen(true);
                           }}
-                          className="mt-2 rounded-full border-2 px-2.5 py-1 font-mono text-[10px] font-bold"
+                          className="mt-2 rounded-full border-2 px-2.5 py-1 font-mono text-[10px] font-bold flex items-center gap-1"
                           style={{ borderColor: hue.ink, color: hue.ink }}
                           data-testid="open-decks"
                         >
-                          🃏 {t("decks.button")}
+                          <Layers size={14} strokeWidth={2.5} /> {t("decks.button")}
                           {snapshot.cahDeckIds.length > 0
                             ? ` · ${snapshot.cahDeckIds.length}`
                             : ""}
@@ -207,10 +208,10 @@ export function LobbyScreen({
             <Button
               variant={currentPlayer?.ready ? "primary" : "secondary"}
               onClick={() => onSetReady(!currentPlayer?.ready)}
-              className="text-lg py-5"
+              className="text-lg py-5 flex items-center gap-2"
               data-testid="ready-up"
             >
-              {currentPlayer?.ready ? "✓ Ready" : t("lobby.readyUp")}
+              {currentPlayer?.ready ? <><Check size={18} strokeWidth={2.5} /> Ready</> : t("lobby.readyUp")}
             </Button>
 
             {isAdmin && (

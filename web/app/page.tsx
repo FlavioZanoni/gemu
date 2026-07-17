@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Lock, Tv, Pencil } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useLobbyStore } from "@/lib/lobbyStore";
 import { gamesCatalog } from "@/lib/games";
@@ -148,9 +149,10 @@ function HomeContent() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
                     ) : (
-                      <span className="text-center font-mono text-[9px] leading-tight text-[#8a7f60]">
+                      <span className="text-center font-mono text-[9px] leading-tight text-[#8a7f60] flex flex-col items-center">
                         {t("home.drawFace")}
-                        <br />✏️
+                        <br />
+                        <Pencil size={16} strokeWidth={2.5} style={{ color: "#8a7f60" }} />
                       </span>
                     )}
                   </button>
@@ -229,8 +231,8 @@ function HomeContent() {
           {/* On air now — public rooms */}
           <div className="mx-auto w-full max-w-4xl">
             <div className="mb-2.5 flex items-baseline justify-between">
-              <span className="font-mono text-[11px] font-bold uppercase tracking-[0.3em] text-(--ink)/45">
-                📺 {t("home.onAir")}
+              <span className="font-mono text-[11px] font-bold uppercase tracking-[0.3em] text-(--ink)/45 flex items-center gap-2">
+                <Tv size={14} strokeWidth={2.5} /> {t("home.onAir")}
               </span>
               <span className="font-mono text-[10px] text-(--ink)/30">
                 {lobby.connected ? t("home.live") : t("home.offline")}
@@ -258,8 +260,8 @@ function HomeContent() {
                         }}
                       />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-[15px] font-bold text-(--ink)">
-                          {r.name} {r.hasPassword ? "🔒" : ""}
+                        <div className="truncate text-[15px] font-bold text-(--ink) flex items-center gap-2">
+                          {r.name} {r.hasPassword ? <Lock size={16} strokeWidth={2.5} /> : ""}
                         </div>
                         <div className="font-mono text-[10px] text-(--ink)/45">
                           {t("home.playlistCount", { n: r.playlist?.length ?? 1 })}

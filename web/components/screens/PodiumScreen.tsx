@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
+import { Volume2, Trophy, Medal } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { SessionFinal, PlayedGame } from "@/lib/protocol";
 import { Button } from "@/components/ui";
@@ -37,7 +38,6 @@ export function PodiumScreen({
     }));
   }, []);
 
-  const medals = ["🥇", "🥈", "🥉"];
 
   const getGameName = (gameType: string) => {
     const game = gamesCatalog.find((g) => g.type === gameType);
@@ -66,7 +66,9 @@ export function PodiumScreen({
 
       {/* Header */}
       <div className="text-center relative z-10">
-        <div className="mono-caption mb-3">🔊 That&apos;s a wrap</div>
+        <div className="mono-caption mb-3 flex items-center justify-center gap-2">
+          <Volume2 size={14} strokeWidth={2.5} /> That&apos;s a wrap
+        </div>
         <h1 className="slab text-6xl">{t("podium.title")}</h1>
       </div>
 
@@ -89,7 +91,11 @@ export function PodiumScreen({
                   animationDelay: `${idx * 0.15}s`,
                 }}
               >
-                <div className="text-4xl">{medals[idx]}</div>
+                <div className="text-4xl flex justify-center">
+                  {idx === 0 && <Trophy size={40} strokeWidth={2.5} style={{ color: "#ffd23f" }} />}
+                  {idx === 1 && <Medal size={40} strokeWidth={2.5} style={{ color: "#c7cdd6" }} />}
+                  {idx === 2 && <Medal size={40} strokeWidth={2.5} style={{ color: "#cd7f32" }} />}
+                </div>
                 <div className="w-14 h-14 rounded-full bg-(--panel-raised) border-3 border-(--line) flex items-center justify-center text-xs text-(--ink)/60">
                   doodle
                 </div>

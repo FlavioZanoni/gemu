@@ -3,7 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 // End-to-end tests drive a real browser against the real stack: a dedicated
 // Go server on :8090 and the Next app on :3100 (isolated from the dev ports).
 // Both are started by Playwright and torn down after the run.
-const WS_PORT = 8090;
+const WS_PORT = 8099;
 const WEB_PORT = 3939;
 
 export default defineConfig({

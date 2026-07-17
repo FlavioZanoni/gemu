@@ -1,5 +1,6 @@
 "use client";
 
+import { Star } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { Player } from "@/lib/protocol";
 import { playerColorFor } from "./gameHues";
@@ -73,8 +74,8 @@ export function PlayerChip({
     >
       <Avatar player={player} color={color} />
       <div className="min-w-0">
-        <div className="truncate text-[13px] font-bold text-(--ink)">
-          {player.name} {isHost ? <span className="text-(--accent)">★</span> : null}
+        <div className="truncate text-[13px] font-bold text-(--ink) flex items-center gap-1">
+          {player.name} {isHost ? <Star size={14} strokeWidth={2.5} style={{ color: "#ffd23f" }} /> : null}
         </div>
         <div className="font-mono text-[10px]" style={{ color: toneColor }}>
           {status.text}

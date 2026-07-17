@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Check } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { TimerBadge, ScoreStrip, Banner, HowToPlayModal } from "../ui";
 import { hueFor } from "../ui/gameHues";
@@ -99,7 +100,7 @@ export function TriviaGame(props: GameProps) {
                 {String.fromCharCode(65 + i)}
               </span>
               <span className="text-(--ink)">{opt}</span>
-              {isCorrect ? <span className="ml-auto">✓</span> : null}
+              {isCorrect ? <Check size={18} strokeWidth={2.5} className="ml-auto" /> : null}
             </button>
           );
         })}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Modal, Button } from "@/components/ui";
 import { DrawingCanvas } from "@/components/DrawingCanvas";
@@ -34,8 +35,8 @@ export function AvatarDrawModal({
           <div className="font-display text-lg text-(--dark-ink)">
             {t("avatar.title")}
           </div>
-          <button onClick={onClose} className="font-display text-(--dark-ink)">
-            ✕
+          <button onClick={onClose} className="font-display text-(--dark-ink) flex items-center">
+            <X size={20} strokeWidth={2.5} />
           </button>
         </div>
 

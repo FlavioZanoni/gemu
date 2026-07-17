@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { X, Check } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { CustomDeck, DeckMeta } from "@/lib/protocol";
 import { Modal, Button } from "@/components/ui";
@@ -61,8 +62,8 @@ export function DeckPicker({
       <div className="overflow-hidden rounded-[20px] border-[3px] border-(--hue-cah) bg-(--panel)" data-testid="deck-picker">
         <div className="flex items-center justify-between bg-[linear-gradient(180deg,#ff6b85,#e84863)] px-5 py-4">
           <div className="font-display text-lg text-white">{t("decks.title")}</div>
-          <button onClick={onClose} className="font-display text-white/90">
-            ✕
+          <button onClick={onClose} className="font-display text-white/90 flex items-center">
+            <X size={20} strokeWidth={2.5} />
           </button>
         </div>
 
@@ -90,7 +91,7 @@ export function DeckPicker({
                       on ? "border-(--hue-cah) bg-(--hue-cah)" : "border-(--line)"
                     }`}
                   >
-                    {on ? <span className="text-[11px] text-(--bg)">✓</span> : null}
+                    {on ? <Check size={16} strokeWidth={3} className="text-(--bg)" /> : null}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">

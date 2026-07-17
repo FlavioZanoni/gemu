@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Check } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { VoteState, VoteResult } from "@/lib/protocol";
 import { gamesCatalog } from "@/lib/games";
@@ -116,7 +117,9 @@ export function VotingScreen({
                 {voteCount === 1 ? "vote" : "votes"}
               </div>
               {isSelected && (
-                <div className="text-xs font-bold">✓ Your vote</div>
+                <div className="text-xs font-bold flex items-center justify-center gap-1">
+                  <Check size={14} strokeWidth={2.5} /> Your vote
+                </div>
               )}
             </div>
           );

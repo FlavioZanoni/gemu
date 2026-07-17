@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from "react";
+import { Pencil, PaintBucket, Undo2 } from "lucide-react";
 
 /**
  * Serialized stroke format (wire format for client↔client relay):
@@ -526,12 +527,12 @@ export const DrawingCanvas = forwardRef<
           {/* Tools row 1: Drawing tools (6 tools) */}
           <div className="flex gap-2 justify-center flex-wrap">
             {[
-              { id: "brush" as const, label: "✏️" },
+              { id: "brush" as const, icon: Pencil },
               { id: "eraser" as const, label: "◻" },
               { id: "line" as const, label: "╱" },
               { id: "rect" as const, label: "▭" },
               { id: "ellipse" as const, label: "◯" },
-              { id: "fill" as const, label: "🪣" },
+              { id: "fill" as const, icon: PaintBucket },
             ].map((t) => (
               <button
                 key={t.id}
@@ -542,7 +543,7 @@ export const DrawingCanvas = forwardRef<
                     // color is already set, just switch tool
                   }
                 }}
-                className="flex-1 max-w-14 h-12 rounded-2xl font-bold text-lg transition"
+                className="flex-1 max-w-14 h-12 rounded-2xl font-bold text-lg transition flex items-center justify-center"
                 style={{
                   background: tool === t.id ? "linear-gradient(180deg,#ffd23f,#f5b32a)" : "#2b1a3d",
                   color: tool === t.id ? "#3d1f0e" : "#ffe9a8",
@@ -553,7 +554,7 @@ export const DrawingCanvas = forwardRef<
                 type="button"
                 title={t.id}
               >
-                {t.label}
+                {t.icon ? <t.icon size={20} strokeWidth={2.5} /> : t.label}
               </button>
             ))}
           </div>
@@ -633,7 +634,7 @@ export const DrawingCanvas = forwardRef<
               {/* Undo */}
               <button
                 onClick={undo}
-                className="h-10 px-3.5 rounded-2xl text-xs font-bold transition"
+                className="h-10 px-3.5 rounded-2xl text-xs font-bold transition flex items-center gap-1"
                 style={{
                   background: "#2b1a3d",
                   color: "#ffe9a8",
@@ -647,7 +648,7 @@ export const DrawingCanvas = forwardRef<
                 type="button"
                 title="Undo"
               >
-                ↩ Undo
+                <Undo2 size={16} strokeWidth={2.5} /> Undo
               </button>
 
               {/* Clear */}
