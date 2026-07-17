@@ -92,7 +92,7 @@ export function PlayingScreen({
       )}
 
       {/* Game surface */}
-      <div className="rounded-2xl border-2 border-(--line) bg-(--panel) p-4">
+      <div data-testid="game-surface" className="rounded-2xl border-2 border-(--line) bg-(--panel) p-4">
         <GameSurface
           gameType={snapshot.gameType}
           roomId={snapshot.id}

@@ -63,6 +63,7 @@ export function HowToPlayModal({
           ))}
           <button
             type="button"
+            data-testid="howto-gotit"
             className="buzzer mt-1 rounded-xl px-4 py-3 text-sm"
             style={{
               background: `linear-gradient(180deg,${hue.gradFrom},${hue.gradTo})`,

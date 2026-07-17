@@ -119,6 +119,8 @@ export function LobbyScreen({
                   return (
                     <div
                       key={game.type}
+                      data-testid={`game-card-${game.type}`}
+                      data-selected={selected}
                       onClick={() => {
                         if (isLast) return;
                         const newPlaylist = selected
@@ -205,6 +207,7 @@ export function LobbyScreen({
               variant={currentPlayer?.ready ? "primary" : "secondary"}
               onClick={() => onSetReady(!currentPlayer?.ready)}
               className="text-lg py-5"
+              data-testid="ready-up"
             >
               {currentPlayer?.ready ? "✓ Ready" : t("lobby.readyUp")}
             </Button>
@@ -221,6 +224,7 @@ export function LobbyScreen({
                   }
                 }}
                 className="text-lg py-5 flex-1"
+                data-testid="start-game"
               >
                 {t("lobby.startGame")} ▶
               </Button>

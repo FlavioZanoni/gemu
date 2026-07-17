@@ -163,6 +163,7 @@ function HomeContent() {
                     value={nick}
                     onChange={(e) => setNick(e.target.value)}
                     placeholder={t("home.typeIt")}
+                    data-testid="nick-input"
                     maxLength={40}
                     className="w-full rounded-xl border-2 border-(--line) bg-(--bg-deep) px-3.5 py-3 text-base font-semibold text-(--ink) placeholder:text-(--ink)/40 focus:border-(--accent-2) focus:outline-none"
                   />
@@ -173,6 +174,7 @@ function HomeContent() {
                 type="button"
                 onClick={handleCreate}
                 disabled={!nickReady}
+                data-testid="create-room"
                 className="buzzer w-full rounded-2xl py-4 font-display text-xl"
                 style={{
                   background: "linear-gradient(180deg,#ffd23f,#f5b32a)",
@@ -196,6 +198,7 @@ function HomeContent() {
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
                   onKeyDown={(e) => e.key === "Enter" && handleJoin()}
                   placeholder={t("home.codePlaceholder")}
+                  data-testid="join-code-input"
                   maxLength={6}
                   className="flex-1 rounded-xl border-2 border-(--line) bg-(--bg-deep) px-3 py-3 text-center font-mono text-[15px] font-bold uppercase tracking-[0.25em] text-(--ink) placeholder:text-(--ink)/30 focus:border-(--accent-2) focus:outline-none"
                 />
@@ -203,6 +206,7 @@ function HomeContent() {
                   type="button"
                   onClick={handleJoin}
                   disabled={!nickReady || !code.trim()}
+                  data-testid="join-room-btn"
                   className="rounded-xl border-2 border-(--ink) bg-(--panel) px-6 font-display text-[15px] text-(--ink) shadow-[0_4px_0_rgba(0,0,0,.4)] disabled:opacity-40"
                 >
                   {t("home.join")}

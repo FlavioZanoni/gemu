@@ -31,6 +31,8 @@ export function CodePill({ code, label }: { code: string; label?: string }) {
   return (
     <button
       type="button"
+      data-testid="room-code"
+      data-code={code}
       className="inline-flex w-fit items-center gap-2 rounded-full bg-(--ink) px-4 py-1.5 font-mono text-xs font-bold text-(--bg)"
       onClick={() => {
         void navigator.clipboard?.writeText(code);

@@ -29,17 +29,20 @@ export function TimerBadge({
   className?: string;
 }) {
   const seconds = useCountdown(deadline);
-  if (seconds === null) return null;
-  const urgent = seconds < 10;
-  // Tick once per second in the final 5s.
+  // Tick once per second in the final 5s. Hooks must run every render — never
+  // after the early return below — or the null→number deadline flip changes
+  // the hook count and React throws.
   const lastTick = useRef<number>(-1);
   useEffect(() => {
+    if (seconds === null) return;
     if (seconds > 0 && seconds <= 5 && seconds !== lastTick.current) {
       lastTick.current = seconds;
       playSfx("tick");
     }
     if (seconds > 5) lastTick.current = -1;
   }, [seconds]);
+  if (seconds === null) return null;
+  const urgent = seconds < 10;
   return (
     <span
       className={`inline-block rounded-[10px] px-4 py-0.5 font-display text-3xl ${className}`}
