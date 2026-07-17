@@ -14,6 +14,7 @@ import {
   HowToPlayModal,
   CodePill,
   LangToggle,
+  SfxToggle,
   Bulbs,
   playerColorFor,
 } from "@/components/ui";
@@ -89,6 +90,7 @@ export function LobbyScreen({
           {snapshot.joinCode && (
             <CodePill code={snapshot.joinCode} label="CODE" />
           )}
+          <SfxToggle />
           <LangToggle />
         </div>
       </div>

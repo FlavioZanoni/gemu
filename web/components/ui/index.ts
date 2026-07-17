@@ -11,5 +11,6 @@ export { LangToggle } from "./LangToggle";
 export { PlayerChip, ScoreChip } from "./PlayerChip";
 export { ScoreStrip } from "./ScoreStrip";
 export { DoodlePad } from "./DoodlePad";
+export { SfxToggle } from "./SfxToggle";
 export { gameHues, hueFor, playerColorFor, playerColors } from "./gameHues";
 export type { GameHue } from "./gameHues";

@@ -1,13 +1,21 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { gamesCatalog } from "@/lib/games";
 import { Bulbs } from "@/components/ui";
 import { hueFor } from "@/components/ui/gameHues";
+import { playSfx } from "@/lib/sfx";
 
 export function DrumrollOverlay({ gameType }: { gameType: string }) {
   const game = gamesCatalog.find((g) => g.type === gameType);
   const hue = hueFor(gameType);
+
+  // Drumroll then a winner fanfare as the pick lands.
+  useEffect(() => {
+    playSfx("drumroll");
+    const id = setTimeout(() => playSfx("winner"), 550);
+    return () => clearTimeout(id);
+  }, []);
 
   // Generate confetti
   const confetti = useMemo(() => {

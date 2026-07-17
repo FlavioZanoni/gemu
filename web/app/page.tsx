@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n";
 import { useLobbyStore } from "@/lib/lobbyStore";
 import { gamesCatalog } from "@/lib/games";
 import { useRoomStore } from "@/lib/roomStore";
-import { DoodlePad, LangToggle, Bulbs } from "@/components/ui";
+import { DoodlePad, LangToggle, Bulbs, SfxToggle } from "@/components/ui";
 import { hueFor, playerColors } from "@/components/ui/gameHues";
 
 export default function Page() {
@@ -83,7 +83,8 @@ function HomeContent() {
   return (
     <div className="min-h-screen bg-(--bg-deep)">
       <div className="radial-glow min-h-screen flex flex-col">
-        <div className="flex justify-end px-6 pt-5">
+        <div className="flex justify-end gap-2 px-6 pt-5">
+          <SfxToggle />
           <LangToggle />
         </div>
 

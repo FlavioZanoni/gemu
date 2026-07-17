@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { playSfx } from "@/lib/sfx";
 import { useI18n } from "@/lib/i18n";
 import type { Player, RoomSnapshot, Standing } from "@/lib/protocol";
 import { GameSurface } from "@/components/GameSurface";
@@ -34,6 +35,11 @@ export function PlayingScreen({
 }) {
   const { t } = useI18n();
   const [howToOpen, setHowToOpen] = useState(false);
+
+  // Fanfare when a game begins.
+  useEffect(() => {
+    playSfx("start");
+  }, []);
 
   const game = gamesCatalog.find((g) => g.type === snapshot.gameType);
   const deadline =

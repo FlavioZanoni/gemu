@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useI18n } from "@/lib/i18n";
 import type { SessionFinal, PlayedGame } from "@/lib/protocol";
 import { Button } from "@/components/ui";
 import { gamesCatalog } from "@/lib/games";
+import { playSfx } from "@/lib/sfx";
 
 export function PodiumScreen({
   sessionFinal,
@@ -14,6 +15,11 @@ export function PodiumScreen({
   onBackToLobby: () => void;
 }) {
   const { t } = useI18n();
+
+  // Champion fanfare on the podium reveal.
+  useEffect(() => {
+    playSfx("winner");
+  }, []);
 
   // Get top 3
   const top3 = sessionFinal.standings.slice(0, 3);

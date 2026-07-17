@@ -2,6 +2,7 @@
 
 import type { ButtonHTMLAttributes, CSSProperties } from "react";
 import { hueFor } from "./gameHues";
+import { playSfx } from "@/lib/sfx";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "secondary" | "danger" | "ghost" | "hue";
@@ -23,13 +24,21 @@ export function Button({
   className = "",
   style,
   children,
+  onClick,
   ...rest
 }: ButtonProps) {
+  // A buzzer click on every press (ghost buttons get a lighter tick).
+  const withSfx = (e: React.MouseEvent<HTMLButtonElement>) => {
+    playSfx(variant === "ghost" || variant === "secondary" ? "click" : "buzzer");
+    onClick?.(e);
+  };
+
   if (variant === "ghost") {
     return (
       <button
         className={`rounded-full border-2 border-(--accent-2) bg-transparent px-4 py-2 font-sans text-[13px] font-semibold text-(--accent-2) transition-colors hover:bg-[rgba(53,212,185,0.12)] disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
         style={style}
+        onClick={withSfx}
         {...rest}
       >
         {children}
@@ -66,6 +75,7 @@ export function Button({
     <button
       className={`buzzer ${sizeClasses[size]} ${variantClass} ${className}`}
       style={{ ...variantStyle, ...style }}
+      onClick={withSfx}
       {...rest}
     >
       {children}
