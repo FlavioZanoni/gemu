@@ -45,6 +45,20 @@ export const gameHues: Record<string, GameHue> = {
     ink: "#3d1f0e",
     drop: "#a04f14",
   },
+  trivia: {
+    base: "#4f9dff",
+    gradFrom: "#6fb0ff",
+    gradTo: "#3f83f2",
+    ink: "#0a2547",
+    drop: "#1f4f99",
+  },
+  fibber: {
+    base: "#ff6fd8",
+    gradFrom: "#ff8ce0",
+    gradTo: "#e84fbf",
+    ink: "#3d0f33",
+    drop: "#992f7a",
+  },
 };
 
 export const fallbackHue: GameHue = gameHues.stop;

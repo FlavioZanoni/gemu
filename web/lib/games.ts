@@ -59,6 +59,30 @@ export const gamesCatalog: CuratedGame[] = [
     },
   },
   {
+    type: "trivia",
+    howToSteps: 3,
+    name: "Trivia",
+    minPlayers: 2,
+    tag: "Quiz",
+    players: "2-10",
+    description: {
+      en: "Timed multiple-choice trivia. Answer fast — speed is worth points.",
+      "pt-BR": "Perguntas de múltipla escolha com tempo. Responda rápido — velocidade dá pontos.",
+    },
+  },
+  {
+    type: "fibber",
+    howToSteps: 3,
+    name: "Fibber",
+    minPlayers: 3,
+    tag: "Bluff",
+    players: "3-10",
+    description: {
+      en: "Write a convincing fake answer, then spot the real one. Fool your friends.",
+      "pt-BR": "Escreva uma resposta falsa convincente e ache a verdadeira. Engane os amigos.",
+    },
+  },
+  {
     type: "invention",
     howToSteps: 4,
     name: "Patently Silly",

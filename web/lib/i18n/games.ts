@@ -66,6 +66,29 @@ export const games = {
     "invention.waitingRound": "Waiting for host to start next round…",
     "invention.backToLobby": "Back to lobby",
 
+    // Trivia
+    "howto.trivia.1": "A question appears with four answers. Tap the one you think is right.",
+    "howto.trivia.2": "You get 100 points for a correct answer, plus a speed bonus for answering early.",
+    "howto.trivia.3": "The correct answer is revealed each round. Most points at the end wins!",
+    "trivia.locked": "Answer locked — waiting for everyone…",
+    "trivia.answeredCount": "{n} answered",
+
+    // Fibber
+    "howto.fibber.1": "Everyone gets an obscure question. Write a fake answer that sounds real.",
+    "howto.fibber.2": "All fakes plus the real answer are shuffled together. Pick the one you think is true.",
+    "howto.fibber.3": "+100 for finding the truth. +50 every time someone falls for your lie!",
+    "fibber.prompt": "Fill the blank",
+    "fibber.writeLie": "Write a convincing fake answer",
+    "fibber.liePlaceholder": "make it believable…",
+    "fibber.submitLie": "Submit my fib",
+    "fibber.lieIn": "Fib submitted — waiting for the others…",
+    "fibber.findTruth": "Which one is the REAL answer?",
+    "fibber.yourLie": "your fib",
+    "fibber.theTruth": "The real answer was",
+    "fibber.truthTag": "TRUTH",
+    "fibber.by": "by",
+    "fibber.pickedBy": "Fooled",
+
     // Canvas & drawing
     "canvas.color": "Color",
     "canvas.brush": "Brush",
@@ -197,6 +220,29 @@ export const games = {
     "invention.nextRound": "Próxima rodada",
     "invention.waitingRound": "Aguardando o host iniciar a próxima rodada…",
     "invention.backToLobby": "Voltar ao lobby",
+
+    // Trivia
+    "howto.trivia.1": "Aparece uma pergunta com quatro respostas. Toque na que achar certa.",
+    "howto.trivia.2": "Você ganha 100 pontos por acerto, mais um bônus de velocidade por responder cedo.",
+    "howto.trivia.3": "A resposta certa é revelada a cada rodada. Mais pontos no fim vence!",
+    "trivia.locked": "Resposta travada — esperando todo mundo…",
+    "trivia.answeredCount": "{n} responderam",
+
+    // Fibber
+    "howto.fibber.1": "Todos recebem uma pergunta obscura. Escreva uma resposta falsa que pareça real.",
+    "howto.fibber.2": "As falsas e a verdadeira são embaralhadas. Escolha a que você acha verdadeira.",
+    "howto.fibber.3": "+100 por achar a verdade. +50 cada vez que alguém cai na sua mentira!",
+    "fibber.prompt": "Complete a lacuna",
+    "fibber.writeLie": "Escreva uma resposta falsa convincente",
+    "fibber.liePlaceholder": "faça parecer real…",
+    "fibber.submitLie": "Enviar minha mentira",
+    "fibber.lieIn": "Mentira enviada — esperando os outros…",
+    "fibber.findTruth": "Qual é a resposta VERDADEIRA?",
+    "fibber.yourLie": "sua mentira",
+    "fibber.theTruth": "A resposta real era",
+    "fibber.truthTag": "VERDADE",
+    "fibber.by": "de",
+    "fibber.pickedBy": "Enganou",
 
     // Canvas & drawing
     "canvas.color": "Cor",

@@ -5,6 +5,8 @@ import { StopGame } from "./games/StopGame";
 import { GarticGame } from "./games/GarticGame";
 import { GarticPhoneGame } from "./games/GarticPhoneGame";
 import { CahGame } from "./games/CahGame";
+import { TriviaGame } from "./games/TriviaGame";
+import { FibberGame } from "./games/FibberGame";
 import type { GameProps } from "./games/types";
 
 type GameSurfaceProps = GameProps & {
@@ -54,6 +56,10 @@ export function GameSurface({
       return <GarticPhoneGame {...gameProps} />;
     case "cah":
       return <CahGame {...gameProps} />;
+    case "trivia":
+      return <TriviaGame {...gameProps} />;
+    case "fibber":
+      return <FibberGame {...gameProps} />;
     default:
       return (
         <div className="rounded-2xl border-2 border-dashed border-(--line) bg-(--panel) p-8 text-center text-sm text-(--ink)/60">
