@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Technicolor Broadcast: marquee sign bearing a slab G -->
+  <rect width="64" height="64" rx="14" fill="#1C1230"/>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="#2B1A3D"/>
+  <!-- marquee bulbs -->
+  <g fill="#FFE9A8">
+    <circle cx="14" cy="8.5" r="2.4"/>
+    <circle cx="32" cy="7.5" r="2.4"/>
+    <circle cx="50" cy="8.5" r="2.4"/>
+    <circle cx="14" cy="55.5" r="2.4"/>
+    <circle cx="32" cy="56.5" r="2.4"/>
+    <circle cx="50" cy="55.5" r="2.4"/>
+    <circle cx="8" cy="24" r="2.4"/>
+    <circle cx="8" cy="40" r="2.4"/>
+    <circle cx="56" cy="24" r="2.4"/>
+    <circle cx="56" cy="40" r="2.4"/>
+  </g>
+  <!-- blocky slab G: hard warm-red drop, gold face -->
+  <g fill="#C2452D" transform="translate(0,3)">
+    <rect x="17" y="15" width="30" height="9"/>
+    <rect x="17" y="15" width="9" height="34"/>
+    <rect x="17" y="40" width="30" height="9"/>
+    <rect x="38" y="30" width="9" height="14"/>
+    <rect x="31" y="30" width="16" height="9"/>
+  </g>
+  <g fill="#FFD23F">
+    <rect x="17" y="15" width="30" height="9"/>
+    <rect x="17" y="15" width="9" height="34"/>
+    <rect x="17" y="40" width="30" height="9"/>
+    <rect x="38" y="30" width="9" height="14"/>
+    <rect x="31" y="30" width="16" height="9"/>
+  </g>
+</svg>
