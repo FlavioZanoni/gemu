@@ -14,7 +14,7 @@ import {
   LangToggle,
   Pill,
 } from "@/components/ui";
-import { playerColors } from "@/components/ui/gameHues";
+import { playerColors, hueFor } from "@/components/ui/gameHues";
 
 export default function Page() {
   return (
@@ -40,7 +40,15 @@ function HomeContent() {
   const [maxPlayers, setMaxPlayers] = useState("8");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
   const [password, setPassword] = useState("");
-  const [selectedGame, setSelectedGame] = useState("invention");
+  // The room's playlist — the whole point: a night is many games, not one.
+  // Defaults to everything; the host trims it here or in the green-room lobby.
+  const [selectedPlaylist, setSelectedPlaylist] = useState<string[]>(() =>
+    gamesCatalog.map((g) => g.type),
+  );
+  const togglePlaylistGame = (type: string) =>
+    setSelectedPlaylist((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
+    );
   const [joinRoomId, setJoinRoomId] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
@@ -109,7 +117,7 @@ function HomeContent() {
   const createDisabled =
     !roomName.trim() ||
     !displayName.trim() ||
-    !selectedGame.trim() ||
+    selectedPlaylist.length === 0 ||
     Number.isNaN(Number(maxPlayers)) ||
     Number(maxPlayers) < 2 ||
     room.pendingJoin;
@@ -193,7 +201,13 @@ function HomeContent() {
                           variant="secondary"
                           size="sm"
                           onClick={() => {
-                            setSelectedGame(game.type);
+                            // Ensure this game is in the night's playlist,
+                            // then open create to finish setup.
+                            setSelectedPlaylist((prev) =>
+                              prev.includes(game.type)
+                                ? prev
+                                : [...prev, game.type],
+                            );
                             setModalOpen("create");
                           }}
                         >
@@ -359,22 +373,49 @@ function HomeContent() {
                           />
                         </div>
 
-                        {/* Game type, visibility, password */}
-                        <div className="grid gap-3 sm:grid-cols-3">
-                          <select
-                            value={selectedGame}
-                            onChange={(e) => {
-                              setSelectedGame(e.target.value);
-                              setLocalError(null);
-                            }}
-                            className="w-full px-4 py-3 rounded-xl border-2 border-(--line) bg-(--panel-raised) text-(--ink) focus:outline-none focus:border-(--accent-2)"
-                          >
-                            {gamesCatalog.map((game) => (
-                              <option key={game.type} value={game.type}>
-                                {game.name}
-                              </option>
-                            ))}
-                          </select>
+                        {/* Playlist: pick the games for the night (multi). */}
+                        <div>
+                          <div className="mono-caption mb-2">
+                            {t("home.playlistLabel")}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {gamesCatalog.map((game) => {
+                              const on = selectedPlaylist.includes(game.type);
+                              const hue = hueFor(game.type);
+                              return (
+                                <button
+                                  key={game.type}
+                                  type="button"
+                                  onClick={() => {
+                                    togglePlaylistGame(game.type);
+                                    setLocalError(null);
+                                  }}
+                                  className="rounded-full px-3.5 py-1.5 text-xs font-bold transition"
+                                  style={
+                                    on
+                                      ? { background: hue.base, color: hue.ink }
+                                      : {
+                                          background: "var(--panel-raised)",
+                                          color: "var(--ink)",
+                                          border: "2px solid var(--line)",
+                                        }
+                                  }
+                                >
+                                  {on ? "✓ " : ""}
+                                  {game.name}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className="mt-1.5 font-mono text-[10px] text-(--ink)/40">
+                            {t("home.playlistHint", {
+                              n: selectedPlaylist.length,
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Visibility, max players */}
+                        <div className="grid gap-3 sm:grid-cols-2">
                           <select
                             value={visibility}
                             onChange={(e) => {
@@ -440,7 +481,7 @@ function HomeContent() {
                               setLocalError(null);
                               room.createRoom({
                                 name: roomName.trim(),
-                                playlist: [selectedGame],
+                                playlist: selectedPlaylist,
                                 visibility,
                                 maxPlayers: Number(maxPlayers),
                                 displayName: displayName.trim(),
