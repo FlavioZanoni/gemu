@@ -37,10 +37,14 @@ export function JoinGateScreen({
   const getErrorMessage = (code: string) => {
     const errors: Record<string, string> = {
       name_taken: t("edge.errorNameTaken"),
-      password_wrong: t("edge.errorPasswordWrong"),
+      invalid_password: t("edge.errorInvalidPassword"),
+      password_wrong: t("edge.errorInvalidPassword"),
       room_full: t("edge.errorRoomFull"),
       invalid_code: t("edge.errorInvalidCode"),
-      invalid_room: t("edge.errorInvalidRoom"),
+      not_found: t("edge.errorNotFound"),
+      invalid_room: t("edge.errorNotFound"),
+      session_in_room: t("edge.errorSessionInRoom"),
+      not_enough_players: t("edge.errorNotEnoughPlayers"),
     };
     return errors[code] || code;
   };

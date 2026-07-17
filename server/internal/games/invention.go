@@ -196,7 +196,7 @@ func (g *InventionGame) OnAction(playerID string, payload map[string]any) error 
 				if len(current) >= 2 {
 					break
 				}
-				g.problems[playerID] = append(current, problem)
+				g.problems[playerID] = append(current, truncateText(problem, 140))
 			}
 			return nil
 		}
@@ -211,7 +211,7 @@ func (g *InventionGame) OnAction(playerID string, payload map[string]any) error 
 		if len(current) >= 2 {
 			return nil
 		}
-		g.problems[playerID] = append(current, problem)
+		g.problems[playerID] = append(current, truncateText(problem, 140))
 		return nil
 
 	case "drawing":
@@ -222,14 +222,14 @@ func (g *InventionGame) OnAction(playerID string, payload map[string]any) error 
 			tagline, _ := payload["tagline"].(string)
 			dataURL, _ := payload["draw"].(string)
 			problem := g.assignments[playerID]
-			if problem == "" || title == "" || dataURL == "" {
+			if problem == "" || title == "" || dataURL == "" || len(dataURL) > maxDrawingBytes {
 				return nil
 			}
 			g.chosen[playerID] = problem
 			g.drawings[playerID] = InventionDrawing{
 				Problem: problem,
-				Title:   title,
-				Tagline: tagline,
+				Title:   truncateText(title, 80),
+				Tagline: truncateText(tagline, 140),
 				DataURL: dataURL,
 			}
 			return nil
@@ -249,7 +249,11 @@ func (g *InventionGame) OnAction(playerID string, payload map[string]any) error 
 			return nil
 		}
 		if payload["action"] == "advance" {
-			g.phase = "voting"
+			// Admin-only, matching "next_round"; otherwise any player could
+			// skip everyone's remaining presentations.
+			if g.room != nil && g.room.IsAdmin(playerID) {
+				g.phase = "voting"
+			}
 			return nil
 		}
 		return nil

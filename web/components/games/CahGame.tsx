@@ -154,9 +154,12 @@ export function CahGame(props: GameProps) {
                   THE BLACK CARD
                 </div>
                 <div style={{ font: "700 19px/1.35 'Space Grotesk'", color: "#fff", flex: 1 }}>
-                  {blackCard.text.split("_").map((part, i) =>
-                    i % 2 === 0 ? part : <span key={i} style={{ color: "var(--hue-cah)" }}>______</span>
-                  )}
+                  {blackCard.text.split(/_{2,}/).map((part, i) => (
+                    <span key={i}>
+                      {part}
+                      {i < blackCard.text.split(/_{2,}/).length - 1 && <span style={{ color: "var(--hue-cah)" }}>______</span>}
+                    </span>
+                  ))}
                 </div>
                 <div style={{ fontFamily: "'Alfa Slab One'", fontSize: "10px", color: "rgba(255,138,155,.5)" }}>
                   GEMU · CARTAS
@@ -315,9 +318,12 @@ export function CahGame(props: GameProps) {
         </div>
         <div style={{ width: "560px", background: "#131320", border: "2px solid var(--hue-cah)", borderRadius: "16px", padding: "18px 22px", marginBottom: "18px" }}>
           <div style={{ font: "700 20px/1.35 'Space Grotesk'", color: "#fff" }}>
-            {blackCard.text.split("_").map((part, i) =>
-              i % 2 === 0 ? part : <span key={i} style={{ color: "var(--hue-cah)" }}>______</span>
-            )}
+            {blackCard.text.split(/_{2,}/).map((part, i) => (
+              <span key={i}>
+                {part}
+                {i < blackCard.text.split(/_{2,}/).length - 1 && <span style={{ color: "var(--hue-cah)" }}>______</span>}
+              </span>
+            ))}
           </div>
         </div>
 
@@ -386,9 +392,12 @@ export function CahGame(props: GameProps) {
           THE BLACK CARD
         </div>
         <div style={{ font: "700 19px/1.35 'Space Grotesk'", color: "#fff" }}>
-          {blackCard.text.split("_").map((part, i) =>
-            i % 2 === 0 ? part : <span key={i} style={{ color: "var(--hue-cah)" }}>______</span>
-          )}
+          {blackCard.text.split(/_{2,}/).map((part, i) => (
+            <span key={i}>
+              {part}
+              {i < blackCard.text.split(/_{2,}/).length - 1 && <span style={{ color: "var(--hue-cah)" }}>______</span>}
+            </span>
+          ))}
         </div>
       </div>
 

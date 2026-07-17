@@ -207,6 +207,21 @@ export default function RoomPage() {
               </Banner>
             )}
 
+            {/* Action error banner */}
+            {room.actionError && (
+              <div className="flex items-center justify-between rounded-2xl border-2 border-(--line) bg-(--panel) p-4 bg-red-400/10">
+                <p className="text-sm text-red-400">
+                  {t(`edge.error${room.actionError.code.charAt(0).toUpperCase() + room.actionError.code.slice(1)}`) || room.actionError.message}
+                </p>
+                <button
+                  onClick={() => room.clearActionError()}
+                  className="text-xs text-red-400 hover:opacity-75 font-bold"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+
             {/* Room header with code */}
             <div className="rounded-2xl border-2 border-(--line) bg-(--panel) p-6 flex items-center justify-between flex-wrap gap-4">
               <div>
@@ -243,6 +258,7 @@ export default function RoomPage() {
                 onStartGame={(force) => room.startGame({ force })}
                 onSetPlaylist={(playlist) => room.setPlaylist(playlist)}
                 onLeave={() => room.leaveRoom()}
+                onKick={(id) => room.kickPlayer(id)}
               />
             )}
 

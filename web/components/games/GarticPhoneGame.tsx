@@ -63,6 +63,7 @@ export function GarticPhoneGame(props: GameProps) {
   const [descriptionText, setDescriptionText] = useState("");
   const [drawingData, setDrawingData] = useState("");
   const [showHowTo, setShowHowTo] = useState(step === 0 && phase === "prompt");
+  const [localReacted, setLocalReacted] = useState<Set<string>>(new Set());
 
   const isSubmitted = privateState?.submitted ?? false;
   const myChain = privateState?.chain ?? -1;
@@ -116,7 +117,11 @@ export function GarticPhoneGame(props: GameProps) {
   };
 
   const handleReact = (chainIdx: number, entryIdx: number, emoji: "😂" | "💀" | "⭐") => {
-    props.sendAction({ action: "react", chain: chainIdx, entry: entryIdx, emoji });
+    const key = `${chainIdx}|${entryIdx}`;
+    if (!localReacted.has(key)) {
+      setLocalReacted((prev) => new Set([...prev, key]));
+      props.sendAction({ action: "react", chain: chainIdx, entry: entryIdx, emoji });
+    }
   };
 
   const getPhaseTitle = () => {
@@ -388,9 +393,7 @@ export function GarticPhoneGame(props: GameProps) {
                   {(["😂", "💀", "⭐"] as const).map((emoji) => {
                     const key = `${revealChain}|${revealPos}`;
                     const emojiCount = reactions[key]?.[emoji] ?? 0;
-                    const hasReacted = Object.keys(reactions).some(
-                      (k) => k === key && reactions[k][emoji] !== undefined
-                    );
+                    const hasReacted = localReacted.has(key);
 
                     return (
                       <button
@@ -426,14 +429,14 @@ export function GarticPhoneGame(props: GameProps) {
               <div style={{ flex: 1, textAlign: "center", fontSize: "9px", color: "rgba(255,233,168,.4)", padding: "10px 0" }}>
                 REACTIONS = POINTS<br />FOR THE AUTHOR
               </div>
-              {props.isAdmin && revealChain < chains.length && (
+              {props.isAdmin && (
                 <Button
                   variant="hue"
                   gameType="garticphone"
                   onClick={handleRevealNext}
                   style={{ background: "linear-gradient(180deg, #c9a4ff, #a678f2)", boxShadow: "0 4px 0 #5f3d99" }}
                 >
-                  NEXT ▶
+                  {revealChain >= chains.length ? "FINISH ✓" : "NEXT ▶"}
                 </Button>
               )}
             </div>

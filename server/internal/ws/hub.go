@@ -19,6 +19,22 @@ type Client struct {
 	RoomID    string
 	Player    rooms.Player
 	SessionID string
+	// writeMu serializes writes to Conn: gorilla/websocket forbids concurrent
+	// WriteJSON on one connection, and any goroutine can broadcast to any
+	// client. Without this, ordinary concurrent traffic panics the process.
+	writeMu sync.Mutex
+}
+
+// write serializes and recovers around a single connection write so a broken
+// pipe or concurrent-write panic degrades one client, never the whole server.
+func (c *Client) write(env Envelope) {
+	if c == nil || c.Conn == nil {
+		return
+	}
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
+	defer func() { _ = recover() }()
+	_ = c.Conn.WriteJSON(env)
 }
 
 type Hub struct {
@@ -76,10 +92,7 @@ func (h *Hub) RemoveClient(clientID string) {
 }
 
 func (h *Hub) Send(client *Client, env Envelope) {
-	if client == nil || client.Conn == nil {
-		return
-	}
-	_ = client.Conn.WriteJSON(env)
+	client.write(env)
 }
 
 func (h *Hub) findClientBySession(sessionID string) (*Client, bool) {
@@ -94,29 +107,34 @@ func (h *Hub) findClientBySession(sessionID string) (*Client, bool) {
 }
 
 func (h *Hub) Broadcast(roomID string, env Envelope) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	for _, client := range h.clients {
-		if client.RoomID == roomID {
-			if client.Conn == nil {
-				continue
-			}
-			_ = client.Conn.WriteJSON(env)
-		}
-	}
+	h.BroadcastExcept(roomID, "", env)
 }
 
 func (h *Hub) BroadcastExcept(roomID string, exceptClientID string, env Envelope) {
+	// Snapshot targets under the lock, then write outside it: a client's
+	// writeMu can block, and we must not hold h.mu (which every handler needs)
+	// while a slow socket drains.
 	h.mu.RLock()
-	defer h.mu.RUnlock()
+	targets := make([]*Client, 0, len(h.clients))
 	for _, client := range h.clients {
 		if client.RoomID == roomID && client.ID != exceptClientID {
-			if client.Conn == nil {
-				continue
-			}
-			_ = client.Conn.WriteJSON(env)
+			targets = append(targets, client)
 		}
 	}
+	h.mu.RUnlock()
+	for _, client := range targets {
+		client.write(env)
+	}
+}
+
+// streamActions is the allowlist of relay-only actions. Restricting at the hub
+// (not per-game OnAction, which defaults to accepting unknown actions) stops a
+// non-drawer from routing real game actions — or arbitrary keys — through the
+// broadcast relay.
+var streamActions = map[string]bool{
+	"stroke":       true,
+	"canvas_clear": true,
+	"canvas_undo":  true,
 }
 
 // handleGameStream relays high-frequency transient payloads (canvas strokes)
@@ -127,6 +145,10 @@ func (h *Hub) BroadcastExcept(roomID string, exceptClientID string, env Envelope
 func (h *Hub) handleGameStream(client *Client, env Envelope) {
 	roomID := client.RoomID
 	if roomID == "" {
+		return
+	}
+	action, _ := env.Payload["action"].(string)
+	if !streamActions[action] {
 		return
 	}
 	s, ok := h.session(roomID)
@@ -223,14 +245,46 @@ func encodeRoomSnapshot(room *rooms.Room) map[string]any {
 	return room.Snapshot()
 }
 
+const (
+	maxNameLen     = 40
+	maxRoomNameLen = 60
+	maxAvatarLen   = 256 * 1024 // doodle avatars are small data: URLs
+	maxPasswordLen = 100
+	roomPlayerCap  = 16 // hard ceiling regardless of client maxPlayers
+)
+
+// truncate caps a rune length so client strings can't bloat every broadcast.
+func truncate(s string, max int) string {
+	r := []rune(s)
+	if len(r) > max {
+		return string(r[:max])
+	}
+	return s
+}
+
+// clampMaxPlayers turns a client value into a sane room size; 0/negative means
+// "no explicit limit", which we still cap at roomPlayerCap.
+func clampMaxPlayers(v int) int {
+	if v <= 0 || v > roomPlayerCap {
+		return roomPlayerCap
+	}
+	return v
+}
+
 func (h *Hub) handleRoomCreate(client *Client, env Envelope) {
-	name := decodeString(env.Payload, "name")
+	// A connection already bound to a room must leave it first; otherwise
+	// rebinding orphans a connected ghost player that never gets cleaned up.
+	if client.RoomID != "" {
+		h.Send(client, Envelope{Type: "room.create.error", RequestID: env.RequestID, Payload: map[string]any{"code": "already_in_room", "message": "leave your current room first"}})
+		return
+	}
+	name := truncate(decodeString(env.Payload, "name"), maxRoomNameLen)
 	visibility := decodeString(env.Payload, "visibility")
-	maxPlayers := decodeInt(env.Payload, "maxPlayers")
-	displayName := decodeString(env.Payload, "displayName")
-	avatarURL := decodeString(env.Payload, "avatarUrl")
+	maxPlayers := clampMaxPlayers(decodeInt(env.Payload, "maxPlayers"))
+	displayName := truncate(decodeString(env.Payload, "displayName"), maxNameLen)
+	avatarURL := truncate(decodeString(env.Payload, "avatarUrl"), maxAvatarLen)
 	sessionID := decodeString(env.Payload, "sessionId")
-	password := decodeString(env.Payload, "password")
+	password := truncate(decodeString(env.Payload, "password"), maxPasswordLen)
 	locale := decodeString(env.Payload, "locale")
 	if locale == "" {
 		locale = "en"
@@ -309,10 +363,16 @@ func (h *Hub) handleRoomCreate(client *Client, env Envelope) {
 }
 
 func (h *Hub) handleRoomJoin(client *Client, env Envelope) {
+	// Reject a join from a connection already bound to a different room; without
+	// this, rebinding strands a connected ghost player in the old room.
 	roomID := decodeString(env.Payload, "roomId")
+	if client.RoomID != "" && client.RoomID != roomID {
+		h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "already_in_room", "message": "leave your current room first"}})
+		return
+	}
 	joinCode := decodeString(env.Payload, "joinCode")
-	displayName := decodeString(env.Payload, "displayName")
-	avatarURL := decodeString(env.Payload, "avatarUrl")
+	displayName := truncate(decodeString(env.Payload, "displayName"), maxNameLen)
+	avatarURL := truncate(decodeString(env.Payload, "avatarUrl"), maxAvatarLen)
 	sessionID := decodeString(env.Payload, "sessionId")
 	isRejoin := false
 
@@ -405,6 +465,19 @@ func (h *Hub) handleRoomJoin(client *Client, env Envelope) {
 		s.mu.Lock()
 		if s.adapter != nil {
 			h.Send(client, Envelope{Type: "game.state", RoomID: room.ID, Payload: map[string]any{"public": s.adapter.PublicState(), "private": s.adapter.PrivateState(player.ID)}})
+		}
+		// Replay the open next-game vote so a rejoiner isn't stuck on a blank
+		// voting screen (the session.vote push already fired before they joined).
+		if s.votes != nil && len(s.voteOptions) > 0 {
+			options := make([]map[string]string, 0, len(s.voteOptions))
+			for _, gameType := range s.voteOptions {
+				options = append(options, h.gameOption(gameType))
+			}
+			h.Send(client, Envelope{Type: "session.vote", RoomID: room.ID, Payload: map[string]any{
+				"options":  options,
+				"deadline": s.voteDeadline.UnixMilli(),
+			}})
+			h.Send(client, Envelope{Type: "session.vote.update", RoomID: room.ID, Payload: map[string]any{"counts": voteCounts(s)}})
 		}
 		s.mu.Unlock()
 	}

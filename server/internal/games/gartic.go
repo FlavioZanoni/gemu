@@ -281,7 +281,8 @@ func (g *GarticGame) OnAction(playerID string, payload map[string]any) error {
 		if g.phase != "drawing" || playerID == g.drawer || g.hasGuessed(playerID) {
 			return nil
 		}
-		text, _ := payload["text"].(string)
+		raw, _ := payload["text"].(string)
+		text := truncateText(raw, 80)
 		normalized := NormalizeAnswer(text)
 		if normalized == "" {
 			return nil

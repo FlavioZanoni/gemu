@@ -104,10 +104,12 @@ export const screens = {
     "edge.leaving": "Leaving room...",
     "edge.reconnecting": "Signal lost — reconnecting to the studio…",
     "edge.errorNameTaken": "That name is already taken in this room.",
-    "edge.errorPasswordWrong": "Password incorrect.",
+    "edge.errorInvalidPassword": "Password incorrect.",
     "edge.errorRoomFull": "This room is full.",
     "edge.errorInvalidCode": "Invalid room code.",
-    "edge.errorInvalidRoom": "Room not found.",
+    "edge.errorNotFound": "Room not found.",
+    "edge.errorSessionInRoom": "You're already in another room.",
+    "edge.errorNotEnoughPlayers": "Not enough players to start this game.",
   },
   "pt-BR": {
     // Home screen
@@ -212,9 +214,11 @@ export const screens = {
     "edge.leaving": "Saindo da sala...",
     "edge.reconnecting": "Sinal perdido — reconectando ao estúdio…",
     "edge.errorNameTaken": "Esse nome já está sendo usado nesta sala.",
-    "edge.errorPasswordWrong": "Senha incorreta.",
+    "edge.errorInvalidPassword": "Senha incorreta.",
     "edge.errorRoomFull": "Esta sala está cheia.",
     "edge.errorInvalidCode": "Código de sala inválido.",
-    "edge.errorInvalidRoom": "Sala não encontrada.",
+    "edge.errorNotFound": "Sala não encontrada.",
+    "edge.errorSessionInRoom": "Você já está em outra sala.",
+    "edge.errorNotEnoughPlayers": "Não há jogadores suficientes para começar este jogo.",
   },
 } as const;

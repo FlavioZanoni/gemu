@@ -25,6 +25,7 @@ export function LobbyScreen({
   onStartGame,
   onSetPlaylist,
   onLeave,
+  onKick,
 }: {
   snapshot: RoomSnapshot;
   players: Player[];
@@ -34,6 +35,7 @@ export function LobbyScreen({
   onStartGame: (force: boolean) => void;
   onSetPlaylist: (playlist: string[]) => void;
   onLeave: () => void;
+  onKick?: (playerId: string) => void;
 }) {
   const { t } = useI18n();
   const [howToOpen, setHowToOpen] = useState(false);
@@ -200,7 +202,7 @@ export function LobbyScreen({
                 trailing={
                   isAdmin && player.id !== snapshot.adminId ? (
                     <button
-                      onClick={() => {}}
+                      onClick={() => onKick?.(player.id)}
                       className="text-xs px-2 py-1 rounded border border-(--line) text-(--ink)/70 hover:text-(--ink)"
                     >
                       {t("common.kick")}

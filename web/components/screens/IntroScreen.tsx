@@ -27,8 +27,31 @@ export function IntroScreen({
   const hue = hueFor(gameType);
   const stepCount = game?.howToSteps ?? 0;
 
-  const roundOptions = [1, 2, 3, 4];
-  const timerOptions = [30, 60, 90];
+  // Per-game settings from docs/session-protocol.md
+  const gameSettings: Record<string, { minRounds: number; maxRounds: number; defaultRounds: number; minTimer?: number; maxTimer?: number; defaultTimer?: number }> = {
+    invention: { minRounds: 1, maxRounds: 5, defaultRounds: 3 },
+    stop: { minRounds: 1, maxRounds: 10, defaultRounds: 3, minTimer: 30, maxTimer: 300, defaultTimer: 90 },
+    gartic: { minRounds: 1, maxRounds: 10, defaultRounds: 2, minTimer: 30, maxTimer: 180, defaultTimer: 75 },
+    garticphone: { minRounds: 1, maxRounds: 10, defaultRounds: 3, minTimer: 30, maxTimer: 300, defaultTimer: 120 },
+    cah: { minRounds: 3, maxRounds: 20, defaultRounds: 8 },
+  };
+
+  const settings = gameSettings[gameType] || gameSettings.stop;
+  const roundOptions = Array.from(
+    { length: Math.min(settings.maxRounds - settings.minRounds + 1, 5) },
+    (_, i) => settings.minRounds + i * Math.floor((settings.maxRounds - settings.minRounds) / 4)
+  );
+  if (!roundOptions.includes(settings.defaultRounds)) {
+    roundOptions.push(settings.defaultRounds);
+    roundOptions.sort((a, b) => a - b);
+  }
+
+  const timerOptions = settings.minTimer && settings.maxTimer
+    ? Array.from(
+        { length: 3 },
+        (_, i) => settings.minTimer! + Math.round(i * (settings.maxTimer! - settings.minTimer!) / 2)
+      )
+    : [];
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-12 px-6 py-12">
@@ -116,35 +139,37 @@ export function IntroScreen({
                 </div>
               </div>
 
-              <div>
-                <span className="text-xs font-bold text-(--ink)/60 uppercase tracking-widest">
-                  Round Timer
-                </span>
-                <div className="flex gap-2 mt-2">
-                  {timerOptions.map((seconds) => (
-                    <button
-                      key={seconds}
-                      onClick={() => onSetTimer(seconds)}
-                      className={`min-w-14 py-2 rounded-lg border-2 font-bold text-sm transition`}
-                      style={
-                        roundTimer === seconds
-                          ? {
-                              borderColor: "#35d4b9",
-                              background: "#35d4b9",
-                              color: "#0c3d33",
-                            }
-                          : {
-                              borderColor: "var(--line)",
-                              background: "transparent",
-                              color: "var(--ink)",
-                            }
-                      }
-                    >
-                      {seconds}s
-                    </button>
-                  ))}
+              {timerOptions.length > 0 && (
+                <div>
+                  <span className="text-xs font-bold text-(--ink)/60 uppercase tracking-widest">
+                    Round Timer
+                  </span>
+                  <div className="flex gap-2 mt-2">
+                    {timerOptions.map((seconds) => (
+                      <button
+                        key={seconds}
+                        onClick={() => onSetTimer(seconds)}
+                        className={`min-w-14 py-2 rounded-lg border-2 font-bold text-sm transition`}
+                        style={
+                          roundTimer === seconds
+                            ? {
+                                borderColor: "#35d4b9",
+                                background: "#35d4b9",
+                                color: "#0c3d33",
+                              }
+                            : {
+                                borderColor: "var(--line)",
+                                background: "transparent",
+                                color: "var(--ink)",
+                              }
+                        }
+                      >
+                        {seconds}s
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
 

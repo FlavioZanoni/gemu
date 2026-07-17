@@ -445,6 +445,7 @@ func (g *CahGame) OnAction(playerID string, payload map[string]any) error {
 			}
 
 			seen := make(map[int]bool)
+			indices := make([]int, 0, len(cardsRaw))
 			for _, c := range cardsRaw {
 				num, ok := c.(float64)
 				if !ok {
@@ -458,6 +459,7 @@ func (g *CahGame) OnAction(playerID string, payload map[string]any) error {
 					return nil // Duplicate
 				}
 				seen[idx] = true
+				indices = append(indices, idx)
 			}
 
 			if len(seen) != g.blackCard.Pick {
@@ -468,8 +470,8 @@ func (g *CahGame) OnAction(playerID string, payload map[string]any) error {
 			// mutation below), record the submission, and discard from hand.
 			played := make([]string, 0, g.blackCard.Pick)
 			newHand := make([]string, 0, len(g.hands[playerID]))
-			for _, c := range cardsRaw {
-				played = append(played, g.hands[playerID][int(c.(float64))])
+			for _, idx := range indices {
+				played = append(played, g.hands[playerID][idx])
 			}
 			for i, card := range g.hands[playerID] {
 				if !seen[i] {

@@ -43,6 +43,7 @@ export function GarticGame(props: GameProps) {
   const guesses = publicState?.guesses ?? [];
   const wordLength = publicState?.wordLength ?? 0;
   const word = publicState?.word ?? "";
+  const closeGuess = privateState?.closeGuess ?? "";
   const isDrawer = drawer === props.playerId;
 
   const [guess, setGuess] = useState("");
@@ -224,6 +225,20 @@ export function GarticGame(props: GameProps) {
                     {g.correct ? `✓ ${playerNames.get(g.playerId)} guessed!` : g.text}
                   </div>
                 ))}
+                {closeGuess && (
+                  <div
+                    style={{
+                      font: "600 13px 'Space Grotesk'",
+                      color: "var(--hue-gartic)",
+                      animation: "rise 0.3s ease-out",
+                      borderLeft: "3px solid var(--hue-gartic)",
+                      paddingLeft: "8px",
+                      opacity: 0.7,
+                    }}
+                  >
+                    💭 {closeGuess}
+                  </div>
+                )}
                 <div ref={guessesEndRef} />
               </div>
 

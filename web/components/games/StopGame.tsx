@@ -69,14 +69,21 @@ export function StopGame(props: GameProps) {
   }, [round, privateState?.answers]);
 
   // Debounce set_answers
+  const sendActionRef = useRef(props.sendAction);
   useEffect(() => {
+    sendActionRef.current = props.sendAction;
+  }, [props.sendAction]);
+
+  useEffect(() => {
+    if (phase !== "answering") return;
     const timer = setTimeout(() => {
       if (Object.keys(answers).length > 0) {
-        props.sendAction({ action: "set_answers", answers });
+        sendActionRef.current({ action: "set_answers", answers });
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [answers, props]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answers, phase]);
 
   const handleAnswerChange = (category: string, value: string) => {
     setAnswers((prev) => ({ ...prev, [category]: value }));

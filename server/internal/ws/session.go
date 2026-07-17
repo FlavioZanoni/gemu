@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"log"
 	"math/rand"
 	"sort"
 	"sync"
@@ -135,8 +136,17 @@ func (h *Hub) armGameTimer(roomID string, s *gameSession) {
 	}
 	seq := s.timerSeq
 	s.timer = time.AfterFunc(time.Until(at), func() {
+		defer recoverTimer("gameTimer", roomID)
 		h.fireGameTimer(roomID, seq, name)
 	})
+}
+
+// recoverTimer keeps a panic inside a timer goroutine from crashing the
+// process (timer callbacks run detached, unguarded by the read loop's recover).
+func recoverTimer(name, roomID string) {
+	if rec := recover(); rec != nil {
+		log.Printf("recovered panic in %s timer for room %s: %v", name, roomID, rec)
+	}
 }
 
 func (h *Hub) fireGameTimer(roomID string, seq int, name string) {
@@ -237,6 +247,7 @@ func (h *Hub) startVote(roomID string, room *rooms.Room, s *gameSession) {
 	s.stopTimer()
 	seq := s.timerSeq
 	s.timer = time.AfterFunc(voteDuration, func() {
+		defer recoverTimer("voteTimer", roomID)
 		h.fireVoteTimer(roomID, seq)
 	})
 

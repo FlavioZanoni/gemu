@@ -54,7 +54,16 @@ func (r *Router) HandleWS(w http.ResponseWriter, req *http.Request) {
 			if err != nil {
 				return
 			}
-			r.hub.HandleMessage(client, env)
+			// One bad message must never take down the process; isolate the
+			// handler so a panic drops this connection only.
+			func() {
+				defer func() {
+					if rec := recover(); rec != nil {
+						log.Printf("recovered panic handling %s from %s: %v", env.Type, client.ID, rec)
+					}
+				}()
+				r.hub.HandleMessage(client, env)
+			}()
 		}
 	}()
 

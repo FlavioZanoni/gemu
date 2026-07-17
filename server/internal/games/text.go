@@ -2,6 +2,19 @@ package games
 
 import "strings"
 
+// maxDrawingBytes caps an embedded canvas data: URL, independent of the WS
+// frame ceiling — these get stored and rebroadcast in full game state.
+const maxDrawingBytes = 48 * 1024
+
+// truncateText caps a string to max runes.
+func truncateText(s string, max int) string {
+	r := []rune(s)
+	if len(r) > max {
+		return string(r[:max])
+	}
+	return s
+}
+
 // ponytail: hand-rolled diacritic table instead of x/text — covers pt-BR/en;
 // swap for golang.org/x/text/unicode/norm if more languages show up.
 var diacritics = strings.NewReplacer(

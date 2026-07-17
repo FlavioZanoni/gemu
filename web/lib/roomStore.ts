@@ -34,6 +34,8 @@ type RoomState = {
     joinCode?: string;
     password?: string;
   } | null;
+  actionError: { code: string; message: string } | null;
+  actionErrorTimeout: NodeJS.Timeout | null;
 };
 
 const initialState: RoomState = {
@@ -54,6 +56,8 @@ const initialState: RoomState = {
   voteResult: null,
   sessionFinal: null,
   pendingProfile: null,
+  actionError: null,
+  actionErrorTimeout: null,
 };
 
 const storageKey = "gemu:last-room";
@@ -326,6 +330,26 @@ export const useRoomStore = () => {
         clearCookie(sessionCookie);
         pendingProfileRef.current = null;
       }
+      // Handle any message type ending in ".error"
+      if (message.type.endsWith(".error")) {
+        const code = (message.payload?.code as string) ?? "unknown";
+        const message_text = (message.payload?.message as string) ?? code;
+        setState((prev) => {
+          // Clear previous timeout if exists
+          if (prev.actionErrorTimeout) {
+            clearTimeout(prev.actionErrorTimeout);
+          }
+          // Set timeout to clear error after ~4s
+          const timeout = setTimeout(() => {
+            setState((s) => ({ ...s, actionError: null, actionErrorTimeout: null }));
+          }, 4000);
+          return {
+            ...prev,
+            actionError: { code, message: message_text },
+            actionErrorTimeout: timeout,
+          };
+        });
+      }
     });
 
     return () => {
@@ -434,6 +458,17 @@ export const useRoomStore = () => {
 
   const resumeSession = () => send("session.resume");
 
+  const clearActionError = () => {
+    if (state.actionErrorTimeout) {
+      clearTimeout(state.actionErrorTimeout);
+    }
+    setState((prev) => ({
+      ...prev,
+      actionError: null,
+      actionErrorTimeout: null,
+    }));
+  };
+
   const isAdmin = useMemo(() => {
     if (!state.snapshot || !state.playerId) return false;
     return state.snapshot.adminId === state.playerId;
@@ -458,5 +493,6 @@ export const useRoomStore = () => {
     pauseSession,
     resumeSession,
     loadLastRoom,
+    clearActionError,
   };
 };

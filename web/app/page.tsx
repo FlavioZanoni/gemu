@@ -25,7 +25,7 @@ export default function Page() {
 }
 
 function HomeContent() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const lobby = useLobbyStore();
   const room = useRoomStore();
   const router = useRouter();
@@ -103,7 +103,8 @@ function HomeContent() {
     if (room.left && lobby.refresh) {
       lobby.refresh();
     }
-  }, [room.left, lobby]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room.left]);
 
   const createDisabled =
     !roomName.trim() ||
@@ -184,7 +185,7 @@ function HomeContent() {
                         </Pill>
                       </div>
                       <p className="text-xs text-(--ink)/75 flex-1">
-                        {game.description[("pt-BR" in game.description ? "en" : "en") as keyof typeof game.description] || ""}
+                        {game.description[locale as keyof typeof game.description] || ""}
                       </p>
                       <div className="flex items-center justify-between pt-2 border-t border-(--line)">
                         <span className="mono-caption">{game.tag}</span>

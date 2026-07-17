@@ -248,7 +248,7 @@ func (g *GarticPhoneGame) OnAction(playerID string, payload map[string]any) erro
 			return nil
 		}
 		dataURL, _ := payload["draw"].(string)
-		if dataURL == "" {
+		if dataURL == "" || len(dataURL) > maxDrawingBytes {
 			return nil
 		}
 		g.pending[playerID] = gpEntry{Author: playerID, Kind: "drawing", DataURL: dataURL}
