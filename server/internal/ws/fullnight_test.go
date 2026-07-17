@@ -78,6 +78,8 @@ func TestFullNightAllGames(t *testing.T) {
 	registry.Register(games.NewGarticFactory())
 	registry.Register(games.NewGarticPhoneFactory())
 	registry.Register(games.NewCahFactory())
+	registry.Register(games.NewTriviaFactory())
+	registry.Register(games.NewFibberFactory())
 	hub := NewHub(registry)
 
 	// Three clients: host + 2 joiners
@@ -86,7 +88,7 @@ func TestFullNightAllGames(t *testing.T) {
 	joiner2 := &Client{ID: "joiner2"}
 
 	// Create room with all five games in the desired order
-	playlist := []any{"stop", "gartic", "garticphone", "cah", "invention"}
+	playlist := []any{"stop", "gartic", "garticphone", "cah", "invention", "trivia", "fibber"}
 	hub.handleRoomCreate(host, Envelope{
 		Type: "room.create",
 		Payload: map[string]any{
@@ -148,7 +150,7 @@ func TestFullNightAllGames(t *testing.T) {
 	})
 
 	clients := []*Client{host, joiner1, joiner2}
-	gameOrder := []string{"stop", "gartic", "garticphone", "cah", "invention"}
+	gameOrder := []string{"stop", "gartic", "garticphone", "cah", "invention", "trivia", "fibber"}
 	playedCount := 0
 
 	// Play each game in sequence
@@ -193,6 +195,10 @@ func TestFullNightAllGames(t *testing.T) {
 			playCah(t, hub, roomID, host, clients)
 		case "invention":
 			playInvention(t, hub, roomID, host, clients)
+		case "trivia":
+			playTrivia(t, hub, roomID, host, clients)
+		case "fibber":
+			playFibber(t, hub, roomID, host, clients)
 		}
 
 		playedCount++
@@ -225,9 +231,11 @@ func TestFullNightAllGames(t *testing.T) {
 			t.Errorf("game %s: expected latest game to be %s, got %s", gameType, gameType, playedGames[playedCount-1].GameType)
 		}
 
-		// Between-game transition: vote for next game
-		if i == 0 {
-			// First transition: use full vote flow
+		// Between-game transition: exercise the real vote flow. The next
+		// game is pinned deterministically at the top of each iteration, so
+		// here we only need the vote to resolve (options are sampled from the
+		// playlist and may not include a specific game).
+		if i < len(gameOrder)-1 {
 			hub.handleSessionVoteStart(host, Envelope{Type: "session.vote.start"})
 			room, ok = hub.rooms.Get(roomID)
 			if !ok {
@@ -236,35 +244,23 @@ func TestFullNightAllGames(t *testing.T) {
 			if room.GetStatus() != rooms.StatusVoting {
 				t.Fatalf("game %s: expected status voting after vote start, got %s", gameType, room.GetStatus())
 			}
-
-			// All three players cast vote for the next game
-			nextGameType := gameOrder[i+1]
+			// Everyone votes for the first offered option.
+			s, _ := hub.session(roomID)
+			s.mu.Lock()
+			ballot := ""
+			if len(s.voteOptions) > 0 {
+				ballot = s.voteOptions[0]
+			}
+			s.mu.Unlock()
 			for _, client := range clients {
 				hub.handleSessionVoteCast(client, Envelope{
 					Type:    "session.vote.cast",
-					Payload: map[string]any{"gameType": nextGameType},
+					Payload: map[string]any{"gameType": ballot},
 				})
 			}
-
-			room, ok = hub.rooms.Get(roomID)
-			if !ok {
-				t.Fatalf("game %s: room not found after vote cast", gameType)
-			}
+			room, _ = hub.rooms.Get(roomID)
 			if room.GetStatus() != rooms.StatusLobby {
 				t.Fatalf("game %s: expected status lobby after all votes, got %s", gameType, room.GetStatus())
-			}
-			if room.GetNextGameType() != nextGameType {
-				t.Fatalf("game %s: expected next game %s, got %s", gameType, nextGameType, room.GetNextGameType())
-			}
-		} else if i < len(gameOrder)-1 {
-			// Remaining transitions: same vote flow but deterministic
-			hub.handleSessionVoteStart(host, Envelope{Type: "session.vote.start"})
-			nextGameType := gameOrder[i+1]
-			for _, client := range clients {
-				hub.handleSessionVoteCast(client, Envelope{
-					Type:    "session.vote.cast",
-					Payload: map[string]any{"gameType": nextGameType},
-				})
 			}
 		}
 	}
@@ -293,11 +289,11 @@ func TestFullNightAllGames(t *testing.T) {
 	if !ok {
 		t.Fatalf("final: expected playedGames to be []rooms.PlayedGame, got %T", snapshot["playedGames"])
 	}
-	if len(playedGames) != 5 {
-		t.Errorf("final: expected 5 played games, got %d", len(playedGames))
+	if len(playedGames) != len(gameOrder) {
+		t.Errorf("final: expected %d played games, got %d", len(gameOrder), len(playedGames))
 	}
 
-	// Verify all five distinct types were played
+	// Verify all distinct types were played
 	typesSeen := make(map[string]bool)
 	for _, pg := range playedGames {
 		typesSeen[pg.GameType] = true
@@ -845,5 +841,88 @@ func playInvention(t *testing.T, hub *Hub, roomID string, host *Client, clients 
 	s.mu.Unlock()
 	if status != games.StatusFinished {
 		t.Logf("invention: game status is %v after 3 rounds", status)
+	}
+}
+
+// playTrivia plays a trivia game to completion.
+func playTrivia(t *testing.T, hub *Hub, roomID string, host *Client, clients []*Client) {
+	t.Helper()
+	s, _ := hub.session(roomID)
+	guard := 0
+	for {
+		guard++
+		if guard > 200 {
+			t.Fatalf("trivia did not finish")
+		}
+		s.mu.Lock()
+		if s.adapter == nil {
+			s.mu.Unlock()
+			return // finished → session cleared
+		}
+		phase, _ := s.adapter.PublicState()["phase"].(string)
+		s.mu.Unlock()
+
+		if phase == "question" {
+			// Every client answers option 0.
+			for _, c := range clients {
+				hub.handleGameAction(c, Envelope{Type: "game.action", Payload: map[string]any{"action": "answer", "choice": float64(0)}})
+			}
+		} else {
+			// reveal → advance
+			if !fireDeadline(t, hub, roomID) {
+				return
+			}
+		}
+	}
+}
+
+// playFibber plays a fibber game to completion.
+func playFibber(t *testing.T, hub *Hub, roomID string, host *Client, clients []*Client) {
+	t.Helper()
+	s, _ := hub.session(roomID)
+	guard := 0
+	for {
+		guard++
+		if guard > 200 {
+			t.Fatalf("fibber did not finish")
+		}
+		s.mu.Lock()
+		if s.adapter == nil {
+			s.mu.Unlock()
+			return
+		}
+		phase, _ := s.adapter.PublicState()["phase"].(string)
+		s.mu.Unlock()
+
+		switch phase {
+		case "writing":
+			for i, c := range clients {
+				hub.handleGameAction(c, Envelope{Type: "game.action", Payload: map[string]any{"action": "lie", "lie": "fib-" + string(rune('a'+i))}})
+			}
+		case "choosing":
+			// Each client picks the first option that isn't their own lie.
+			s.mu.Lock()
+			ps := s.adapter.PublicState()
+			s.mu.Unlock()
+			opts, _ := ps["options"].([]string)
+			_ = opts
+			for _, c := range clients {
+				s.mu.Lock()
+				own := -1
+				if v, ok := s.adapter.PrivateState(c.Player.ID)["ownOption"].(int); ok {
+					own = v
+				}
+				s.mu.Unlock()
+				choice := 0
+				if own == 0 {
+					choice = 1
+				}
+				hub.handleGameAction(c, Envelope{Type: "game.action", Payload: map[string]any{"action": "choose", "choice": float64(choice)}})
+			}
+		default: // reveal
+			if !fireDeadline(t, hub, roomID) {
+				return
+			}
+		}
 	}
 }
