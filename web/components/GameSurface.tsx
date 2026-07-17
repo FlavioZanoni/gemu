@@ -1,6 +1,5 @@
 "use client";
 
-import type { Player } from "@/lib/protocol";
 import { InventionGame } from "./games/InventionGame";
 import { StopGame } from "./games/StopGame";
 import { GarticGame } from "./games/GarticGame";
@@ -42,14 +41,8 @@ export function GameSurface({
     case "invention":
       return (
         <InventionGame
-          roomId={roomId}
-          playerId={playerId}
-          players={players as Player[]}
-          publicState={publicState}
-          privateState={privateState}
-          sendAction={sendAction}
+          {...gameProps}
           onFullscreenToggle={onFullscreenToggle}
-          isAdmin={isAdmin}
           onLeave={onLeave}
         />
       );
