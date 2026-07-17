@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#140c22;font-family:'Space Grotesk',system-ui,sans-serif;color:#ffe9a8}
+a{color:#35d4b9}a:hover{color:#ffd23f}
+@keyframes bulb{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes tick{0%{transform:scale(1)}50%{transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes confetti{0%{transform:translateY(-10px) rotate(0)}100%{transform:translateY(14px) rotate(180deg)}}
+</style>
+</helmet>
+
+<div style="padding:44px 48px 80px;display:flex;flex-direction:column;gap:44px">
+
+<div>
+  <div style="font-family:'Alfa Slab One';font-size:30px;color:#ffe9a8;text-shadow:0 4px 0 #c2452d">GEMU · CORE LOOP SCREENS</div>
+  <div style="font:400 13px/1.6 'Space Grotesk';color:rgba(255,233,168,.6);max-width:720px;margin-top:6px">The full night, phone-portrait first, in flow order. TV/cast variants and edge states at the bottom. Direction 2a system throughout.</div>
+</div>
+
+<!-- ROW 1: HOME + CREATE + LOBBY -->
+<div style="display:flex;gap:36px;flex-wrap:wrap;align-items:flex-start">
+
+<!-- HOME -->
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:700 11px 'Space Mono';letter-spacing:.25em;color:#35d4b9">1 · HOME</div>
+<div data-screen-label="Home" style="width:390px;background:#1c1230;border-radius:28px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55)">
+  <div style="padding:22px 20px 28px;background:radial-gradient(ellipse at 50% -10%,rgba(255,120,90,.2),transparent 55%)">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      <div style="display:inline-flex;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:99px;padding:2px">
+        <span style="font:700 10px 'Space Mono';color:#1c1230;background:#ffe9a8;border-radius:99px;padding:4px 10px">EN</span>
+        <span style="font:700 10px 'Space Mono';color:rgba(255,233,168,.5);padding:4px 10px">PT</span>
+      </div>
+    </div>
+    <div style="text-align:center;margin-bottom:22px">
+      <div style="display:inline-block;position:relative;background:#2b1a3d;border:3px solid #ffd23f;border-radius:16px;padding:12px 30px 14px">
+        <div style="position:absolute;top:-6px;left:14px;right:14px;display:flex;justify-content:space-between">
+          <div style="width:8px;height:8px;border-radius:99px;background:#ffe9a8;box-shadow:0 0 8px #ffd23f;animation:bulb 1s infinite"></div>
+          <div style="width:8px;height:8px;border-radius:99px;background:#ff8a9b;box-shadow:0 0 8px #ff4f6f;animation:bulb 1s .33s infinite"></div>
+          <div style="width:8px;height:8px;border-radius:99px;background:#8ceedd;box-shadow:0 0 8px #35d4b9;animation:bulb 1s .66s infinite"></div>
+        </div>
+        <div style="font-family:'Alfa Slab One';font-size:38px;color:#ffe9a8;text-shadow:0 4px 0 #c2452d;line-height:1">GEMU</div>
+        <div style="font:700 9px 'Space Mono';letter-spacing:.4em;color:#35d4b9;text-align:center;margin-top:4px">TONIGHT'S BIG SHOW</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:18px;padding:12px 14px;margin-bottom:14px">
+      <div style="width:64px;height:64px;border-radius:16px;background:#fff8e7;border:2px solid #ffd23f;display:flex;align-items:center;justify-content:center;font:400 8px 'Space Mono';color:#8a7f60;text-align:center;line-height:1.3">draw your<br>face here<br>✏️</div>
+      <div style="flex:1">
+        <div style="font:700 10px 'Space Mono';letter-spacing:.2em;color:rgba(255,233,168,.5);margin-bottom:4px">YOUR NICKNAME</div>
+        <div style="background:#1c1230;border:2px solid #5a3f7a;border-radius:10px;padding:9px 12px;font:600 15px 'Space Grotesk';color:#ffe9a8">Flavio<span style="color:#35d4b9">|</span></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px">
+      <div style="font-family:'Alfa Slab One';font-size:17px;color:#3d1f0e;background:linear-gradient(180deg,#ffd23f,#f5b32a);border-radius:14px;padding:15px;box-shadow:0 5px 0 #c2452d;text-align:center">CREATE A ROOM</div>
+      <div style="display:flex;gap:10px">
+        <div style="flex:1;background:#1c1230;border:2px solid #5a3f7a;border-radius:12px;padding:12px;font:700 15px 'Space Mono';letter-spacing:.25em;color:rgba(255,233,168,.4);text-align:center">CODE…</div>
+        <div style="font-family:'Alfa Slab One';font-size:14px;color:#ffe9a8;background:#2b1a3d;border:2px solid #ffe9a8;border-radius:12px;padding:12px 20px;box-shadow:0 4px 0 rgba(0,0,0,.4);display:flex;align-items:center">JOIN</div>
+      </div>
+    </div>
+    <div style="font:700 10px 'Space Mono';letter-spacing:.25em;color:rgba(255,233,168,.45);margin-bottom:8px">ON AIR NOW · PUBLIC ROOMS</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:10px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:14px;padding:10px 12px">
+        <span style="width:8px;height:8px;border-radius:99px;background:#35d4b9;animation:bulb 1.4s infinite"></span>
+        <div style="flex:1"><div style="font:700 13px 'Space Grotesk';color:#ffe9a8">sexta caótica</div><div style="font:400 10px 'Space Mono';color:rgba(255,233,168,.45)">PLAYLIST · 4 GAMES</div></div>
+        <span style="font:700 11px 'Space Mono';color:#35d4b9">6/10</span>
+        <span style="font-family:'Alfa Slab One';font-size:11px;color:#3d1f0e;background:#ffd23f;border-radius:9px;padding:6px 12px;box-shadow:0 3px 0 #c2452d">JOIN</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:14px;padding:10px 12px;opacity:.6">
+        <span style="width:8px;height:8px;border-radius:99px;background:#ff9d3f"></span>
+        <div style="flex:1"><div style="font:700 13px 'Space Grotesk';color:#ffe9a8">game night 🔒</div><div style="font:400 10px 'Space Mono';color:rgba(255,233,168,.45)">PASSWORD REQUIRED</div></div>
+        <span style="font:700 11px 'Space Mono';color:rgba(255,233,168,.5)">10/10</span>
+        <span style="font:700 11px 'Space Mono';color:rgba(255,233,168,.35);border:2px solid #5a3f7a;border-radius:9px;padding:6px 10px">FULL</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- CREATE SHEET -->
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:700 11px 'Space Mono';letter-spacing:.25em;color:#35d4b9">1b · CREATE ROOM (bottom sheet)</div>
+<div data-screen-label="Create room" style="width:390px;background:#1c1230;border-radius:28px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55);position:relative">
+  <div style="padding:22px 20px;filter:blur(3px);opacity:.5">
+    <div style="text-align:center"><div style="display:inline-block;background:#2b1a3d;border:3px solid #ffd23f;border-radius:16px;padding:12px 30px"><div style="font-family:'Alfa Slab One';font-size:38px;color:#ffe9a8;text-shadow:0 4px 0 #c2452d;line-height:1">GEMU</div></div></div>
+    <div style="height:180px"></div>
+  </div>
+  <div style="position:absolute;left:0;right:0;bottom:0;background:#2b1a3d;border-top:3px solid #ffd23f;border-radius:24px 24px 0 0;padding:18px 20px 24px;box-shadow:0 -20px 50px rgba(0,0,0,.5)">
+    <div style="width:44px;height:5px;border-radius:99px;background:#5a3f7a;margin:0 auto 14px"></div>
+    <div style="font-family:'Alfa Slab One';font-size:20px;color:#ffe9a8;margin-bottom:14px">SET UP THE SHOW</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div>
+        <div style="font:700 9px 'Space Mono';letter-spacing:.2em;color:rgba(255,233,168,.5);margin-bottom:4px">ROOM NAME</div>
+        <div style="background:#1c1230;border:2px solid #5a3f7a;border-radius:10px;padding:10px 12px;font:600 14px 'Space Grotesk';color:#ffe9a8">sexta caótica</div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <div style="flex:1">
+          <div style="font:700 9px 'Space Mono';letter-spacing:.2em;color:rgba(255,233,168,.5);margin-bottom:4px">VISIBILITY</div>
+          <div style="display:flex;background:#1c1230;border:2px solid #5a3f7a;border-radius:10px;padding:3px">
+            <span style="flex:1;font:700 11px 'Space Mono';color:#1c1230;background:#ffe9a8;border-radius:7px;padding:7px 0;text-align:center">PUBLIC</span>
+            <span style="flex:1;font:700 11px 'Space Mono';color:rgba(255,233,168,.5);padding:7px 0;text-align:center">PRIVATE</span>
+          </div>
+        </div>
+        <div style="width:110px">
+          <div style="font:700 9px 'Space Mono';letter-spacing:.2em;color:rgba(255,233,168,.5);margin-bottom:4px">MAX PLAYERS</div>
+          <div style="display:flex;align-items:center;background:#1c1230;border:2px solid #5a3f7a;border-radius:10px;padding:5px 8px;gap:8px;justify-content:space-between">
+            <span style="font:700 16px 'Space Grotesk';color:#5a3f7a">−</span><span style="font:700 14px 'Space Mono';color:#ffe9a8">10</span><span style="font:700 16px 'Space Grotesk';color:#35d4b9">+</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font:700 9px 'Space Mono';letter-spacing:.2em;color:rgba(255,233,168,.5);margin-bottom:4px">PASSWORD <span style="color:#5a3f7a">· OPTIONAL</span></div>
+        <div style="background:#1c1230;border:2px dashed #5a3f7a;border-radius:10px;padding:10px 12px;font:600 13px 'Space Grotesk';color:rgba(255,233,168,.35)">none — anyone with the code gets in</div>
+      </div>
+      <div style="font-family:'Alfa Slab One';font-size:16px;color:#3d1f0e;background:linear-gradient(180deg,#ffd23f,#f5b32a);border-radius:13px;padding:14px;box-shadow:0 5px 0 #c2452d;text-align:center;margin-top:4px">GO TO GREEN ROOM →</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- LOBBY -->
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:700 11px 'Space Mono';letter-spacing:.25em;color:#35d4b9">2 · LOBBY (host view)</div>
+<div data-screen-label="Lobby" style="width:390px;background:#1c1230;border-radius:28px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55)">
+  <div style="padding:18px 16px 22px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div><div style="font-family:'Alfa Slab One';font-size:19px;color:#ffe9a8">sexta caótica</div><div style="font:400 10px 'Space Mono';color:rgba(255,233,168,.45)">GREEN ROOM · WAITING TO START</div></div>
+      <div style="display:inline-flex;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:99px;padding:2px">
+        <span style="font:700 9px 'Space Mono';color:#1c1230;background:#ffe9a8;border-radius:99px;padding:3px 8px">EN</span>
+        <span style="font:700 9px 'Space Mono';color:rgba(255,233,168,.5);padding:3px 8px">PT</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:#ffe9a8;border-radius:12px;padding:10px;box-shadow:0 4px 0 #c2452d">
+        <span style="font:700 10px 'Space Mono';color:rgba(28,18,48,.55)">CODE</span>
+        <span style="font:700 18px 'Space Mono';letter-spacing:.25em;color:#1c1230">KQ7F2A</span>
+        <span style="font:700 13px 'Space Grotesk';color:#1c1230">⧉</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:12px;padding:10px 12px"><span style="font-size:13px">🔒</span><span style="font:700 12px 'Space Mono';color:rgba(255,233,168,.6)">••••</span></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+      <span style="font:700 10px 'Space Mono';letter-spacing:.25em;color:rgba(255,233,168,.45)">TONIGHT'S PLAYLIST</span>
+      <span style="font:600 11px 'Space Grotesk';color:#35d4b9">Edit ›</span>
+    </div>
+    <div style="display:flex;gap:8px;overflow:hidden;margin-bottom:16px">
+      <div style="flex:none;width:104px;background:linear-gradient(180deg,#ffd23f,#f5b32a);border-radius:14px;padding:10px;box-shadow:0 4px 0 #9c7413"><div style="font-family:'Alfa Slab One';font-size:12px;color:#3d1f0e">STOP!</div><div style="font:600 9px 'Space Mono';color:rgba(61,31,14,.65);margin-top:2px">3–10 · WORDS</div><div style="font:700 10px 'Space Grotesk';color:#3d1f0e;margin-top:6px">✓ in playlist</div></div>
+      <div style="flex:none;width:104px;background:linear-gradient(180deg,#41e0c4,#28b89e);border-radius:14px;padding:10px;box-shadow:0 4px 0 #0f6e5c"><div style="font-family:'Alfa Slab One';font-size:12px;color:#0c3d33">GARTIC</div><div style="font:600 9px 'Space Mono';color:rgba(12,61,51,.65);margin-top:2px">3–10 · DRAW</div><div style="font:700 10px 'Space Grotesk';color:#0c3d33;margin-top:6px">✓ in playlist</div></div>
+      <div style="flex:none;width:104px;background:linear-gradient(180deg,#c9a4ff,#a678f2);border-radius:14px;padding:10px;box-shadow:0 4px 0 #5f3d99"><div style="font-family:'Alfa Slab One';font-size:11px;color:#2d1650">G. PHONE</div><div style="font:600 9px 'Space Mono';color:rgba(45,22,80,.65);margin-top:2px">4–10 · CHAOS</div><div style="font:700 10px 'Space Grotesk';color:#2d1650;margin-top:6px">✓ in playlist</div></div>
+      <div style="flex:none;width:104px;background:#2b1a3d;border:2px dashed #5a3f7a;border-radius:14px;padding:10px;opacity:.7"><div style="font-family:'Alfa Slab One';font-size:12px;color:rgba(255,233,168,.55)">CAH</div><div style="font:600 9px 'Space Mono';color:rgba(255,233,168,.4);margin-top:2px">4–10 · CARDS</div><div style="font:700 10px 'Space Grotesk';color:#35d4b9;margin-top:6px">+ add</div></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+      <span style="font:700 10px 'Space Mono';letter-spacing:.25em;color:rgba(255,233,168,.45)">CONTESTANTS</span>
+      <span style="font:700 11px 'Space Mono';color:#35d4b9">5 READY / 7</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px;background:#2b1a3d;border:2px solid #35d4b9;border-radius:99px;padding:5px 12px 5px 5px">
+        <div style="width:34px;height:34px;border-radius:99px;background:#fff8e7;border:2px solid #ffd23f;display:flex;align-items:center;justify-content:center;font:400 7px 'Space Mono';color:#8a7f60">doodle</div>
+        <div style="flex:1;font:700 13px 'Space Grotesk';color:#ffe9a8">Flavio <span style="color:#ffd23f">★</span></div>
+        <span style="font:700 9px 'Space Mono';color:#35d4b9">✓ READY</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;background:#2b1a3d;border:2px solid #35d4b9;border-radius:99px;padding:5px 12px 5px 5px">
+        <div style="width:34px;height:34px;border-radius:99px;background:#fff8e7;border:2px solid #35d4b9;display:flex;align-items:center;justify-content:center;font:400 7px 'Space Mono';color:#8a7f60">doodle</div>
+        <div style="flex:1;font:700 13px 'Space Grotesk';color:#ffe9a8">Gustavo</div>
+        <span style="font:700 9px 'Space Mono';color:#35d4b9">✓ READY</span>
+        <span style="font:700 11px 'Space Grotesk';color:#ff4f6f">✕</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:99px;padding:5px 12px 5px 5px">
+        <div style="width:34px;height:34px;border-radius:99px;background:#fff8e7;border:2px solid #ff4f6f;display:flex;align-items:center;justify-content:center;font:400 7px 'Space Mono';color:#8a7f60">doodle</div>
+        <div style="flex:1;font:700 13px 'Space Grotesk';color:#ffe9a8">Dani</div>
+        <span style="font:700 9px 'Space Mono';color:rgba(255,233,168,.4)">PICKING…</span>
+        <span style="font:700 11px 'Space Grotesk';color:#ff4f6f">✕</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;background:#2b1a3d;border:2px dashed #5a3f7a;border-radius:99px;padding:9px 12px;opacity:.55;justify-content:center">
+        <span style="font:400 11px 'Space Mono';color:rgba(255,233,168,.5)">+ 4 more spots · share the code</span>
+      </div>
+    </div>
+    <div style="font-family:'Alfa Slab One';font-size:17px;color:#3d1f0e;background:linear-gradient(180deg,#ffd23f,#f5b32a);border-radius:14px;padding:15px;box-shadow:0 5px 0 #c2452d;text-align:center">START THE SHOW <span style="font-size:12px">▶</span></div>
+    <div style="text-align:center;font:400 9px 'Space Mono';color:rgba(255,233,168,.35);margin-top:8px">FIRST GAME IS DRAWN AT RANDOM FROM THE PLAYLIST</div>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- ROW 2: INTRO + SHELL + RESULTS -->
+<div style="display:flex;gap:36px;flex-wrap:wrap;align-items:flex-start">
+
+<!-- INTRO -->
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:700 11px 'Space Mono';letter-spacing:.25em;color:#35d4b9">3 · PRE-GAME INTRO <span style="color:rgba(255,233,168,.4);letter-spacing:0">— after the random-pick drumroll</span></div>
+<div data-screen-label="Pre-game intro" style="width:390px;background:#1c1230;border-radius:28px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55)">
+  <div style="padding:24px 20px 26px;background:radial-gradient(ellipse at 50% -10%,rgba(255,210,63,.18),transparent 55%)">
+    <div style="text-align:center;margin-bottom:18px">
+      <div style="display:inline-block;position:relative;background:#2b1a3d;border:3px solid #ffd23f;border-radius:16px;padding:12px 34px 14px">
+        <div style="position:absolute;top:-6px;left:14px;right:14px;display:flex;justify-content:space-between">
+          <div style="width:8px;height:8px;border-radius:99px;background:#ffe9a8;box-shadow:0 0 8px #ffd23f;animation:bulb 1s infinite"></div>
+          <div style="width:8px;height:8px;border-radius:99px;background:#ff8a9b;box-shadow:0 0 8px #ff4f6f;animation:bulb 1s .33s infinite"></div>
+          <div style="width:8px;height:8px;border-radius:99px;background:#8ceedd;box-shadow:0 0 8px #35d4b9;animation:bulb 1s .66s infinite"></div>
+        </div>
+        <div style="font:700 10px 'Space Mono';letter-spacing:.35em;color:#35d4b9;text-align:center">UP NEXT</div>
+        <div style="font-family:'Alfa Slab One';font-size:34px;color:#ffe9a8;text-shadow:0 4px 0 #c2452d;text-align:center">STOP!</div>
+        <div style="font:600 10px 'Space Mono';color:rgba(255,233,168,.5);text-align:center;margin-top:2px">GAME 1 OF THE NIGHT</div>
+      </div>
+    </div>
+    <div style="background:#2b1a3d;border:3px solid #ffd23f;border-radius:18px;overflow:hidden;margin-bottom:16px">
+      <div style="background:linear-gradient(180deg,#ffd23f,#f5b32a);padding:12px 16px">
+        <div style="font:700 9px 'Space Mono';letter-spacing:.3em;color:rgba(61,31,14,.7)">HOW TO PLAY</div>
+      </div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:11px">
+        <div style="display:flex;gap:11px;align-items:flex-start"><div style="flex:none;width:24px;height:24px;border-radius:99px;background:#ffd23f;color:#3d1f0e;font-family:'Alfa Slab One';font-size:12px;display:flex;align-items:center;justify-content:center">1</div><div style="font:500 13px/1.4 'Space Grotesk';color:#ffe9a8">You get a letter and 8 categories. Fill every blank with a word starting with that letter.</div></div>
+        <div style="display:flex;gap:11px;align-items:flex-start"><div style="flex:none;width:24px;height:24px;border-radius:99px;background:#ffd23f;color:#3d1f0e;font-family:'Alfa Slab One';font-size:12px;display:flex;align-items:center;justify-content:center">2</div><div style="font:500 13px/1.4 'Space Grotesk';color:#ffe9a8">Done first? Slam <b>STOP!</b> — everyone else gets 5 seconds.</div></div>
+        <div style="display:flex;gap:11px;align-items:flex-start"><div style="flex:none;width:24px;height:24px;border-radius:99px;background:#ffd23f;color:#3d1f0e;font-family:'Alfa Slab One';font-size:12px;display:flex;align-items:center;justify-content:center">3</div><div style="font:500 13px/1.4 'Space Grotesk';color:#ffe9a8">Then everyone votes answers valid or nonsense. Unique = 10, duplicate = 5.</div></div>
+      </div>
+    </div>
+    <div style="font-family:'Alfa Slab One';font-size:16px;color:#3d1f0e;background:linear-gradient(180deg,#ffd23f,#f5b32a);border-radius:14px;padding:14px;box-shadow:0 5px 0 #c2452d;text-align:center">GOT IT — I'M READY</div>
+    <div style="text-align:center;font:400 10px 'Space Mono';color:rgba(255,233,168,.4);margin-top:10px">5 OF 7 READY · STARTS WHEN EVERYONE'S IN</div>
+  </div>
+</div>
+</div>
+
+<!-- SHELL -->
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:700 11px 'Space Mono';letter-spacing:.25em;color:#35d4b9">4 · IN-GAME SHELL <span style="color:rgba(255,233,168,.4);letter-spacing:0">— persistent header, any game below</span></div>
+<div data-screen-label="In-game shell" style="width:390px;background:#1c1230;border-radius:28px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55)">
+  <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#2b1a3d;border-bottom:2px solid #5a3f7a">
+    <span style="font-family:'Alfa Slab One';font-size:12px;color:#3d1f0e;background:#ffd23f;border-radius:8px;padding:4px 10px">STOP!</span>
+    <span style="font:600 10px 'Space Mono';color:rgba(255,233,168,.5)">RD 2/3</span>
+    <span style="flex:1"></span>
+    <span style="font:700 15px 'Space Mono';color:#1c1230;background:#ffe9a8;border-radius:8px;padding:3px 10px;box-shadow:0 3px 0 #c2452d">0:42</span>
+    <span style="font:700 12px 'Space Grotesk';color:#35d4b9;border:2px solid #35d4b9;border-radius:99px;width:24px;height:24px;display:flex;align-items:center;justify-content:center">?</span>
+    <span style="font:700 10px 'Space Mono';color:#ffe9a8;background:#1c1230;border:2px solid #5a3f7a;border-radius:99px;padding:4px 9px">#2 · 175</span>
+  </div>
+  <div style="height:560px;margin:12px;border:3px dashed #5a3f7a;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+    <div style="font:700 11px 'Space Mono';letter-spacing:.25em;color:rgba(255,233,168,.4)">GAME SURFACE</div>
+    <div style="font:400 11px/1.5 'Space Grotesk';color:rgba(255,233,168,.35);text-align:center;max-width:220px">GameSurface.tsx mounts the active game here, full-height. Header stays put across all games.</div>
+  </div>
+  <div style="padding:0 12px 14px;text-align:center;font:400 9px 'Space Mono';color:rgba(255,233,168,.3)">SCORE PEEK TAPS OPEN → SESSION SCOREBOARD OVERLAY</div>
+</div>
+</div>
+
+<!-- RESULTS -->
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:700 11px 'Space Mono';letter-spacing:.25em;color:#35d4b9">5 · GAME RESULTS <span style="color:rgba(255,233,168,.4);letter-spacing:0">— rows slide in 1-by-1, bottom-up</span></div>
+<div data-screen-label="Game results" style="width:390px;background:#1c1230;border-radius:28px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55)">
+  <div style="padding:22px 18px 24px;background:radial-gradient(ellipse at 50% -10%,rgba(255,210,63,.16),transparent 55%)">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font:700 10px 'Space Mono';letter-spacing:.35em;color:#35d4b9">GAME OVER</div>
+      <div style="font-family:'Alfa Slab One';font-size:28px;color:#ffe9a8;text-shadow:0 4px 0 #c2452d">STOP! STANDINGS</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#ffd23f,#f5b32a);border-radius:14px;padding:10px 12px;box-shadow:0 5px 0 #c2452d">
+        <div style="font-family:'Alfa Slab One';font-size:16px;color:#3d1f0e;width:26px;text-align:center">1</div>
+        <div style="width:36px;height:36px;border-radius:99px;background:#fff8e7;border:2px solid #3d1f0e;display:flex;align-items:center;justify-content:center;font:400 7px 'Space Mono';color:#8a7f60">doodle</div>
+        <div style="flex:1"><div style="font:700 14px 'Space Grotesk';color:#3d1f0e">Gustavo</div><div style="font:600 10px 'Space Mono';color:rgba(61,31,14,.6)">85 PTS IN GAME</div></div>
+        <div style="font-family:'Alfa Slab One';font-size:18px;color:#3d1f0e">+100</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:14px;padding:10px 12px">
+        <div style="font-family:'Alfa Slab One';font-size:15px;color:rgba(255,233,168,.6);width:26px;text-align:center">2</div>
+        <div style="width:36px;height:36px;border-radius:99px;background:#fff8e7;border:2px solid #ffd23f;display:flex;align-items:center;justify-content:center;font:400 7px 'Space Mono';color:#8a7f60">doodle</div>
+        <div style="flex:1"><div style="font:700 14px 'Space Grotesk';color:#ffe9a8">Flavio</div><div style="font:600 10px 'Space Mono';color:rgba(255,233,168,.45)">70 PTS IN GAME</div></div>
+        <div style="font-family:'Alfa Slab One';font-size:16px;color:#35d4b9">+75</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:14px;padding:10px 12px">
+        <div style="font-family:'Alfa Slab One';font-size:15px;color:rgba(255,233,168,.6);width:26px;text-align:center">3</div>
+        <div style="width:36px;height:36px;border-radius:99px;background:#fff8e7;border:2px solid #ff4f6f;display:flex;align-items:center;justify-content:center;font:400 7px 'Space Mono';color:#8a7f60">doodle</div>
+        <div style="flex:1"><div style="font:700 14px 'Space Grotesk';color:#ffe9a8">Dani</div><div style="font:600 10px 'Space Mono';color:rgba(255,233,168,.45)">55 PTS IN GAME</div></div>
+        <div style="font-family:'Alfa Slab One';font-size:16px;color:#35d4b9">+60</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:14px;padding:10px 12px;opacity:.8">
+        <div style="font-family:'Alfa Slab One';font-size:15px;color:rgba(255,233,168,.6);width:26px;text-align:center">4</div>
+        <div style="width:36px;height:36px;border-radius:99px;background:#fff8e7;border:2px solid #b78bff;display:flex;align-items:center;justify-content:center;font:400 7px 'Space Mono';color:#8a7f60">doodle</div>
+        <div style="flex:1"><div style="font:700 14px 'Space Grotesk';color:#ffe9a8">Rafa</div><div style="font:600 10px 'Space Mono';color:rgba(255,233,168,.45)">40 PTS IN GAME</div></div>
+        <div style="font-family:'Alfa Slab One';font-size:16px;color:#35d4b9">+50</div>
+      </div>
+    </div>
+    <div style="background:#2b1a3d;border:2px dashed #5a3f7a;border-radius:12px;padding:10px 14px;text-align:center;font:400 11px 'Space Mono';color:rgba(255,233,168,.5)">NEXT-GAME VOTE OPENS IN <b style="color:#ffd23f">5</b>…</div>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- ROW 3: VOTE + SCOREBOARD + PODIUM -->
+<div style="display:flex;gap:36px;flex-wrap:wrap;align-items:flex-start">
+
+<!-- VOTE -->
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:700 11px 'Space Mono';letter-spacing:.25em;color:#35d4b9">6 · VOTE <span style="color:rgba(255,233,168,.4);letter-spacing:0">— as approved in 2a; winner reveal = marquee drumroll</span></div>
+<div data-screen-label="Vote" style="width:390px;background:#1c1230;border-radius:28px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55)">
+  <div style="padding:22px 18px 26px;background:radial-gradient(ellipse at 50% -10%,rgba(255,120,90,.22),transparent 60%)">
+    <div style="text-align:center;margin-bottom:6px">
+      <div style="display:inline-block;position:relative;background:#2b1a3d;border:3px solid #ffd23f;border-radius:14px;padding:10px 22px 12px">
+        <div style="position:absolute;top:-6px;left:12px;right:12px;display:flex;justify-content:space-between">
+          <div style="width:8px;height:8px;border-radius:99px;background:#ffe9a8;box-shadow:0 0 8px #ffd23f;animation:bulb 1s infinite"></div>
+          <div style="width:8px;height:8px;border-radius:99px;background:#ff8a9b;box-shadow:0 0 8px #ff4f6f;animation:bulb 1s .33s infinite"></div>
+          <div style="width:8px;height:8px;border-radius:99px;background:#8ceedd;box-shadow:0 0 8px #35d4b9;animation:bulb 1s .66s infinite"></div>
+        </div>
+        <div style="font-family:'Alfa Slab One';font-size:21px;color:#ffe9a8;text-shadow:0 3px 0 #c2452d">NEXT GAME</div>
+        <div style="font:700 10px 'Space Mono';letter-spacing:.3em;color:#35d4b9;text-align:center">AUDIENCE VOTE</div>
+      </div>
+    </div>
+    <div style="text-align:center;margin:10px 0 14px"><span style="font-family:'Alfa Slab One';font-size:26px;color:#1c1230;background:#ffd23f;padding:2px 16px;border-radius:8px;box-shadow:0 4px 0 #c2452d">00:17</span></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,#ffd23f,#f5b32a);border-radius:12px;padding:12px 14px;box-shadow:0 5px 0 #c2452d">
+        <div style="font-family:'Alfa Slab One';font-size:16px;color:#3d1f0e;width:24px;text-align:center">A</div>
+        <div style="flex:1"><div style="font-family:'Alfa Slab One';font-size:15px;color:#3d1f0e">STOP!</div><div style="font:600 10px 'Space Mono';color:rgba(61,31,14,.7)">CATEGORIES · 3–10 · YOUR VOTE ✓</div></div>
+        <div style="display:flex;gap:3px"><div style="width:10px;height:18px;background:#3d1f0e;border-radius:2px"></div><div style="width:10px;height:18px;background:#3d1f0e;border-radius:2px"></div><div style="width:10px;height:18px;background:#3d1f0e;border-radius:2px"></div><div style="width:10px;height:18px;background:#3d1f0e;border-radius:2px"></div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;background:#2b1a3d;border:2px solid #35d4b9;border-radius:12px;padding:12px 14px">
+        <div style="font-family:'Alfa Slab One';font-size:16px;color:#35d4b9;width:24px;text-align:center">B</div>
+        <div style="flex:1"><div style="font-family:'Alfa Slab One';font-size:15px;color:#ffe9a8">GARTIC</div><div style="font:600 10px 'Space Mono';color:rgba(255,233,168,.5)">DRAW &amp; GUESS · 3–10</div></div>
+        <div style="display:flex;gap:3px"><div style="width:10px;height:18px;background:#35d4b9;border-radius:2px"></div><div style="width:10px;height:18px;background:#35d4b9;border-radius:2px"></div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;background:#2b1a3d;border:2px solid #b78bff;border-radius:12px;padding:12px 14px">
+        <div style="font-family:'Alfa Slab One';font-size:16px;color:#b78bff;width:24px;text-align:center">C</div>
+        <div style="flex:1"><div style="font-family:'Alfa Slab One';font-size:15px;color:#ffe9a8">GARTIC PHONE</div><div style="font:600 10px 'Space Mono';color:rgba(255,233,168,.5)">TELEPHONE CHAOS · 4–10</div></div>
+        <div style="display:flex;gap:3px"><div style="width:10px;height:18px;background:#b78bff;border-radius:2px"></div></div>
+      </div>
+    </div>
+    <div style="margin-top:16px;text-align:center;font:600 10px 'Space Mono';letter-spacing:.2em;color:rgba(255,233,168,.45)">7 OF 8 CONTESTANTS VOTED</div>
+  </div>
+</div>
+</div>
+
+<!-- SCOREBOARD -->
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:700 11px 'Space Mono';letter-spacing:.25em;color:#35d4b9">7 · SESSION SCOREBOARD <span style="color:rgba(255,233,168,.4);letter-spacing:0">— between games / score-peek overlay</span></div>
+<div data-screen-label="Session scoreboard" style="width:390px;background:#1c1230;border-radius:28px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55)">
+  <div style="padding:22px 18px 24px">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font:700 10px 'Space Mono';letter-spacing:.35em;color:#35d4b9">AFTER 2 GAMES</div>
+      <div style="font-family:'Alfa Slab One';font-size:26px;color:#ffe9a8;text-shadow:0 4px 0 #c2452d">TONIGHT'S BOARD</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:18px">
+      <div style="display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#ffd23f,#f5b32a);border-radius:14px;padding:10px 12px;box-shadow:0 5px 0 #c2452d">
+        <div style="font-family:'Alfa Slab One';font-size:16px;color:#3d1f0e;width:24px;text-align:center">1</div>
+        <div style="width:36px;height:36px;border-radius:99px;background:#fff8e7;border:2px solid #3d1f0e;display:flex;align-items:center;justify-content:center;font:400 7px 'Space Mono';color:#8a7f60">doodle</div>
+        <div style="flex:1"><div style="font:700 14px 'Space Grotesk';color:#3d1f0e">Gustavo</div><div style="display:flex;gap:4px;margin-top:3px"><span style="width:10px;height:10px;border-radius:3px;background:#3d1f0e" title="Stop: 1st"></span><span style="width:10px;height:10px;border-radius:3px;background:rgba(61,31,14,.35)"></span></div></div>
+        <div style="font-family:'Alfa Slab One';font-size:20px;color:#3d1f0e">175</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:14px;padding:10px 12px">
+        <div style="font-family:'Alfa Slab One';font-size:15px;color:rgba(255,233,168,.6);width:24px;text-align:center">2</div>
+        <div style="width:36px;height:36px;border-radius:99px;background:#fff8e7;border:2px solid #ffd23f;display:flex;align-items:center;justify-content:center;font:400 7px 'Space Mono';color:#8a7f60">doodle</div>
+        <div style="flex:1"><div style="font:700 14px 'Space Grotesk';color:#ffe9a8">Flavio</div><div style="display:flex;gap:4px;margin-top:3px"><span style="width:10px;height:10px;border-radius:3px;background:#ffd23f"></span><span style="width:10px;height:10px;border-radius:3px;background:#35d4b9"></span></div></div>
+        <div style="font-family:'Alfa Slab One';font-size:18px;color:#ffe9a8">150</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:14px;padding:10px 12px">
+        <div style="font-family:'Alfa Slab One';font-size:15px;color:rgba(255,233,168,.6);width:24px;text-align:center">3</div>
+        <div style="width:36px;height:36px;border-radius:99px;background:#fff8e7;border:2px solid #ff4f6f;display:flex;align-items:center;justify-content:center;font:400 7px 'Space Mono';color:#8a7f60">doodle</div>
+        <div style="flex:1"><div style="font:700 14px 'Space Grotesk';color:#ffe9a8">Dani</div><div style="display:flex;gap:4px;margin-top:3px"><span style="width:10px;height:10px;border-radius:3px;background:#ffd23f;opacity:.5"></span><span style="width:10px;height:10px;border-radius:3px;background:#35d4b9;opacity:.5"></span></div></div>
+        <div style="font-family:'Alfa Slab One';font-size:18px;color:#ffe9a8">120</div>
+      </div>
+    </div>
+    <div style="font:400 10px 'Space Mono';color:rgba(255,233,168,.4);text-align:center;margin-bottom:14px">SQUARES = PER-GAME PLACEMENT HISTORY, IN GAME HUE</div>
+    <div style="display:flex;gap:10px">
+      <div style="flex:1;font-family:'Alfa Slab One';font-size:13px;color:#ffe9a8;background:#2b1a3d;border:2px solid #ffe9a8;border-radius:12px;padding:12px;text-align:center;box-shadow:0 4px 0 rgba(0,0,0,.4)">KEEP PLAYING</div>
+      <div style="flex:1;font-family:'Alfa Slab One';font-size:13px;color:#fff;background:linear-gradient(180deg,#ff6b85,#e84863);border-radius:12px;padding:12px;text-align:center;box-shadow:0 4px 0 #8f1f33">END THE NIGHT</div>
+    </div>
+    <div style="text-align:center;font:400 9px 'Space Mono';color:rgba(255,233,168,.35);margin-top:8px">HOST ONLY · ENDING GOES TO THE FINAL PODIUM</div>
+  </div>
+</div>
+</div>
+
+<!-- PODIUM -->
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:700 11px 'Space Mono';letter-spacing:.25em;color:#35d4b9">8 · FINAL PODIUM <span style="color:rgba(255,233,168,.4);letter-spacing:0">— confetti + podium blocks rise 3-2-1</span></div>
+<div data-screen-label="Final podium" style="width:390px;background:#1c1230;border-radius:28px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55);position:relative">
+  <div style="position:absolute;top:0;left:0;right:0;height:120px;pointer-events:none">
+    <span style="position:absolute;left:12%;top:10px;width:8px;height:12px;background:#ffd23f;border-radius:2px;animation:confetti 1.6s infinite alternate"></span>
+    <span style="position:absolute;left:32%;top:26px;width:8px;height:12px;background:#ff4f6f;border-radius:2px;animation:confetti 1.9s .3s infinite alternate"></span>
+    <span style="position:absolute;left:55%;top:8px;width:8px;height:12px;background:#35d4b9;border-radius:2px;animation:confetti 1.4s .6s infinite alternate"></span>
+    <span style="position:absolute;left:74%;top:30px;width:8px;height:12px;background:#b78bff;border-radius:2px;animation:confetti 2s .15s infinite alternate"></span>
+    <span style="position:absolute;left:88%;top:14px;width:8px;height:12px;background:#ff9d3f;border-radius:2px;animation:confetti 1.7s .45s infinite alternate"></span>
+  </div>
+  <div style="padding:26px 18px 24px">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font:700 10px 'Space Mono';letter-spacing:.35em;color:#35d4b9">THAT'S A WRAP</div>
+      <div style="font-family:'Alfa Slab One';font-size:30px;color:#ffe9a8;text-shadow:0 4px 0 #c2452d">CHAMPION OF<br>THE NIGHT</div>
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:8px;margin-bottom:18px;padding:0 6px">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div style="width:44px;height:44px;border-radius:99px;background:#fff8e7;border:2px solid #35d4b9;display:flex;align-items:center;justify-content:center;font:400 7px 'Space Mono';color:#8a7f60">doodle</div>
+        <div style="font:700 12px 'Space Grotesk';color:#ffe9a8">Flavio</div>
+        <div style="width:100%;height:74px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:12px 12px 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-family:'Alfa Slab One';font-size:20px;color:rgba(255,233,168,.7)">2</span><span style="font:700 11px 'Space Mono';color:rgba(255,233,168,.5)">325</span></div>
+      </div>
+      <div style="flex:1.15;display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div style="font-size:20px">👑</div>
+        <div style="width:52px;height:52px;border-radius:99px;background:#fff8e7;border:3px solid #ffd23f;display:flex;align-items:center;justify-content:center;font:400 7px 'Space Mono';color:#8a7f60">doodle</div>
+        <div style="font:700 14px 'Space Grotesk';color:#ffd23f">Gustavo</div>
+        <div style="width:100%;height:104px;background:linear-gradient(180deg,#ffd23f,#f5b32a);border-radius:12px 12px 0 0;box-shadow:0 0 30px rgba(255,210,63,.35);display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-family:'Alfa Slab One';font-size:26px;color:#3d1f0e">1</span><span style="font:700 12px 'Space Mono';color:#3d1f0e">410</span></div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div style="width:44px;height:44px;border-radius:99px;background:#fff8e7;border:2px solid #ff4f6f;display:flex;align-items:center;justify-content:center;font:400 7px 'Space Mono';color:#8a7f60">doodle</div>
+        <div style="font:700 12px 'Space Grotesk';color:#ffe9a8">Dani</div>
+        <div style="width:100%;height:56px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:12px 12px 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-family:'Alfa Slab One';font-size:18px;color:rgba(255,233,168,.7)">3</span><span style="font:700 11px 'Space Mono';color:rgba(255,233,168,.5)">290</span></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:99px;padding:6px 14px"><span style="font:700 11px 'Space Mono';color:rgba(255,233,168,.5)">4</span><span style="flex:1;font:600 12px 'Space Grotesk';color:#ffe9a8">Rafa</span><span style="font:700 11px 'Space Mono';color:rgba(255,233,168,.6)">245</span></div>
+      <div style="display:flex;align-items:center;gap:10px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:99px;padding:6px 14px"><span style="font:700 11px 'Space Mono';color:rgba(255,233,168,.5)">5</span><span style="flex:1;font:600 12px 'Space Grotesk';color:#ffe9a8">Bia</span><span style="font:700 11px 'Space Mono';color:rgba(255,233,168,.6)">210</span></div>
+    </div>
+    <div style="font-family:'Alfa Slab One';font-size:14px;color:#3d1f0e;background:linear-gradient(180deg,#ffd23f,#f5b32a);border-radius:12px;padding:13px;box-shadow:0 4px 0 #c2452d;text-align:center">SAME TIME NEXT WEEK? · NEW ROOM</div>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- TV VARIANTS -->
+<div>
+  <div style="font:700 11px 'Space Mono';letter-spacing:.25em;color:#35d4b9;margin-bottom:4px">9 · TV / CAST VARIANTS <span style="color:rgba(255,233,168,.4);letter-spacing:0">— host shares this on the living-room screen; phones stay the controller</span></div>
+  <div style="display:flex;gap:28px;flex-wrap:wrap;margin-top:12px">
+    <div data-screen-label="TV vote" style="width:640px;aspect-ratio:16/9;background:#1c1230;border-radius:18px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55);padding:28px 34px;box-sizing:border-box;background-image:radial-gradient(ellipse at 50% -20%,rgba(255,120,90,.22),transparent 55%)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+        <div style="font-family:'Alfa Slab One';font-size:26px;color:#ffe9a8;text-shadow:0 3px 0 #c2452d">VOTE ON YOUR PHONE!</div>
+        <span style="font-family:'Alfa Slab One';font-size:26px;color:#1c1230;background:#ffd23f;padding:0 14px;border-radius:8px;box-shadow:0 4px 0 #c2452d">00:17</span>
+      </div>
+      <div style="display:flex;gap:14px;height:200px">
+        <div style="flex:1.4;background:linear-gradient(180deg,#ffd23f,#f5b32a);border-radius:14px;box-shadow:0 6px 0 #c2452d;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
+          <div style="font-family:'Alfa Slab One';font-size:24px;color:#3d1f0e">STOP!</div>
+          <div style="font-family:'Alfa Slab One';font-size:40px;color:#3d1f0e">4</div>
+        </div>
+        <div style="flex:1;background:#2b1a3d;border:2px solid #35d4b9;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
+          <div style="font-family:'Alfa Slab One';font-size:19px;color:#35d4b9">GARTIC</div>
+          <div style="font-family:'Alfa Slab One';font-size:32px;color:rgba(255,233,168,.75)">2</div>
+        </div>
+        <div style="flex:1;background:#2b1a3d;border:2px solid #b78bff;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
+          <div style="font-family:'Alfa Slab One';font-size:17px;color:#b78bff">G. PHONE</div>
+          <div style="font-family:'Alfa Slab One';font-size:32px;color:rgba(255,233,168,.75)">1</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px">
+        <span style="font:700 12px 'Space Mono';letter-spacing:.2em;color:rgba(255,233,168,.5)">7 OF 8 VOTED</span>
+        <span style="font:700 13px 'Space Mono';color:#1c1230;background:#ffe9a8;border-radius:99px;padding:5px 16px;letter-spacing:.2em">KQ7F2A</span>
+      </div>
+    </div>
+    <div data-screen-label="TV podium" style="width:640px;aspect-ratio:16/9;background:#1c1230;border-radius:18px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55);padding:24px 34px;box-sizing:border-box;position:relative">
+      <span style="position:absolute;left:18%;top:14px;width:9px;height:14px;background:#ffd23f;border-radius:2px;animation:confetti 1.6s infinite alternate"></span>
+      <span style="position:absolute;left:48%;top:8px;width:9px;height:14px;background:#ff4f6f;border-radius:2px;animation:confetti 1.9s .3s infinite alternate"></span>
+      <span style="position:absolute;left:78%;top:18px;width:9px;height:14px;background:#35d4b9;border-radius:2px;animation:confetti 1.5s .5s infinite alternate"></span>
+      <div style="text-align:center;font-family:'Alfa Slab One';font-size:24px;color:#ffe9a8;text-shadow:0 3px 0 #c2452d;margin-bottom:14px">🏆 CHAMPION OF THE NIGHT</div>
+      <div style="display:flex;align-items:flex-end;gap:12px;height:190px;max-width:440px;margin:0 auto">
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;justify-content:flex-end;height:100%">
+          <div style="font:700 13px 'Space Grotesk';color:#ffe9a8">Flavio · 325</div>
+          <div style="width:100%;height:44%;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:center"><span style="font-family:'Alfa Slab One';font-size:26px;color:rgba(255,233,168,.7)">2</span></div>
+        </div>
+        <div style="flex:1.15;display:flex;flex-direction:column;align-items:center;gap:5px;justify-content:flex-end;height:100%">
+          <div style="font-size:22px">👑</div>
+          <div style="font:700 15px 'Space Grotesk';color:#ffd23f">Gustavo · 410</div>
+          <div style="width:100%;height:62%;background:linear-gradient(180deg,#ffd23f,#f5b32a);border-radius:10px 10px 0 0;box-shadow:0 0 34px rgba(255,210,63,.4);display:flex;align-items:center;justify-content:center"><span style="font-family:'Alfa Slab One';font-size:34px;color:#3d1f0e">1</span></div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;justify-content:flex-end;height:100%">
+          <div style="font:700 13px 'Space Grotesk';color:#ffe9a8">Dani · 290</div>
+          <div style="width:100%;height:32%;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:center"><span style="font-family:'Alfa Slab One';font-size:24px;color:rgba(255,233,168,.7)">3</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDGE STATES -->
+<div>
+  <div style="font:700 11px 'Space Mono';letter-spacing:.25em;color:#35d4b9;margin-bottom:12px">10 · EDGE STATES</div>
+  <div style="display:flex;gap:28px;flex-wrap:wrap">
+    <div data-screen-label="Reconnecting" style="width:300px;background:#1c1230;border-radius:22px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.5)">
+      <div style="background:#3d2314;border-bottom:2px solid #ff9d3f;padding:9px 14px;display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:99px;background:#ff9d3f;animation:bulb 1s infinite"></span><span style="font:600 11px 'Space Grotesk';color:#ffcf9e">Signal lost — reconnecting…</span></div>
+      <div style="padding:16px;opacity:.45;filter:saturate(.6)">
+        <div style="height:110px;border:3px dashed #5a3f7a;border-radius:14px;display:flex;align-items:center;justify-content:center;font:400 10px 'Space Mono';color:rgba(255,233,168,.4);text-align:center">game keeps rendering<br>inputs disabled</div>
+      </div>
+    </div>
+    <div data-screen-label="Kicked" style="width:300px;background:#1c1230;border-radius:22px;border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 50px rgba(0,0,0,.5);padding:28px 20px;text-align:center;box-sizing:border-box">
+      <div style="font-size:30px;margin-bottom:8px">🥾</div>
+      <div style="font-family:'Alfa Slab One';font-size:19px;color:#ff4f6f">VOTED OFF THE ISLAND</div>
+      <div style="font:400 12px/1.5 'Space Grotesk';color:rgba(255,233,168,.55);margin:8px 0 16px">The host removed you from the room.</div>
+      <div style="font-family:'Alfa Slab One';font-size:13px;color:#ffe9a8;background:#2b1a3d;border:2px solid #ffe9a8;border-radius:11px;padding:11px;box-shadow:0 4px 0 rgba(0,0,0,.4)">BACK TO HOME</div>
+    </div>
+    <div data-screen-label="Room not found" style="width:300px;background:#1c1230;border-radius:22px;border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 50px rgba(0,0,0,.5);padding:28px 20px;text-align:center;box-sizing:border-box">
+      <div style="font-family:'Alfa Slab One';font-size:34px;color:#5a3f7a;margin-bottom:4px">?</div>
+      <div style="font-family:'Alfa Slab One';font-size:18px;color:#ffe9a8">OFF AIR</div>
+      <div style="font:400 12px/1.5 'Space Grotesk';color:rgba(255,233,168,.55);margin:8px 0 16px">Room <b style="font-family:'Space Mono';color:#ffd23f">KQ7F2A</b> doesn't exist or already ended.</div>
+      <div style="font-family:'Alfa Slab One';font-size:13px;color:#3d1f0e;background:linear-gradient(180deg,#ffd23f,#f5b32a);border-radius:11px;padding:11px;box-shadow:0 4px 0 #c2452d">TRY ANOTHER CODE</div>
+    </div>
+  </div>
+</div>
+
+<div style="font:400 12px/1.6 'Space Grotesk';color:rgba(255,233,168,.45);max-width:760px;border-top:1px solid rgba(255,255,255,.08);padding-top:18px">Next: the four game screens (Stop form + STOP moment + validation, Gartic draw/guess, Gartic Phone write/draw/reveal, CAH hand/judge) — then the clickable prototype of the whole night.</div>
+
+</div>
+
+</x-dc>
+</body>
+</html>

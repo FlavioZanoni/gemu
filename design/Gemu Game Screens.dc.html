@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#140c22;font-family:'Space Grotesk',system-ui,sans-serif;color:#ffe9a8}
+a{color:#35d4b9}a:hover{color:#ffd23f}
+@keyframes bulb{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes tick{0%{transform:scale(1)}50%{transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes slam{0%{transform:scale(.7) rotate(-6deg)}60%{transform:scale(1.15) rotate(2deg)}100%{transform:scale(1) rotate(-2deg)}}
+</style>
+</helmet>
+
+<div style="padding:44px 48px 80px;display:flex;flex-direction:column;gap:48px">
+
+<div>
+  <div style="font-family:'Alfa Slab One';font-size:30px;color:#ffe9a8;text-shadow:0 4px 0 #c2452d">GEMU · GAME SCREENS</div>
+  <div style="font:400 13px/1.6 'Space Grotesk';color:rgba(255,233,168,.6);max-width:720px;margin-top:6px">All inside the in-game shell (header: game chip · round · timer · ? · score peek). Each game wears its hue: Stop = yellow, Gartic = teal, Gartic Phone = purple, CAH = coral, Patently Silly = orange.</div>
+</div>
+
+<!-- ============ STOP ============ -->
+<div>
+<div style="font:700 12px 'Space Mono';letter-spacing:.25em;color:#ffd23f;margin-bottom:14px">■ STOP! — SCATTERGORIES</div>
+<div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start">
+
+<!-- STOP FORM -->
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:700 10px 'Space Mono';letter-spacing:.2em;color:rgba(255,233,168,.5)">A · FILL PHASE</div>
+<div data-screen-label="Stop form" style="width:390px;background:#1c1230;border-radius:28px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55)">
+  <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#2b1a3d;border-bottom:2px solid #5a3f7a">
+    <span style="font-family:'Alfa Slab One';font-size:12px;color:#3d1f0e;background:#ffd23f;border-radius:8px;padding:4px 10px">STOP!</span>
+    <span style="font:600 10px 'Space Mono';color:rgba(255,233,168,.5)">RD 2/3</span><span style="flex:1"></span>
+    <span style="font:700 15px 'Space Mono';color:#1c1230;background:#ffe9a8;border-radius:8px;padding:3px 10px;box-shadow:0 3px 0 #c2452d">1:12</span>
+    <span style="font:700 12px 'Space Grotesk';color:#35d4b9;border:2px solid #35d4b9;border-radius:99px;width:24px;height:24px;display:flex;align-items:center;justify-content:center">?</span>
+  </div>
+  <div style="padding:14px 16px 18px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(180deg,#ffd23f,#f5b32a);box-shadow:0 5px 0 #c2452d;display:flex;align-items:center;justify-content:center;font-family:'Alfa Slab One';font-size:36px;color:#3d1f0e">B</div>
+      <div><div style="font:700 10px 'Space Mono';letter-spacing:.25em;color:rgba(255,233,168,.5)">EVERYTHING STARTS WITH</div><div style="font:600 13px 'Space Grotesk';color:#ffe9a8">6 of 8 filled — keep going!</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:10px;background:#2b1a3d;border:2px solid #35d4b9;border-radius:12px;padding:9px 12px"><span style="width:86px;font:700 10px 'Space Mono';color:rgba(255,233,168,.5)">ANIMAL</span><span style="flex:1;font:600 14px 'Space Grotesk';color:#ffe9a8">Bat</span><span style="color:#35d4b9;font-size:12px">✓</span></div>
+      <div style="display:flex;align-items:center;gap:10px;background:#2b1a3d;border:2px solid #35d4b9;border-radius:12px;padding:9px 12px"><span style="width:86px;font:700 10px 'Space Mono';color:rgba(255,233,168,.5)">FOOD</span><span style="flex:1;font:600 14px 'Space Grotesk';color:#ffe9a8">Brigadeiro</span><span style="color:#35d4b9;font-size:12px">✓</span></div>
+      <div style="display:flex;align-items:center;gap:10px;background:#1c1230;border:2px solid #ffd23f;border-radius:12px;padding:9px 12px;box-shadow:0 0 0 4px rgba(255,210,63,.12)"><span style="width:86px;font:700 10px 'Space Mono';color:#ffd23f">CITY</span><span style="flex:1;font:600 14px 'Space Grotesk';color:#ffe9a8">Bel<span style="color:#35d4b9">|</span></span></div>
+      <div style="display:flex;align-items:center;gap:10px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:12px;padding:9px 12px;opacity:.75"><span style="width:86px;font:700 10px 'Space Mono';color:rgba(255,233,168,.4)">MOVIE</span><span style="flex:1;font:600 13px 'Space Grotesk';color:rgba(255,233,168,.3)">…</span></div>
+      <div style="display:flex;align-items:center;gap:10px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:12px;padding:9px 12px;opacity:.75"><span style="width:86px;font:700 10px 'Space Mono';color:rgba(255,233,168,.4)">PROFISSION</span><span style="flex:1;font:600 13px 'Space Grotesk';color:rgba(255,233,168,.3)">…</span></div>
+    </div>
+    <div style="font-family:'Alfa Slab One';font-size:22px;color:#fff;background:linear-gradient(180deg,#ff6b85,#e84863);border-radius:16px;padding:16px;box-shadow:0 6px 0 #8f1f33;text-align:center;letter-spacing:.05em">🛑 STOP!</div>
+    <div style="text-align:center;font:400 9px 'Space Mono';color:rgba(255,233,168,.35);margin-top:8px">SLAMMING STOP GIVES EVERYONE ELSE 5 SECONDS</div>
+  </div>
+</div>
+</div>
+
+<!-- STOP MOMENT -->
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:700 10px 'Space Mono';letter-spacing:.2em;color:rgba(255,233,168,.5)">B · THE STOP MOMENT <span style="color:rgba(255,233,168,.35)">— full-screen interrupt</span></div>
+<div data-screen-label="Stop moment" style="width:390px;height:520px;background:#1c1230;border-radius:28px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55);position:relative">
+  <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 40%,rgba(232,72,99,.35),transparent 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px">
+    <div style="width:52px;height:52px;border-radius:99px;background:#fff8e7;border:3px solid #ff4f6f;display:flex;align-items:center;justify-content:center;font:400 8px 'Space Mono';color:#8a7f60">doodle</div>
+    <div style="font:700 12px 'Space Mono';letter-spacing:.25em;color:#ff8a9b">GUSTAVO SLAMMED</div>
+    <div style="font-family:'Alfa Slab One';font-size:64px;color:#fff;text-shadow:0 6px 0 #8f1f33;animation:slam .5s ease-out;transform:rotate(-2deg)">STOP!</div>
+    <div style="font:600 13px 'Space Grotesk';color:rgba(255,233,168,.7)">finish what you can…</div>
+    <div style="font-family:'Alfa Slab One';font-size:44px;color:#fff;background:linear-gradient(180deg,#ff6b85,#e84863);border-radius:16px;padding:2px 24px;box-shadow:0 5px 0 #8f1f33;animation:tick 1s infinite">5</div>
+  </div>
+</div>
+</div>
+
+<!-- VALIDATION -->
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:700 10px 'Space Mono';letter-spacing:.2em;color:rgba(255,233,168,.5)">C · VALIDATION VOTE <span style="color:rgba(255,233,168,.35)">— one answer at a time, everyone judges</span></div>
+<div data-screen-label="Stop validation" style="width:390px;background:#1c1230;border-radius:28px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55)">
+  <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#2b1a3d;border-bottom:2px solid #5a3f7a">
+    <span style="font-family:'Alfa Slab One';font-size:12px;color:#3d1f0e;background:#ffd23f;border-radius:8px;padding:4px 10px">STOP!</span>
+    <span style="font:600 10px 'Space Mono';color:rgba(255,233,168,.5)">JUDGING · 4/16</span><span style="flex:1"></span>
+    <span style="font:700 15px 'Space Mono';color:#1c1230;background:#ffe9a8;border-radius:8px;padding:3px 10px;box-shadow:0 3px 0 #c2452d">0:08</span>
+  </div>
+  <div style="padding:18px 16px 20px">
+    <div style="text-align:center;margin-bottom:14px">
+      <span style="font:700 10px 'Space Mono';letter-spacing:.25em;color:rgba(255,233,168,.5)">CATEGORY · CITY · LETTER B</span>
+    </div>
+    <div style="background:#fff8e7;border-radius:18px;padding:22px 18px;text-align:center;box-shadow:0 6px 0 rgba(0,0,0,.35);margin-bottom:6px">
+      <div style="font:700 10px 'Space Mono';letter-spacing:.2em;color:#8a7f60;margin-bottom:6px">DANI WROTE</div>
+      <div style="font-family:'Alfa Slab One';font-size:30px;color:#1c1230">"Bhurgatinho"</div>
+    </div>
+    <div style="text-align:center;font:400 10px 'Space Mono';color:rgba(255,233,168,.4);margin-bottom:14px">IS THIS A REAL CITY?!</div>
+    <div style="display:flex;gap:10px;margin-bottom:14px">
+      <div style="flex:1;font-family:'Alfa Slab One';font-size:15px;color:#0c3d33;background:linear-gradient(180deg,#41e0c4,#28b89e);border-radius:14px;padding:14px;box-shadow:0 5px 0 #0f6e5c;text-align:center">✓ VALID</div>
+      <div style="flex:1;font-family:'Alfa Slab One';font-size:15px;color:#fff;background:linear-gradient(180deg,#ff6b85,#e84863);border-radius:14px;padding:14px;box-shadow:0 5px 0 #8f1f33;text-align:center">✗ NONSENSE</div>
+    </div>
+    <div style="display:flex;justify-content:center;gap:14px;margin-bottom:12px">
+      <span style="font:700 12px 'Space Mono';color:#35d4b9">VALID 2</span>
+      <div style="width:140px;height:10px;border-radius:99px;background:#2b1a3d;border:1px solid #5a3f7a;overflow:hidden;margin-top:3px"><div style="width:33%;height:100%;background:#35d4b9;float:left"></div><div style="width:67%;height:100%;background:#e84863;float:left"></div></div>
+      <span style="font:700 12px 'Space Mono';color:#ff8a9b">4 NOPE</span>
+    </div>
+    <div style="display:flex;justify-content:center;gap:5px">
+      <div style="width:22px;height:22px;border-radius:99px;background:#fff8e7;border:2px solid #35d4b9"></div>
+      <div style="width:22px;height:22px;border-radius:99px;background:#fff8e7;border:2px solid #ff4f6f"></div>
+      <div style="width:22px;height:22px;border-radius:99px;background:#fff8e7;border:2px solid #ff4f6f"></div>
+      <div style="width:22px;height:22px;border-radius:99px;background:#fff8e7;border:2px solid #5a3f7a;opacity:.4"></div>
+    </div>
+    <div style="text-align:center;font:400 9px 'Space Mono';color:rgba(255,233,168,.35);margin-top:10px">UNIQUE VALID = 10 · DUPLICATE = 5 · NONSENSE = 0</div>
+  </div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ============ GARTIC ============ -->
+<div>
+<div style="font:700 12px 'Space Mono';letter-spacing:.25em;color:#35d4b9;margin-bottom:14px">■ GARTIC — DRAW &amp; GUESS</div>
+<div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start">
+
+<!-- DRAWER -->
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:700 10px 'Space Mono';letter-spacing:.2em;color:rgba(255,233,168,.5)">A · DRAWER VIEW <span style="color:rgba(255,233,168,.35)">— mounts DrawingCanvas.dc.html</span></div>
+<div data-screen-label="Gartic drawer" style="width:390px;background:#1c1230;border-radius:28px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55)">
+  <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#2b1a3d;border-bottom:2px solid #5a3f7a">
+    <span style="font-family:'Alfa Slab One';font-size:12px;color:#0c3d33;background:#35d4b9;border-radius:8px;padding:4px 10px">GARTIC</span>
+    <span style="font:600 10px 'Space Mono';color:rgba(255,233,168,.5)">RD 1/2 · YOU DRAW</span><span style="flex:1"></span>
+    <span style="font:700 15px 'Space Mono';color:#1c1230;background:#ffe9a8;border-radius:8px;padding:3px 10px;box-shadow:0 3px 0 #c2452d">1:04</span>
+    <span style="font:700 12px 'Space Grotesk';color:#35d4b9;border:2px solid #35d4b9;border-radius:99px;width:24px;height:24px;display:flex;align-items:center;justify-content:center">?</span>
+  </div>
+  <div style="padding:12px 14px 16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div><div style="font:700 9px 'Space Mono';letter-spacing:.3em;color:#35d4b9">YOUR SECRET WORD</div><div style="font-family:'Alfa Slab One';font-size:19px;color:#ffe9a8;text-shadow:0 3px 0 #c2452d">CAPIVARA</div></div>
+      <div style="font:600 10px 'Space Mono';color:rgba(255,233,168,.45);text-align:right">3 OF 6<br>GUESSED ✓</div>
+    </div>
+    <div style="height:300px;background:#fff8e7;border-radius:16px;border:3px solid #35d4b9;box-shadow:0 5px 0 rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font:400 10px 'Space Mono';color:#8a7f60;text-align:center;line-height:1.6">DrawingCanvas.dc.html<br>(strokes stream live over WS)</div>
+    <div style="display:flex;gap:5px;margin-top:10px;justify-content:center">
+      <span style="width:34px;height:34px;border-radius:10px;background:linear-gradient(180deg,#ffd23f,#f5b32a);display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 3px 0 #9c7413">✏️</span>
+      <span style="width:34px;height:34px;border-radius:10px;background:#2b1a3d;border:2px solid #5a3f7a;display:flex;align-items:center;justify-content:center;font-size:13px;color:#ffe9a8">◻</span>
+      <span style="width:34px;height:34px;border-radius:10px;background:#2b1a3d;border:2px solid #5a3f7a;display:flex;align-items:center;justify-content:center;font-size:13px;color:#ffe9a8">▭</span>
+      <span style="width:34px;height:34px;border-radius:10px;background:#2b1a3d;border:2px solid #5a3f7a;display:flex;align-items:center;justify-content:center;font-size:13px;color:#ffe9a8">🪣</span>
+      <span style="width:34px;height:34px;border-radius:10px;background:#2b1a3d;border:2px solid #5a3f7a;display:flex;align-items:center;justify-content:center;font-size:12px;color:#ffe9a8">↩</span>
+    </div>
+    <div style="margin-top:12px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:12px;padding:8px 12px;display:flex;flex-direction:column;gap:3px">
+      <span style="font:600 11px 'Space Grotesk';color:rgba(255,233,168,.6)"><b style="color:#35d4b9">Dani ✓</b> guessed it! (+18)</span>
+      <span style="font:600 11px 'Space Grotesk';color:rgba(255,233,168,.6)"><b style="color:#ffe9a8">Rafa:</b> hamster gigante</span>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- GUESSER -->
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:700 10px 'Space Mono';letter-spacing:.2em;color:rgba(255,233,168,.5)">B · GUESSER VIEW <span style="color:rgba(255,233,168,.35)">— close-guess masking, faster = more points</span></div>
+<div data-screen-label="Gartic guesser" style="width:390px;background:#1c1230;border-radius:28px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55)">
+  <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#2b1a3d;border-bottom:2px solid #5a3f7a">
+    <span style="font-family:'Alfa Slab One';font-size:12px;color:#0c3d33;background:#35d4b9;border-radius:8px;padding:4px 10px">GARTIC</span>
+    <span style="font:600 10px 'Space Mono';color:rgba(255,233,168,.5)">GUSTAVO DRAWS</span><span style="flex:1"></span>
+    <span style="font:700 15px 'Space Mono';color:#fff;background:linear-gradient(180deg,#ff6b85,#e84863);border-radius:8px;padding:3px 10px;box-shadow:0 3px 0 #8f1f33;animation:tick 1s infinite">0:09</span>
+    <span style="font:700 12px 'Space Grotesk';color:#35d4b9;border:2px solid #35d4b9;border-radius:99px;width:24px;height:24px;display:flex;align-items:center;justify-content:center">?</span>
+  </div>
+  <div style="padding:12px 14px 16px">
+    <div style="text-align:center;margin-bottom:10px">
+      <span style="font:700 16px 'Space Mono';letter-spacing:.4em;color:#ffe9a8">C _ P _ V _ R A</span>
+      <div style="font:400 9px 'Space Mono';color:rgba(255,233,168,.4);margin-top:3px">8 LETTERS · HINT UNLOCKS AT 0:30</div>
+    </div>
+    <div style="height:280px;background:#fff8e7;border-radius:16px;border:3px solid #5a3f7a;display:flex;align-items:center;justify-content:center;font:400 10px 'Space Mono';color:#8a7f60;text-align:center;line-height:1.6">live drawing streams here<br>(read-only canvas)</div>
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:4px;margin-bottom:10px">
+      <div style="display:flex;gap:8px;align-items:center"><span style="font:600 11px 'Space Grotesk';color:rgba(255,233,168,.55)"><b style="color:#35d4b9">Dani ✓</b> guessed it!</span></div>
+      <div style="display:flex;gap:8px;align-items:center"><span style="font:600 11px 'Space Grotesk';color:rgba(255,233,168,.55)"><b>Rafa:</b> hamster gigante</span></div>
+      <div style="display:flex;gap:8px;align-items:center"><span style="font:600 11px 'Space Grotesk';color:#ffd23f">🔥 your last guess was CLOSE!</span></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <div style="flex:1;background:#1c1230;border:2px solid #35d4b9;border-radius:12px;padding:11px 12px;font:600 14px 'Space Grotesk';color:#ffe9a8">capiva<span style="color:#35d4b9">|</span></div>
+      <div style="font-family:'Alfa Slab One';font-size:13px;color:#0c3d33;background:linear-gradient(180deg,#41e0c4,#28b89e);border-radius:12px;padding:11px 16px;box-shadow:0 4px 0 #0f6e5c;display:flex;align-items:center">GO</div>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ============ GARTIC PHONE ============ -->
+<div>
+<div style="font:700 12px 'Space Mono';letter-spacing:.25em;color:#b78bff;margin-bottom:14px">■ GARTIC PHONE — TELEPHONE</div>
+<div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start">
+
+<!-- WRITE -->
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:700 10px 'Space Mono';letter-spacing:.2em;color:rgba(255,233,168,.5)">A · DESCRIBE WHAT YOU SEE</div>
+<div data-screen-label="Gartic Phone write" style="width:390px;background:#1c1230;border-radius:28px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55)">
+  <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#2b1a3d;border-bottom:2px solid #5a3f7a">
+    <span style="font-family:'Alfa Slab One';font-size:11px;color:#2d1650;background:#b78bff;border-radius:8px;padding:4px 10px">G. PHONE</span>
+    <span style="font:600 10px 'Space Mono';color:rgba(255,233,168,.5)">STEP 3/7</span><span style="flex:1"></span>
+    <span style="font:700 15px 'Space Mono';color:#1c1230;background:#ffe9a8;border-radius:8px;padding:3px 10px;box-shadow:0 3px 0 #c2452d">0:35</span>
+    <span style="font:700 12px 'Space Grotesk';color:#35d4b9;border:2px solid #35d4b9;border-radius:99px;width:24px;height:24px;display:flex;align-items:center;justify-content:center">?</span>
+  </div>
+  <div style="padding:16px 16px 20px">
+    <div style="text-align:center;font:700 10px 'Space Mono';letter-spacing:.25em;color:#b78bff;margin-bottom:12px">RAFA DREW THIS… WHAT IS IT?!</div>
+    <div style="height:290px;background:#fff8e7;border-radius:16px;border:3px solid #b78bff;box-shadow:0 5px 0 rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font:400 10px 'Space Mono';color:#8a7f60;text-align:center;line-height:1.6">received drawing<br>(replayed stroke by stroke)</div>
+    <div style="margin-top:14px">
+      <div style="font:700 9px 'Space Mono';letter-spacing:.2em;color:rgba(255,233,168,.5);margin-bottom:5px">YOUR DESCRIPTION</div>
+      <div style="background:#1c1230;border:2px solid #b78bff;border-radius:12px;padding:12px;font:600 14px 'Space Grotesk';color:#ffe9a8;box-shadow:0 0 0 4px rgba(183,139,255,.12)">a capybara driving a bus…<span style="color:#b78bff">|</span></div>
+    </div>
+    <div style="font-family:'Alfa Slab One';font-size:14px;color:#2d1650;background:linear-gradient(180deg,#c9a4ff,#a678f2);border-radius:12px;padding:13px;box-shadow:0 4px 0 #5f3d99;text-align:center;margin-top:10px">LOCK IT IN</div>
+  </div>
+</div>
+</div>
+
+<!-- REVEAL -->
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:700 10px 'Space Mono';letter-spacing:.2em;color:#ffd23f">B · THE REVEAL — THE MONEY SCREEN <span style="color:rgba(255,233,168,.35)">— host-paced, chain by chain, card by card</span></div>
+<div data-screen-label="Gartic Phone reveal" style="width:390px;background:#1c1230;border-radius:28px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55);position:relative">
+  <div style="padding:16px 16px 18px;background:radial-gradient(ellipse at 50% -10%,rgba(183,139,255,.25),transparent 55%)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div><div style="font:700 9px 'Space Mono';letter-spacing:.3em;color:#b78bff">THE REVEAL · CHAIN 2 OF 7</div><div style="font-family:'Alfa Slab One';font-size:17px;color:#ffe9a8">DANI'S CHAIN</div></div>
+      <div style="display:flex;gap:4px">
+        <span style="width:8px;height:8px;border-radius:99px;background:#b78bff"></span><span style="width:8px;height:8px;border-radius:99px;background:#b78bff"></span><span style="width:8px;height:8px;border-radius:99px;background:#b78bff;box-shadow:0 0 8px #b78bff"></span><span style="width:8px;height:8px;border-radius:99px;background:#5a3f7a"></span><span style="width:8px;height:8px;border-radius:99px;background:#5a3f7a"></span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
+      <div style="display:flex;gap:10px;align-items:flex-start;opacity:.55">
+        <div style="flex:none;width:30px;height:30px;border-radius:99px;background:#fff8e7;border:2px solid #ff4f6f;display:flex;align-items:center;justify-content:center;font:400 6px 'Space Mono';color:#8a7f60">dd</div>
+        <div style="flex:1;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:4px 14px 14px 14px;padding:9px 12px">
+          <div style="font:700 8px 'Space Mono';letter-spacing:.2em;color:rgba(255,233,168,.4)">DANI WROTE</div>
+          <div style="font:600 13px 'Space Grotesk';color:#ffe9a8">"a capybara late for work"</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;opacity:.75">
+        <div style="flex:none;width:30px;height:30px;border-radius:99px;background:#fff8e7;border:2px solid #b78bff;display:flex;align-items:center;justify-content:center;font:400 6px 'Space Mono';color:#8a7f60">dd</div>
+        <div style="flex:1">
+          <div style="font:700 8px 'Space Mono';letter-spacing:.2em;color:rgba(255,233,168,.4);margin-bottom:4px">RAFA DREW IT</div>
+          <div style="height:120px;background:#fff8e7;border:2px solid #5a3f7a;border-radius:4px 14px 14px 14px;display:flex;align-items:center;justify-content:center;font:400 9px 'Space Mono';color:#8a7f60">drawing replays<br>stroke by stroke</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <div style="flex:none;width:30px;height:30px;border-radius:99px;background:#fff8e7;border:2px solid #35d4b9;display:flex;align-items:center;justify-content:center;font:400 6px 'Space Mono';color:#8a7f60">dd</div>
+        <div style="flex:1;background:linear-gradient(180deg,#c9a4ff,#a678f2);border-radius:4px 14px 14px 14px;padding:10px 12px;box-shadow:0 5px 0 #5f3d99;animation:slam .45s ease-out">
+          <div style="font:700 8px 'Space Mono';letter-spacing:.2em;color:rgba(45,22,80,.6)">BIA SAW THAT AND WROTE</div>
+          <div style="font:700 15px 'Space Grotesk';color:#2d1650">"a capybara driving a bus" 💀</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:center;gap:8px;margin-bottom:14px">
+      <span style="font-size:16px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:99px;padding:5px 12px">😂 <b style="font:700 11px 'Space Mono';color:#ffe9a8">4</b></span>
+      <span style="font-size:16px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:99px;padding:5px 12px">💀 <b style="font:700 11px 'Space Mono';color:#ffe9a8">2</b></span>
+      <span style="font-size:16px;background:#2b1a3d;border:2px solid #ffd23f;border-radius:99px;padding:5px 12px;box-shadow:0 0 12px rgba(255,210,63,.3)">⭐ <b style="font:700 11px 'Space Mono';color:#ffd23f">5</b></span>
+    </div>
+    <div style="display:flex;gap:8px">
+      <div style="flex:1;text-align:center;font:400 9px 'Space Mono';color:rgba(255,233,168,.4);padding:10px 0">REACTIONS = POINTS<br>FOR THE AUTHOR</div>
+      <div style="font-family:'Alfa Slab One';font-size:13px;color:#2d1650;background:linear-gradient(180deg,#c9a4ff,#a678f2);border-radius:12px;padding:12px 18px;box-shadow:0 4px 0 #5f3d99;display:flex;align-items:center">NEXT ▶</div>
+    </div>
+    <div style="text-align:center;font:400 8px 'Space Mono';color:rgba(255,233,168,.3);margin-top:6px">HOST PACES THE REVEAL · EVERYONE REACTS LIVE</div>
+  </div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ============ CAH ============ -->
+<div>
+<div style="font:700 12px 'Space Mono';letter-spacing:.25em;color:#ff4f6f;margin-bottom:14px">■ CARDS AGAINST HUMANITY</div>
+<div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start">
+
+<!-- HAND -->
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:700 10px 'Space Mono';letter-spacing:.2em;color:rgba(255,233,168,.5)">A · YOUR HAND <span style="color:rgba(255,233,168,.35)">— fanned cards, drag up or tap to play</span></div>
+<div data-screen-label="CAH hand" style="width:390px;height:640px;background:#1c1230;border-radius:28px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55);position:relative">
+  <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#2b1a3d;border-bottom:2px solid #5a3f7a">
+    <span style="font-family:'Alfa Slab One';font-size:12px;color:#fff;background:#ff4f6f;border-radius:8px;padding:4px 10px">CAH</span>
+    <span style="font:600 10px 'Space Mono';color:rgba(255,233,168,.5)">RD 3/8 · DANI JUDGES</span><span style="flex:1"></span>
+    <span style="font:700 15px 'Space Mono';color:#1c1230;background:#ffe9a8;border-radius:8px;padding:3px 10px;box-shadow:0 3px 0 #c2452d">0:51</span>
+    <span style="font:700 12px 'Space Grotesk';color:#35d4b9;border:2px solid #35d4b9;border-radius:99px;width:24px;height:24px;display:flex;align-items:center;justify-content:center">?</span>
+  </div>
+  <div style="padding:16px">
+    <div style="background:#131320;border:2px solid #ff4f6f;border-radius:16px;padding:18px;box-shadow:0 6px 0 rgba(0,0,0,.45)">
+      <div style="font:700 8px 'Space Mono';letter-spacing:.25em;color:#ff8a9b;margin-bottom:8px">THE BLACK CARD</div>
+      <div style="font:700 18px/1.35 'Space Grotesk';color:#fff">What ended my last relationship? <span style="color:#ff8a9b">______</span></div>
+    </div>
+    <div style="text-align:center;font:400 9px 'Space Mono';color:rgba(255,233,168,.4);margin-top:10px">5 OF 6 PLAYED · WAITING FOR YOU</div>
+  </div>
+  <div style="position:absolute;bottom:-30px;left:0;right:0;height:300px">
+    <div style="position:absolute;bottom:0;left:8px;width:150px;height:200px;background:#fff8e7;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.5);transform:rotate(-9deg);padding:14px;box-sizing:border-box"><div style="font:700 13px/1.35 'Space Grotesk';color:#1c1230">My collection of novelty spoons.</div></div>
+    <div style="position:absolute;bottom:26px;left:112px;width:158px;height:210px;background:#fff8e7;border:3px solid #ff4f6f;border-radius:14px;box-shadow:0 14px 34px rgba(232,72,99,.4);transform:rotate(-1deg);padding:14px;box-sizing:border-box;z-index:2"><div style="font:700 14px/1.35 'Space Grotesk';color:#1c1230">Aggressive interpretive dance.</div><div style="position:absolute;bottom:12px;left:14px;right:14px;font-family:'Alfa Slab One';font-size:11px;color:#fff;background:linear-gradient(180deg,#ff6b85,#e84863);border-radius:9px;padding:8px;text-align:center;box-shadow:0 3px 0 #8f1f33">PLAY THIS ▲</div></div>
+    <div style="position:absolute;bottom:0;right:8px;width:150px;height:200px;background:#fff8e7;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.5);transform:rotate(8deg);padding:14px;box-sizing:border-box"><div style="font:700 13px/1.35 'Space Grotesk';color:#1c1230">A vague sense of dread.</div></div>
+  </div>
+</div>
+</div>
+
+<!-- JUDGE -->
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:700 10px 'Space Mono';letter-spacing:.2em;color:rgba(255,233,168,.5)">B · JUDGE VIEW + WINNER REVEAL</div>
+<div data-screen-label="CAH judge" style="width:390px;background:#1c1230;border-radius:28px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55)">
+  <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#2b1a3d;border-bottom:2px solid #5a3f7a">
+    <span style="font-family:'Alfa Slab One';font-size:12px;color:#fff;background:#ff4f6f;border-radius:8px;padding:4px 10px">CAH</span>
+    <span style="font:600 10px 'Space Mono';color:#ff8a9b">YOU'RE THE JUDGE 👑</span><span style="flex:1"></span>
+    <span style="font:700 12px 'Space Grotesk';color:#35d4b9;border:2px solid #35d4b9;border-radius:99px;width:24px;height:24px;display:flex;align-items:center;justify-content:center">?</span>
+  </div>
+  <div style="padding:16px">
+    <div style="background:#131320;border:2px solid #ff4f6f;border-radius:14px;padding:13px 16px;margin-bottom:14px">
+      <div style="font:700 15px/1.35 'Space Grotesk';color:#fff">What ended my last relationship? <span style="color:#ff8a9b">______</span></div>
+    </div>
+    <div style="font:700 9px 'Space Mono';letter-spacing:.25em;color:rgba(255,233,168,.5);margin-bottom:8px">READ THEM OUT LOUD, PICK A WINNER</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:6px">
+      <div style="background:linear-gradient(180deg,#fff8e7,#f4e9c8);border:3px solid #ff4f6f;border-radius:14px;padding:13px 14px;box-shadow:0 5px 0 #8f1f33;display:flex;justify-content:space-between;align-items:center">
+        <span style="font:700 14px 'Space Grotesk';color:#1c1230">Aggressive interpretive dance.</span>
+        <span style="font-family:'Alfa Slab One';font-size:10px;color:#fff;background:#ff4f6f;border-radius:99px;padding:5px 10px">WINNER 👑</span>
+      </div>
+      <div style="background:#fff8e7;border-radius:14px;padding:13px 14px;opacity:.65"><span style="font:700 14px 'Space Grotesk';color:#1c1230">My collection of novelty spoons.</span></div>
+      <div style="background:#fff8e7;border-radius:14px;padding:13px 14px;opacity:.65"><span style="font:700 14px 'Space Grotesk';color:#1c1230">A vague sense of dread.</span></div>
+    </div>
+    <div style="text-align:center;background:#2b1a3d;border:2px solid #ffd23f;border-radius:12px;padding:10px;margin-top:10px">
+      <span style="font:700 11px 'Space Mono';color:#ffd23f">✨ THAT WAS GUSTAVO'S CARD · +1 AWESOME POINT</span>
+    </div>
+    <div style="text-align:center;font:400 9px 'Space Mono';color:rgba(255,233,168,.35);margin-top:8px">AUTHOR REVEALED ONLY AFTER THE PICK · JUDGE ROTATES</div>
+  </div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ============ PATENTLY SILLY ============ -->
+<div>
+<div style="font:700 12px 'Space Mono';letter-spacing:.25em;color:#ff9d3f;margin-bottom:14px">■ PATENTLY SILLY — EXISTING GAME, RESKINNED</div>
+<div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start">
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:700 10px 'Space Mono';letter-spacing:.2em;color:rgba(255,233,168,.5)">PITCH PHASE <span style="color:rgba(255,233,168,.35)">— same flow it has today, new clothes</span></div>
+<div data-screen-label="Patently Silly" style="width:390px;background:#1c1230;border-radius:28px;border:1px solid rgba(255,255,255,.12);overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55)">
+  <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#2b1a3d;border-bottom:2px solid #5a3f7a">
+    <span style="font-family:'Alfa Slab One';font-size:11px;color:#3d1f0e;background:#ff9d3f;border-radius:8px;padding:4px 10px">P. SILLY</span>
+    <span style="font:600 10px 'Space Mono';color:rgba(255,233,168,.5)">PITCHING</span><span style="flex:1"></span>
+    <span style="font:700 15px 'Space Mono';color:#1c1230;background:#ffe9a8;border-radius:8px;padding:3px 10px;box-shadow:0 3px 0 #c2452d">0:45</span>
+    <span style="font:700 12px 'Space Grotesk';color:#35d4b9;border:2px solid #35d4b9;border-radius:99px;width:24px;height:24px;display:flex;align-items:center;justify-content:center">?</span>
+  </div>
+  <div style="padding:18px 16px 20px">
+    <div style="text-align:center;font:700 10px 'Space Mono';letter-spacing:.25em;color:#ff9d3f;margin-bottom:12px">GUSTAVO IS PITCHING…</div>
+    <div style="background:#fff8e7;border-radius:18px;padding:20px 18px;box-shadow:0 6px 0 rgba(0,0,0,.35);margin-bottom:14px;position:relative">
+      <div style="position:absolute;top:-10px;right:14px;background:#ff9d3f;color:#3d1f0e;font:700 9px 'Space Mono';border-radius:99px;padding:4px 10px;transform:rotate(3deg)">PATENT PENDING</div>
+      <div style="font:700 9px 'Space Mono';letter-spacing:.2em;color:#8a7f60;margin-bottom:6px">INVENTION Nº 042</div>
+      <div style="font-family:'Alfa Slab One';font-size:22px;color:#1c1230;margin-bottom:8px">THE SNOOZE TOASTER</div>
+      <div style="font:500 13px/1.5 'Space Grotesk';color:#4a4232">Alarm clock that launches toast at your face. You can't snooze breakfast.</div>
+    </div>
+    <div style="display:flex;justify-content:center;gap:8px">
+      <span style="font-size:16px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:99px;padding:6px 14px">💰 <b style="font:700 11px 'Space Mono';color:#ffe9a8">3</b></span>
+      <span style="font-size:16px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:99px;padding:6px 14px">🗑 <b style="font:700 11px 'Space Mono';color:#ffe9a8">1</b></span>
+      <span style="font-size:16px;background:#2b1a3d;border:2px solid #ff9d3f;border-radius:99px;padding:6px 14px;box-shadow:0 0 12px rgba(255,157,63,.3)">🚀 <b style="font:700 11px 'Space Mono';color:#ff9d3f">4</b></span>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+</div>
+
+<div style="font:400 12px/1.6 'Space Grotesk';color:rgba(255,233,168,.45);max-width:760px;border-top:1px solid rgba(255,255,255,.08);padding-top:18px">All 5 games covered. Last step: the clickable prototype of the whole night — say "go" and I'll wire it up (lobby → random pick → Stop → results → vote → Gartic → … → podium, with working drawing canvas).</div>
+
+</div>
+
+</x-dc>
+</body>
+</html>

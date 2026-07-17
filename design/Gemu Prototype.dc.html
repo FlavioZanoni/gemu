@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0d0716;font-family:'Space Grotesk',system-ui,sans-serif;color:#ffe9a8}
+a{color:#35d4b9}a:hover{color:#ffd23f}
+input{outline:none}
+@keyframes bulb{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes tick{0%{transform:scale(1)}50%{transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes slam{0%{transform:scale(.6) rotate(-8deg);opacity:0}60%{transform:scale(1.15) rotate(2deg);opacity:1}100%{transform:scale(1) rotate(-2deg);opacity:1}}
+@keyframes rise{0%{transform:translateY(24px);opacity:0}100%{transform:translateY(0);opacity:1}}
+@keyframes fall{0%{transform:translateY(-40px) rotate(0)}100%{transform:translateY(105vh) rotate(720deg)}}
+@keyframes dealUp{from{transform:translate(0,360px) rotate(0deg);opacity:0}}
+@keyframes throwIn{from{transform:translate(0,260px) rotate(40deg);opacity:0}}
+@keyframes flipIn{from{transform:rotateY(90deg) scale(.9);opacity:0}}
+@keyframes winPop{0%{transform:scale(1) rotate(0)}45%{transform:scale(1.14) rotate(-3deg)}100%{transform:scale(1.07) rotate(-1.5deg)}}
+@keyframes handOff{to{transform:translate(0,340px) rotate(6deg);opacity:0}}
+</style>
+</helmet>
+<div style="min-height:100vh;background:radial-gradient(ellipse at 50% -20%,rgba(255,120,90,.14),transparent 55%),#1c1230;display:flex;flex-direction:column">
+
+<!-- SHELL HEADER -->
+<sc-if value="{{ showHeader }}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;align-items:center;gap:12px;padding:12px 28px;background:#2b1a3d;border-bottom:2px solid #5a3f7a">
+    <span style="font-family:'Alfa Slab One';font-size:14px;color:{{ chipFg }};background:{{ chipBg }};border-radius:9px;padding:5px 14px">{{ chipLabel }}</span>
+    <span style="font:600 11px 'Space Mono',monospace;color:rgba(255,233,168,.5)">{{ subLabel }}</span>
+    <span style="flex:1"></span>
+    <span style="font:700 18px 'Space Mono',monospace;color:{{ hTimerFg }};background:{{ hTimerBg }};border-radius:9px;padding:3px 14px;box-shadow:0 3px 0 {{ hTimerShadow }};animation:{{ hTimerAnim }}">{{ hTimerLabel }}</span>
+    <button onClick="{{ togglePause }}" title="Pause (host)" style="font:700 13px 'Space Grotesk';color:#ffd23f;border:2px solid #ffd23f;background:transparent;border-radius:99px;padding:6px 14px;cursor:pointer" style-hover="background:rgba(255,210,63,.12)">⏸</button>
+    <button onClick="{{ openRules }}" style="font:700 13px 'Space Grotesk';color:#35d4b9;border:2px solid #35d4b9;background:transparent;border-radius:99px;padding:6px 16px;cursor:pointer" style-hover="background:rgba(53,212,185,.12)">? How to play</button>
+    <span style="font:700 11px 'Space Mono',monospace;color:#ffe9a8;background:#1c1230;border:2px solid #5a3f7a;border-radius:99px;padding:6px 12px">{{ scorePeek }}</span>
+  </div>
+</sc-if>
+
+<div style="flex:1;display:flex;flex-direction:column;width:100%;max-width:1240px;margin:0 auto;box-sizing:border-box;padding:0 32px">
+
+<!-- HOME -->
+<sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:50px 0 40px">
+    <div style="display:flex;align-items:center;justify-content:center;gap:70px;margin-bottom:44px">
+      <div>
+        <div style="display:inline-block;position:relative;background:#2b1a3d;border:4px solid #ffd23f;border-radius:26px;padding:30px 64px 32px;transform:rotate(-1.5deg)">
+          <div style="position:absolute;top:-8px;left:24px;right:24px;display:flex;justify-content:space-between">
+            <div style="width:12px;height:12px;border-radius:99px;background:#ffe9a8;box-shadow:0 0 12px #ffd23f;animation:bulb 1s infinite"></div>
+            <div style="width:12px;height:12px;border-radius:99px;background:#ff8a9b;box-shadow:0 0 12px #ff4f6f;animation:bulb 1s .25s infinite"></div>
+            <div style="width:12px;height:12px;border-radius:99px;background:#8ceedd;box-shadow:0 0 12px #35d4b9;animation:bulb 1s .5s infinite"></div>
+            <div style="width:12px;height:12px;border-radius:99px;background:#ffe9a8;box-shadow:0 0 12px #ffd23f;animation:bulb 1s .75s infinite"></div>
+          </div>
+          <div style="position:absolute;bottom:-8px;left:24px;right:24px;display:flex;justify-content:space-between">
+            <div style="width:12px;height:12px;border-radius:99px;background:#8ceedd;box-shadow:0 0 12px #35d4b9;animation:bulb 1s .5s infinite"></div>
+            <div style="width:12px;height:12px;border-radius:99px;background:#ffe9a8;box-shadow:0 0 12px #ffd23f;animation:bulb 1s .75s infinite"></div>
+            <div style="width:12px;height:12px;border-radius:99px;background:#ff8a9b;box-shadow:0 0 12px #ff4f6f;animation:bulb 1s infinite"></div>
+            <div style="width:12px;height:12px;border-radius:99px;background:#8ceedd;box-shadow:0 0 12px #35d4b9;animation:bulb 1s .25s infinite"></div>
+          </div>
+          <div style="font-family:'Alfa Slab One';font-size:96px;color:#ffe9a8;text-shadow:0 8px 0 #c2452d;line-height:1">GEMU</div>
+        </div>
+        <div style="font:600 17px 'Space Grotesk';color:rgba(255,233,168,.85);margin-top:22px;max-width:420px;line-height:1.5">One room. A playlist of games.<br>A champion crowned by midnight.</div>
+        <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap">
+          <span style="font-family:'Alfa Slab One';font-size:12px;color:#3d1f0e;background:linear-gradient(180deg,#ffd23f,#f5b32a);border-radius:10px;padding:7px 14px;box-shadow:0 3px 0 #9c7413;transform:rotate(-2deg)">STOP!</span>
+          <span style="font-family:'Alfa Slab One';font-size:12px;color:#0c3d33;background:linear-gradient(180deg,#41e0c4,#28b89e);border-radius:10px;padding:7px 14px;box-shadow:0 3px 0 #0f6e5c;transform:rotate(1.5deg)">GARTIC</span>
+          <span style="font-family:'Alfa Slab One';font-size:12px;color:#2d1650;background:linear-gradient(180deg,#c9a4ff,#a678f2);border-radius:10px;padding:7px 14px;box-shadow:0 3px 0 #5f3d99;transform:rotate(-1deg)">G. PHONE</span>
+          <span style="font-family:'Alfa Slab One';font-size:12px;color:#fff;background:linear-gradient(180deg,#ff6b85,#e84863);border-radius:10px;padding:7px 14px;box-shadow:0 3px 0 #8f1f33;transform:rotate(2deg)">CAH</span>
+          <span style="font-family:'Alfa Slab One';font-size:12px;color:#3d1f0e;background:linear-gradient(180deg,#ffb56b,#f28e35);border-radius:10px;padding:7px 14px;box-shadow:0 3px 0 #9c5413;transform:rotate(-1.5deg)">P. SILLY</span>
+        </div>
+      </div>
+      <div style="width:390px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:24px;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+        <div style="font:700 11px 'Space Mono',monospace;letter-spacing:.3em;color:#35d4b9;margin-bottom:16px">STEP RIGHT UP</div>
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
+          <div style="width:80px;height:80px;border-radius:20px;background:#fff8e7;border:2px solid #ffd23f;display:flex;align-items:center;justify-content:center;font:400 9px 'Space Mono',monospace;color:#8a7f60;text-align:center;line-height:1.35;cursor:pointer">draw your<br>face here<br>✏️</div>
+          <div style="flex:1">
+            <div style="font:700 10px 'Space Mono',monospace;letter-spacing:.2em;color:rgba(255,233,168,.5);margin-bottom:6px">YOUR NICKNAME</div>
+            <input value="{{ nick }}" onChange="{{ setNick }}" placeholder="type it…" style="width:100%;box-sizing:border-box;background:#1c1230;border:2px solid #5a3f7a;border-radius:11px;padding:12px 14px;font:600 17px 'Space Grotesk';color:#ffe9a8" style-focus="border-color:#35d4b9">
+          </div>
+        </div>
+        <button onClick="{{ createRoom }}" style="width:100%;font-family:'Alfa Slab One';font-size:20px;color:#3d1f0e;background:linear-gradient(180deg,#ffd23f,#f5b32a);border:none;border-radius:16px;padding:19px;box-shadow:0 6px 0 #c2452d;cursor:pointer;opacity:{{ createOpacity }}" style-active="transform:translateY(4px);box-shadow:0 2px 0 #c2452d">CREATE A ROOM</button>
+        <div style="display:flex;align-items:center;gap:12px;margin:14px 0"><div style="flex:1;height:1px;background:#5a3f7a"></div><span style="font:700 9px 'Space Mono',monospace;color:rgba(255,233,168,.4)">OR JOIN THE PARTY</span><div style="flex:1;height:1px;background:#5a3f7a"></div></div>
+        <div style="display:flex;gap:10px">
+          <div style="flex:1;background:#1c1230;border:2px solid #5a3f7a;border-radius:12px;padding:13px;font:700 15px 'Space Mono',monospace;letter-spacing:.3em;color:rgba(255,233,168,.35);text-align:center">CODE…</div>
+          <div style="font-family:'Alfa Slab One';font-size:15px;color:#ffe9a8;background:#2b1a3d;border:2px solid #ffe9a8;border-radius:12px;padding:13px 24px;display:flex;align-items:center;box-shadow:0 4px 0 rgba(0,0,0,.4);cursor:pointer">JOIN</div>
+        </div>
+        <button onClick="{{ devCah }}" style="width:100%;margin-top:12px;font:700 10px 'Space Mono',monospace;letter-spacing:.2em;color:#ff8a9b;background:transparent;border:2px dashed rgba(255,79,111,.4);border-radius:12px;padding:10px;cursor:pointer" style-hover="background:rgba(255,79,111,.08)">🃏 REVIEW SHORTCUT · JUMP STRAIGHT TO CAH</button>
+      </div>
+    </div>
+    <div style="max-width:900px;margin:0 auto;width:100%">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
+        <span style="font:700 11px 'Space Mono',monospace;letter-spacing:.3em;color:rgba(255,233,168,.45)">📺 ON AIR NOW · PUBLIC ROOMS</span>
+        <span style="font:400 10px 'Space Mono',monospace;color:rgba(255,233,168,.3)">PROTOTYPE · FRIENDS ARE SIMULATED</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="display:flex;align-items:center;gap:12px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:16px;padding:12px 16px">
+          <span style="width:9px;height:9px;border-radius:99px;background:#35d4b9;animation:bulb 1.4s infinite"></span>
+          <div style="flex:1"><div style="font:700 15px 'Space Grotesk';color:#ffe9a8">sexta caótica</div><div style="font:400 10px 'Space Mono',monospace;color:rgba(255,233,168,.45)">PLAYLIST · 4 GAMES · GAME 2 RUNNING</div></div>
+          <span style="font:700 12px 'Space Mono',monospace;color:#35d4b9">6/10</span>
+          <span style="font-family:'Alfa Slab One';font-size:12px;color:#3d1f0e;background:#ffd23f;border-radius:10px;padding:8px 16px;box-shadow:0 3px 0 #c2452d;cursor:pointer">JOIN</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:16px;padding:12px 16px;opacity:.6">
+          <span style="width:9px;height:9px;border-radius:99px;background:#ff9d3f"></span>
+          <div style="flex:1"><div style="font:700 15px 'Space Grotesk';color:#ffe9a8">game night 🔒</div><div style="font:400 10px 'Space Mono',monospace;color:rgba(255,233,168,.45)">PASSWORD REQUIRED</div></div>
+          <span style="font:700 12px 'Space Mono',monospace;color:rgba(255,233,168,.5)">10/10</span>
+          <span style="font:700 11px 'Space Mono',monospace;color:rgba(255,233,168,.35);border:2px solid #5a3f7a;border-radius:10px;padding:8px 12px">FULL</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<!-- LOBBY -->
+<sc-if value="{{ isLobby }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;padding:34px 0 40px">
+    <div style="display:flex;align-items:center;gap:20px;margin-bottom:24px">
+      <div><div style="font-family:'Alfa Slab One';font-size:30px;color:#ffe9a8">sexta caótica</div><div style="font:400 11px 'Space Mono',monospace;color:rgba(255,233,168,.45)">GREEN ROOM · WAITING TO START</div></div>
+      <span style="flex:1"></span>
+      <div style="display:flex;align-items:center;gap:12px;background:#ffe9a8;border-radius:14px;padding:12px 22px;box-shadow:0 4px 0 #c2452d">
+        <span style="font:700 11px 'Space Mono',monospace;color:rgba(28,18,48,.55)">CODE</span>
+        <span style="font:700 26px 'Space Mono',monospace;letter-spacing:.3em;color:#1c1230">KQ7F2A</span>
+        <span style="font:700 16px 'Space Grotesk';color:#1c1230;cursor:pointer">⧉</span>
+      </div>
+      <div style="display:inline-flex;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:99px;padding:3px">
+        <span style="font:700 11px 'Space Mono',monospace;color:#1c1230;background:#ffe9a8;border-radius:99px;padding:6px 13px">EN</span>
+        <span style="font:700 11px 'Space Mono',monospace;color:rgba(255,233,168,.5);padding:6px 13px;cursor:pointer">PT</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:26px">
+      <div>
+        <div style="font:700 11px 'Space Mono',monospace;letter-spacing:.25em;color:rgba(255,233,168,.45);margin-bottom:10px">TONIGHT'S PLAYLIST <span style="color:#35d4b9;letter-spacing:0;cursor:pointer">· Edit ›</span></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:26px">
+          <div style="background:linear-gradient(180deg,#ffd23f,#f5b32a);border-radius:16px;padding:16px;box-shadow:0 5px 0 #9c7413"><div style="font-family:'Alfa Slab One';font-size:17px;color:#3d1f0e">STOP!</div><div style="font:600 10px 'Space Mono',monospace;color:rgba(61,31,14,.65);margin-top:3px">3–10 · WORDS</div><div style="font:700 11px 'Space Grotesk';color:#3d1f0e;margin-top:10px">✓ in playlist</div></div>
+          <div style="background:linear-gradient(180deg,#41e0c4,#28b89e);border-radius:16px;padding:16px;box-shadow:0 5px 0 #0f6e5c"><div style="font-family:'Alfa Slab One';font-size:17px;color:#0c3d33">GARTIC</div><div style="font:600 10px 'Space Mono',monospace;color:rgba(12,61,51,.65);margin-top:3px">3–10 · DRAW</div><div style="font:700 11px 'Space Grotesk';color:#0c3d33;margin-top:10px">✓ in playlist</div></div>
+          <div style="background:linear-gradient(180deg,#c9a4ff,#a678f2);border-radius:16px;padding:16px;box-shadow:0 5px 0 #5f3d99"><div style="font-family:'Alfa Slab One';font-size:15px;color:#2d1650">G. PHONE</div><div style="font:600 10px 'Space Mono',monospace;color:rgba(45,22,80,.65);margin-top:3px">4–10 · CHAOS</div><div style="font:700 11px 'Space Grotesk';color:#2d1650;margin-top:10px">✓ in playlist</div></div>
+        </div>
+        <div style="display:flex;gap:12px">
+          <button onClick="{{ toggleReady }}" style="flex:1;font-family:'Alfa Slab One';font-size:17px;color:{{ readyBtnFg }};background:{{ readyBtnBg }};border:{{ readyBtnBorder }};border-radius:18px;padding:20px;box-shadow:0 5px 0 {{ readyBtnShadow }};cursor:pointer" style-active="transform:translateY(4px);box-shadow:0 1px 0 rgba(0,0,0,.4)">{{ readyBtnLabel }}</button>
+          <button onClick="{{ startShow }}" style="flex:1.4;font-family:'Alfa Slab One';font-size:19px;color:#3d1f0e;background:linear-gradient(180deg,#ffd23f,#f5b32a);border:none;border-radius:18px;padding:20px;box-shadow:0 7px 0 #c2452d;cursor:pointer;opacity:{{ startOpacity }}" style-active="transform:translateY(5px);box-shadow:0 2px 0 #c2452d">START THE SHOW ▶</button>
+        </div>
+        <div style="text-align:center;font:400 10px 'Space Mono',monospace;color:rgba(255,233,168,.35);margin-top:10px">FIRST GAME IS DRAWN AT RANDOM FROM THE PLAYLIST 🔊</div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
+          <span style="font:700 11px 'Space Mono',monospace;letter-spacing:.25em;color:rgba(255,233,168,.45)">CONTESTANTS</span>
+          <span style="font:700 12px 'Space Mono',monospace;color:#35d4b9">{{ readyLabel }}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <sc-for list="{{ lobbyPlayers }}" as="p" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:12px;background:#2b1a3d;border:2px solid {{ p.border }};border-radius:99px;padding:7px 16px 7px 7px;animation:rise .4s ease-out">
+              <div style="width:40px;height:40px;border-radius:99px;background:#fff8e7;border:2px solid {{ p.hue }};display:flex;align-items:center;justify-content:center;font:400 7px 'Space Mono',monospace;color:#8a7f60">doodle</div>
+              <div style="flex:1;font:700 15px 'Space Grotesk';color:#ffe9a8">{{ p.name }} <span style="color:#ffd23f">{{ p.star }}</span></div>
+              <span style="font:700 10px 'Space Mono',monospace;color:{{ p.stateColor }}">{{ p.state }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<!-- DRUMROLL / WINNER OVERLAY -->
+<sc-if value="{{ isDrumroll }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px">
+    <div style="font:700 13px 'Space Mono',monospace;letter-spacing:.45em;color:#35d4b9">🔊 {{ drumCaption }}</div>
+    <div style="position:relative;background:#2b1a3d;border:4px solid #ffd23f;border-radius:24px;padding:28px 70px 30px;min-width:340px;text-align:center">
+      <div style="position:absolute;top:-8px;left:22px;right:22px;display:flex;justify-content:space-between">
+        <div style="width:11px;height:11px;border-radius:99px;background:#ffe9a8;box-shadow:0 0 10px #ffd23f;animation:bulb .35s infinite"></div>
+        <div style="width:11px;height:11px;border-radius:99px;background:#ff8a9b;box-shadow:0 0 10px #ff4f6f;animation:bulb .35s .12s infinite"></div>
+        <div style="width:11px;height:11px;border-radius:99px;background:#8ceedd;box-shadow:0 0 10px #35d4b9;animation:bulb .35s .24s infinite"></div>
+      </div>
+      <div style="font:700 12px 'Space Mono',monospace;letter-spacing:.4em;color:#35d4b9;margin-bottom:8px">UP NEXT</div>
+      <div style="font-family:'Alfa Slab One';font-size:64px;color:{{ drumColor }};text-shadow:0 6px 0 #c2452d;line-height:1">{{ drumName }}</div>
+    </div>
+  </div>
+</sc-if>
+
+<!-- INTRO -->
+<sc-if value="{{ isIntro }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:60px;padding:40px 0">
+    <div style="text-align:center;animation:slam .5s ease-out">
+      <div style="font:700 12px 'Space Mono',monospace;letter-spacing:.4em;color:#35d4b9">GAME 1 · UP NEXT</div>
+      <div style="font-family:'Alfa Slab One';font-size:80px;color:#ffe9a8;text-shadow:0 7px 0 #c2452d;line-height:1.05">STOP!</div>
+      <div style="font:600 13px 'Space Mono',monospace;color:rgba(255,233,168,.45);margin-top:12px">EVERYONE ELSE IS READY · WAITING ON YOU</div>
+    </div>
+    <div style="width:440px">
+      <div style="background:#2b1a3d;border:3px solid #ffd23f;border-radius:20px;overflow:hidden;margin-bottom:18px">
+        <div style="background:linear-gradient(180deg,#ffd23f,#f5b32a);padding:14px 20px"><div style="font:700 10px 'Space Mono',monospace;letter-spacing:.3em;color:rgba(61,31,14,.7)">HOW TO PLAY</div></div>
+        <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;gap:13px"><div style="flex:none;width:27px;height:27px;border-radius:99px;background:#ffd23f;color:#3d1f0e;font-family:'Alfa Slab One';font-size:13px;display:flex;align-items:center;justify-content:center">1</div><div style="font:500 15px/1.45 'Space Grotesk';color:#ffe9a8">You get a letter + 4 categories. Fill each with a word starting with that letter.</div></div>
+          <div style="display:flex;gap:13px"><div style="flex:none;width:27px;height:27px;border-radius:99px;background:#ffd23f;color:#3d1f0e;font-family:'Alfa Slab One';font-size:13px;display:flex;align-items:center;justify-content:center">2</div><div style="font:500 15px/1.45 'Space Grotesk';color:#ffe9a8">Done first? Slam <b>STOP!</b> — everyone else gets 5 seconds.</div></div>
+          <div style="display:flex;gap:13px"><div style="flex:none;width:27px;height:27px;border-radius:99px;background:#ffd23f;color:#3d1f0e;font-family:'Alfa Slab One';font-size:13px;display:flex;align-items:center;justify-content:center">3</div><div style="font:500 15px/1.45 'Space Grotesk';color:#ffe9a8">Then everyone judges answers valid or nonsense. Unique = 10, duplicate = 5.</div></div>
+        </div>
+      </div>
+      <div style="background:#2b1a3d;border:2px solid #5a3f7a;border-radius:16px;padding:16px 18px;margin-bottom:18px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">
+          <span style="font:700 10px 'Space Mono',monospace;letter-spacing:.3em;color:rgba(255,233,168,.5)">GAME OPTIONS</span>
+          <span style="font:700 9px 'Space Mono',monospace;color:#ffd23f">★ HOST ONLY</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+          <span style="width:100px;font:700 10px 'Space Mono',monospace;color:rgba(255,233,168,.5)">ROUNDS</span>
+          <div style="display:flex;gap:6px">
+            <sc-for list="{{ roundOpts }}" as="ro" hint-placeholder-count="4">
+              <button onClick="{{ ro.pick }}" style="min-width:42px;padding:8px 0;border-radius:10px;border:2px solid {{ ro.border }};background:{{ ro.bg }};color:{{ ro.fg }};font-family:'Alfa Slab One';font-size:13px;cursor:pointer">{{ ro.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="width:100px;font:700 10px 'Space Mono',monospace;color:rgba(255,233,168,.5)">ROUND TIMER</span>
+          <div style="display:flex;gap:6px">
+            <sc-for list="{{ timerOpts }}" as="to" hint-placeholder-count="3">
+              <button onClick="{{ to.pick }}" style="min-width:52px;padding:8px 0;border-radius:10px;border:2px solid {{ to.border }};background:{{ to.bg }};color:{{ to.fg }};font-family:'Alfa Slab One';font-size:13px;cursor:pointer">{{ to.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      <button onClick="{{ startStop }}" style="width:100%;font-family:'Alfa Slab One';font-size:18px;color:#3d1f0e;background:linear-gradient(180deg,#ffd23f,#f5b32a);border:none;border-radius:16px;padding:18px;box-shadow:0 6px 0 #c2452d;cursor:pointer" style-active="transform:translateY(4px);box-shadow:0 2px 0 #c2452d">GOT IT — I'M READY</button>
+    </div>
+  </div>
+</sc-if>
+
+<!-- STOP FILL -->
+<sc-if value="{{ isStop }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;gap:34px;padding:30px 0 40px">
+    <div style="flex:1.5">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
+        <div style="width:78px;height:78px;border-radius:20px;background:linear-gradient(180deg,#ffd23f,#f5b32a);box-shadow:0 6px 0 #c2452d;display:flex;align-items:center;justify-content:center;font-family:'Alfa Slab One';font-size:46px;color:#3d1f0e">B</div>
+        <div><div style="font:700 11px 'Space Mono',monospace;letter-spacing:.3em;color:rgba(255,233,168,.5)">EVERYTHING STARTS WITH</div><div style="font:600 16px 'Space Grotesk';color:#ffe9a8">{{ filledLabel }}</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:11px">
+        <sc-for list="{{ cats }}" as="c" hint-placeholder-count="4">
+          <div style="display:flex;align-items:center;gap:14px;background:#2b1a3d;border:2px solid {{ c.border }};border-radius:14px;padding:6px 18px">
+            <span style="width:110px;font:700 11px 'Space Mono',monospace;color:rgba(255,233,168,.5)">{{ c.label }}</span>
+            <input value="{{ c.val }}" onChange="{{ c.set }}" placeholder="B…" style="flex:1;background:transparent;border:none;padding:13px 0;font:600 17px 'Space Grotesk';color:#ffe9a8">
+            <span style="color:#35d4b9;font-size:15px">{{ c.check }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <button onClick="{{ slamStop }}" style="width:100%;font-family:'Alfa Slab One';font-size:26px;color:#fff;background:linear-gradient(180deg,#ff6b85,#e84863);border:none;border-radius:20px;padding:20px;box-shadow:0 7px 0 #8f1f33;cursor:pointer;letter-spacing:.05em;margin-top:20px" style-active="transform:translateY(5px);box-shadow:0 2px 0 #8f1f33">🛑 STOP!</button>
+      <div style="text-align:center;font:400 10px 'Space Mono',monospace;color:rgba(255,233,168,.35);margin-top:9px">SLAMMING GIVES EVERYONE ELSE 5 SECONDS 🔊</div>
+    </div>
+    <div style="flex:1;max-width:320px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
+        <span style="font:700 11px 'Space Mono',monospace;letter-spacing:.25em;color:rgba(255,233,168,.45)">GAME SCOREBOARD</span>
+        <span style="font:700 10px 'Space Mono',monospace;color:#ffd23f">RD {{ roundLabel }}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <sc-for list="{{ gameBoard }}" as="r" hint-placeholder-count="5">
+          <div style="display:flex;align-items:center;gap:12px;background:#2b1a3d;border:2px solid {{ r.border }};border-radius:99px;padding:7px 16px 7px 7px">
+            <div style="width:36px;height:36px;border-radius:99px;background:#fff8e7;border:2px solid {{ r.hue }};display:flex;align-items:center;justify-content:center;font:400 7px 'Space Mono',monospace;color:#8a7f60">doodle</div>
+            <div style="flex:1;font:700 14px 'Space Grotesk';color:#ffe9a8">{{ r.name }}</div>
+            <span style="font:700 10px 'Space Mono',monospace;color:{{ r.stateColor }}">{{ r.state }}</span>
+            <span style="font-family:'Alfa Slab One';font-size:16px;color:#ffe9a8;min-width:30px;text-align:right">{{ r.pts }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="font:400 9px 'Space Mono',monospace;color:rgba(255,233,168,.3);margin-top:10px;text-align:center">GAME POINTS SO FAR · SESSION POINTS AWARDED AT THE END</div>
+    </div>
+  </div>
+</sc-if>
+
+<!-- JUDGE -->
+<sc-if value="{{ isJudge }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 0 50px">
+    <div style="font:700 11px 'Space Mono',monospace;letter-spacing:.3em;color:rgba(255,233,168,.5);margin-bottom:18px">CATEGORY · {{ judgeCat }} · LETTER B · {{ judgeProgress }}</div>
+    <div style="width:460px;background:#fff8e7;border-radius:22px;padding:34px 26px;text-align:center;box-shadow:0 8px 0 rgba(0,0,0,.35);margin-bottom:12px;animation:slam .4s ease-out">
+      <div style="font:700 11px 'Space Mono',monospace;letter-spacing:.2em;color:#8a7f60;margin-bottom:8px">{{ judgeWho }} WROTE</div>
+      <div style="font-family:'Alfa Slab One';font-size:40px;color:#1c1230">"{{ judgeWord }}"</div>
+    </div>
+    <div style="font:400 11px 'Space Mono',monospace;color:rgba(255,233,168,.4);margin-bottom:20px">IS THIS REAL?!</div>
+    <div style="display:flex;gap:14px;width:460px">
+      <button onClick="{{ voteValid }}" style="flex:1;font-family:'Alfa Slab One';font-size:17px;color:#0c3d33;background:linear-gradient(180deg,#41e0c4,#28b89e);border:none;border-radius:16px;padding:18px;box-shadow:0 6px 0 #0f6e5c;cursor:pointer" style-active="transform:translateY(4px);box-shadow:0 2px 0 #0f6e5c">✓ VALID</button>
+      <button onClick="{{ voteNope }}" style="flex:1;font-family:'Alfa Slab One';font-size:17px;color:#fff;background:linear-gradient(180deg,#ff6b85,#e84863);border:none;border-radius:16px;padding:18px;box-shadow:0 6px 0 #8f1f33;cursor:pointer" style-active="transform:translateY(4px);box-shadow:0 2px 0 #8f1f33">✗ NONSENSE</button>
+    </div>
+    <sc-if value="{{ judgeTallyVisible }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;gap:16px;margin-top:20px;animation:rise .3s ease-out">
+        <span style="font:700 13px 'Space Mono',monospace;color:#35d4b9">VALID {{ tallyValid }}</span>
+        <div style="width:180px;height:12px;border-radius:99px;background:#2b1a3d;border:1px solid #5a3f7a;overflow:hidden;display:flex"><div style="width:{{ tallyPct }};background:#35d4b9"></div><div style="flex:1;background:#e84863"></div></div>
+        <span style="font:700 13px 'Space Mono',monospace;color:#ff8a9b">{{ tallyNope }} NOPE</span>
+      </div>
+    </sc-if>
+    <div style="font:400 10px 'Space Mono',monospace;color:rgba(255,233,168,.3);margin-top:22px">UNIQUE VALID = 10 · DUPLICATE = 5 · NONSENSE = 0</div>
+  </div>
+</sc-if>
+
+<!-- RESULTS -->
+<sc-if value="{{ isResults }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 0 40px">
+    <div style="text-align:center;margin-bottom:22px">
+      <div style="font:700 12px 'Space Mono',monospace;letter-spacing:.4em;color:#35d4b9">GAME OVER 🔊</div>
+      <div style="font-family:'Alfa Slab One';font-size:42px;color:#ffe9a8;text-shadow:0 5px 0 #c2452d">{{ resultsTitle }}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:11px;width:560px;margin-bottom:26px">
+      <sc-for list="{{ standings }}" as="s" hint-placeholder-count="5">
+        <div style="display:flex;align-items:center;gap:14px;background:{{ s.bg }};border:{{ s.borderCss }};border-radius:16px;padding:12px 18px;box-shadow:{{ s.shadow }};animation:rise .5s ease-out both;animation-delay:{{ s.delay }}">
+          <div style="font-family:'Alfa Slab One';font-size:19px;color:{{ s.rankColor }};width:30px;text-align:center">{{ s.rank }}</div>
+          <div style="width:42px;height:42px;border-radius:99px;background:#fff8e7;border:2px solid {{ s.hue }};display:flex;align-items:center;justify-content:center;font:400 7px 'Space Mono',monospace;color:#8a7f60">doodle</div>
+          <div style="flex:1"><div style="font:700 16px 'Space Grotesk';color:{{ s.nameColor }}">{{ s.name }}</div><div style="font:600 11px 'Space Mono',monospace;color:{{ s.subColor }}">{{ s.raw }} PTS IN GAME</div></div>
+          <div style="font-family:'Alfa Slab One';font-size:21px;color:{{ s.gainColor }}">+{{ s.gain }}</div>
+        </div>
+      </sc-for>
+    </div>
+    <sc-if value="{{ resultsNotFinal }}" hint-placeholder-val="{{ false }}">
+      <button onClick="{{ nextRound }}" style="font-family:'Alfa Slab One';font-size:16px;color:#3d1f0e;background:linear-gradient(180deg,#ffd23f,#f5b32a);border:none;border-radius:14px;padding:15px 40px;box-shadow:0 5px 0 #c2452d;cursor:pointer" style-active="transform:translateY(4px);box-shadow:0 1px 0 #c2452d">NEXT ROUND ▶</button>
+    </sc-if>
+    <sc-if value="{{ resultsFinal }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;gap:14px">
+        <button onClick="{{ playSame }}" style="font-family:'Alfa Slab One';font-size:15px;color:#ffe9a8;background:#2b1a3d;border:2px solid #ffe9a8;border-radius:14px;padding:14px 28px;box-shadow:0 4px 0 rgba(0,0,0,.4);cursor:pointer" style-active="transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.4)">🔁 PLAY STOP! AGAIN</button>
+        <button onClick="{{ toVote }}" style="font-family:'Alfa Slab One';font-size:15px;color:#3d1f0e;background:linear-gradient(180deg,#ffd23f,#f5b32a);border:none;border-radius:14px;padding:14px 28px;box-shadow:0 4px 0 #c2452d;cursor:pointer" style-active="transform:translateY(3px);box-shadow:0 1px 0 #c2452d">VOTE ON THE NEXT GAME →</button>
+      </div>
+      <div style="font:400 10px 'Space Mono',monospace;color:rgba(255,233,168,.35);margin-top:10px">REPEATS ARE ALLOWED IN THE VOTE TOO</div>
+    </sc-if>
+  </div>
+</sc-if>
+
+<!-- VOTE -->
+<sc-if value="{{ isVote }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 0 50px">
+    <div style="text-align:center;margin-bottom:8px">
+      <div style="display:inline-block;position:relative;background:#2b1a3d;border:3px solid #ffd23f;border-radius:18px;padding:14px 34px 16px">
+        <div style="position:absolute;top:-7px;left:16px;right:16px;display:flex;justify-content:space-between">
+          <div style="width:9px;height:9px;border-radius:99px;background:#ffe9a8;box-shadow:0 0 8px #ffd23f;animation:bulb 1s infinite"></div>
+          <div style="width:9px;height:9px;border-radius:99px;background:#ff8a9b;box-shadow:0 0 8px #ff4f6f;animation:bulb 1s .33s infinite"></div>
+          <div style="width:9px;height:9px;border-radius:99px;background:#8ceedd;box-shadow:0 0 8px #35d4b9;animation:bulb 1s .66s infinite"></div>
+        </div>
+        <div style="font-family:'Alfa Slab One';font-size:30px;color:#ffe9a8;text-shadow:0 4px 0 #c2452d">NEXT GAME</div>
+        <div style="font:700 11px 'Space Mono',monospace;letter-spacing:.35em;color:#35d4b9;text-align:center">AUDIENCE VOTE</div>
+      </div>
+    </div>
+    <div style="margin:16px 0 26px"><span style="font-family:'Alfa Slab One';font-size:34px;color:{{ vTimerFg }};background:{{ vTimerBg }};padding:2px 22px;border-radius:11px;box-shadow:0 5px 0 {{ vTimerShadow }};animation:{{ vTimerAnim }}">{{ vTimerLabel }}</span></div>
+    <div style="display:flex;gap:18px;margin-bottom:22px">
+      <sc-for list="{{ voteOpts }}" as="v" hint-placeholder-count="3">
+        <div onClick="{{ v.pick }}" style="width:220px;background:{{ v.bg }};border:{{ v.borderCss }};border-radius:18px;padding:22px 18px;cursor:pointer;box-shadow:{{ v.shadow }};text-align:center;transition:transform .15s" style-hover="transform:translateY(-3px)">
+          <div style="font-family:'Alfa Slab One';font-size:15px;color:{{ v.letterColor }};margin-bottom:4px">{{ v.letter }}</div>
+          <div style="font-family:'Alfa Slab One';font-size:22px;color:{{ v.nameColor }}">{{ v.name }}</div>
+          <div style="font:600 10px 'Space Mono',monospace;color:{{ v.subColor }};margin:4px 0 8px">{{ v.sub }}</div>
+          <div style="font:700 9px 'Space Mono',monospace;color:{{ v.minColor }};margin-bottom:10px">{{ v.minLabel }}</div>
+          <div style="font-family:'Alfa Slab One';font-size:38px;color:{{ v.countColor }}">{{ v.count }}</div>
+          <div style="font:700 10px 'Space Mono',monospace;color:{{ v.youColor }};margin-top:6px">{{ v.you }}</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="font:600 11px 'Space Mono',monospace;letter-spacing:.2em;color:rgba(255,233,168,.45)">{{ voteProgress }}</div>
+  </div>
+</sc-if>
+
+<!-- GARTIC -->
+<sc-if value="{{ isGartic }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;gap:24px;padding:22px 0 30px">
+    <div style="width:230px;flex:none">
+      <div style="font:700 11px 'Space Mono',monospace;letter-spacing:.25em;color:rgba(255,233,168,.45);margin-bottom:10px">SCOREBOARD · RD 1/2</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <sc-for list="{{ garticBoard }}" as="gb" hint-placeholder-count="5">
+          <div style="display:flex;align-items:center;gap:9px;background:#2b1a3d;border:2px solid {{ gb.border }};border-radius:99px;padding:5px 12px 5px 5px">
+            <div style="width:28px;height:28px;border-radius:99px;background:#fff8e7;border:2px solid {{ gb.hue }};display:flex;align-items:center;justify-content:center;font:400 6px 'Space Mono',monospace;color:#8a7f60">dd</div>
+            <div style="flex:1;font:700 12px 'Space Grotesk';color:#ffe9a8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ gb.name }}</div>
+            <span style="font:600 8px 'Space Mono',monospace;color:{{ gb.stateColor }}">{{ gb.state }}</span>
+            <span style="font-family:'Alfa Slab One';font-size:14px;color:#ffe9a8">{{ gb.pts }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="font:400 8px 'Space Mono',monospace;color:rgba(255,233,168,.3);margin-top:9px;text-align:center">GAME POINTS · SESSION POINTS AT THE END</div>
+    </div>
+    <div style="flex:1.6;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div><div style="font:700 10px 'Space Mono',monospace;letter-spacing:.35em;color:#35d4b9">YOUR SECRET WORD</div><div style="font-family:'Alfa Slab One';font-size:26px;color:#ffe9a8;text-shadow:0 3px 0 #c2452d">CAPIVARA</div></div>
+        <div style="font:600 11px 'Space Mono',monospace;color:rgba(255,233,168,.45);text-align:right">{{ guessedLabel }}</div>
+      </div>
+      <canvas ref="{{ canvasRef }}" width="760" height="560"
+        onPointerDown="{{ gDown }}" onPointerMove="{{ gMove }}" onPointerUp="{{ gUp }}" onPointerLeave="{{ gUp }}"
+        style="width:100%;aspect-ratio:760/560;background:#fff8e7;border-radius:18px;border:3px solid #35d4b9;box-shadow:0 6px 0 rgba(0,0,0,.35);touch-action:none;cursor:crosshair;display:block"></canvas>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:12px">
+        <div style="display:flex;gap:5px">
+          <sc-for list="{{ gSwatches }}" as="s" hint-placeholder-count="8">
+            <button onClick="{{ s.pick }}" style="width:30px;height:30px;border-radius:99px;background:{{ s.hex }};border:{{ s.border }};cursor:pointer;padding:0"></button>
+          </sc-for>
+        </div>
+        <span style="flex:1"></span>
+        <button onClick="{{ gEraser }}" style="height:38px;padding:0 14px;border-radius:11px;border:2px solid {{ eraserBorder }};background:{{ eraserBg }};color:{{ eraserFg }};font:700 12px 'Space Grotesk';cursor:pointer">◻ Eraser</button>
+        <button onClick="{{ gUndo }}" style="height:38px;padding:0 14px;border-radius:11px;border:2px solid #5a3f7a;background:#2b1a3d;color:#ffe9a8;font:700 12px 'Space Grotesk';cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.35)" style-active="transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.35)">↩ Undo</button>
+        <button onClick="{{ gClear }}" style="height:38px;padding:0 14px;border-radius:11px;border:none;background:linear-gradient(180deg,#ff6b85,#e84863);color:#fff;font:700 12px 'Space Grotesk';cursor:pointer;box-shadow:0 3px 0 #8f1f33" style-active="transform:translateY(2px);box-shadow:0 1px 0 #8f1f33">Clear</button>
+      </div>
+    </div>
+    <div style="flex:1;max-width:340px;display:flex;flex-direction:column">
+      <div style="font:700 11px 'Space Mono',monospace;letter-spacing:.25em;color:rgba(255,233,168,.45);margin-bottom:10px">GUESS CHAT</div>
+      <div style="flex:1;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px;overflow:hidden;justify-content:flex-end">
+        <sc-for list="{{ chat }}" as="m" hint-placeholder-count="3">
+          <div style="font:600 13px 'Space Grotesk';color:{{ m.color }};animation:rise .3s ease-out">{{ m.text }}</div>
+        </sc-for>
+      </div>
+      <div style="background:#1c1230;border:2px dashed #5a3f7a;border-radius:12px;padding:11px 14px;font:400 11px 'Space Mono',monospace;color:rgba(255,233,168,.35);margin-top:10px;text-align:center">YOU'RE DRAWING — NO GUESSING</div>
+    </div>
+  </div>
+</sc-if>
+
+<!-- CAH: PLAY A CARD -->
+<sc-if value="{{ isCah }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;padding:16px 0 0;overflow:hidden;position:relative">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:34px;height:34px;border-radius:99px;background:#fff8e7;border:2px solid #ff4f6f;display:flex;align-items:center;justify-content:center;font:400 6px 'Space Mono',monospace;color:#8a7f60">dd</div>
+        <span style="font:700 12px 'Space Mono',monospace;color:#ff8a9b">DANI JUDGES THIS ROUND 👑</span>
+      </div>
+      <span style="font:700 11px 'Space Mono',monospace;letter-spacing:.2em;color:rgba(255,233,168,.5)">{{ cahCaption }}</span>
+    </div>
+    <!-- THE TABLE -->
+    <div style="flex:1;display:flex;align-items:center;gap:36px;background:radial-gradient(ellipse at 50% 60%,rgba(255,79,111,.09),transparent 65%);border-radius:24px;position:relative;min-height:320px;padding:0 20px">
+      <div style="width:210px;flex:none;background:rgba(43,26,61,.75);border:2px solid #5a3f7a;border-radius:16px;padding:14px;backdrop-filter:blur(4px)">
+        <div style="font:700 9px 'Space Mono',monospace;letter-spacing:.25em;color:rgba(255,233,168,.5);margin-bottom:10px">ROUND WINS</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <sc-for list="{{ cahBoard }}" as="cb2" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:9px;background:#2b1a3d;border:2px solid {{ cb2.border }};border-radius:99px;padding:4px 12px 4px 4px">
+              <div style="width:28px;height:28px;border-radius:99px;background:#fff8e7;border:2px solid {{ cb2.hue }};display:flex;align-items:center;justify-content:center;font:400 6px 'Space Mono',monospace;color:#8a7f60">dd</div>
+              <div style="flex:1;font:700 12px 'Space Grotesk';color:#ffe9a8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ cb2.name }}</div>
+              <span style="font:600 8px 'Space Mono',monospace;color:{{ cb2.stateColor }}">{{ cb2.state }}</span>
+              <span style="font-family:'Alfa Slab One';font-size:14px;color:#ffe9a8">{{ cb2.pts }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font:400 8px 'Space Mono',monospace;color:rgba(255,233,168,.3);margin-top:9px;text-align:center">MOST WINS TAKES THE GAME</div>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:40px">
+      <div style="width:200px;height:225px;flex:none;background:linear-gradient(165deg,#1a1a28,#0e0e18);border:2px solid #ff4f6f;border-radius:18px;padding:18px;box-sizing:border-box;transform:rotate(-3deg);box-shadow:0 18px 40px rgba(0,0,0,.55),0 0 30px rgba(255,79,111,.15);display:flex;flex-direction:column">
+        <div style="font:700 9px 'Space Mono',monospace;letter-spacing:.25em;color:#ff8a9b;margin-bottom:10px">THE BLACK CARD</div>
+        <div style="font:700 19px/1.35 'Space Grotesk';color:#fff;flex:1">What ended my last relationship? <span style="color:#ff8a9b">______</span></div>
+        <div style="font-family:'Alfa Slab One';font-size:10px;color:rgba(255,138,155,.5)">GEMU · CAH</div>
+      </div>
+      <!-- PLAY ZONE -->
+      <sc-if value="{{ cahPicking }}" hint-placeholder-val="{{ false }}">
+        <div style="width:200px;height:230px;border:3px dashed rgba(255,233,168,.25);border-radius:18px;display:flex;align-items:center;justify-content:center;font:600 11px 'Space Mono',monospace;color:rgba(255,233,168,.35);text-align:center;line-height:1.6">YOUR CARD<br>LANDS HERE<br>▼ pick from your hand</div>
+      </sc-if>
+      <sc-if value="{{ cahWaiting }}" hint-placeholder-val="{{ false }}">
+        <div style="position:relative;width:220px;height:250px">
+          <sc-for list="{{ pileCards }}" as="pc" hint-placeholder-count="4">
+            <div style="position:absolute;left:{{ pc.x }}px;top:{{ pc.y }}px;width:180px;height:220px;background:linear-gradient(160deg,#221530,#131320);border:2px solid #3a2751;border-radius:16px;transform:rotate({{ pc.rot }}deg);box-shadow:0 10px 24px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;animation:throwIn .5s cubic-bezier(.2,.8,.3,1.1) {{ pc.delay }} both">
+              <div style="font-family:'Alfa Slab One';font-size:16px;color:#ff4f6f;transform:rotate(-8deg);opacity:.8">GEMU</div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ cahRevealing }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:repeat(2,150px);gap:12px;perspective:900px;justify-content:center">
+          <sc-for list="{{ tableCards }}" as="tc" hint-placeholder-count="4">
+            <div style="width:150px;height:195px;background:linear-gradient(160deg,#fff8e7,#f2e6c4);border:{{ tc.borderCss }};border-radius:14px;padding:14px;box-sizing:border-box;transform:rotate({{ tc.rot }}deg);box-shadow:{{ tc.shadow }};opacity:{{ tc.opacity }};animation:{{ tc.anim }};display:flex;flex-direction:column">
+              <div style="font:700 13.5px/1.4 'Space Grotesk';color:#1c1230;flex:1">{{ tc.text }}</div>
+              <div style="font-family:'Alfa Slab One';font-size:10px;color:{{ tc.tagColor }}">{{ tc.tag }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+      </div>
+    </div>
+    <sc-if value="{{ cahWon }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;justify-content:center;margin-top:10px">
+        <div style="background:#2b1a3d;border:2px solid #ffd23f;border-radius:14px;padding:12px 26px;animation:slam .45s ease-out;box-shadow:0 8px 30px rgba(0,0,0,.5);transform:rotate(-1deg)">
+          <span style="font:700 13px 'Space Mono',monospace;color:#ffd23f;white-space:nowrap">✨ DANI PICKED YOUR CARD · +1 AWESOME POINT 🔊</span>
+        </div>
+      </div>
+    </sc-if>
+    <!-- THE HAND -->
+    <div style="position:relative;height:{{ handHeight }};margin-top:6px;transition:height .4s ease">
+      <sc-for list="{{ handCards }}" as="hc" hint-placeholder-count="4">
+        <div onClick="{{ hc.pick }}" style="position:absolute;left:50%;bottom:-36px;width:185px;height:235px;margin-left:-92px;transform:translate({{ hc.x }}px,{{ hc.y }}px) rotate({{ hc.rot }}deg);transform-origin:50% 130%;background:linear-gradient(160deg,#fff8e7,#f2e6c4);border-radius:16px;padding:18px;box-sizing:border-box;cursor:pointer;box-shadow:-6px 8px 22px rgba(0,0,0,.45);transition:transform .18s ease,box-shadow .18s ease;animation:{{ hc.anim }};display:flex;flex-direction:column" style-hover="transform:translate({{ hc.x }}px,{{ hc.yUp }}px) rotate(0deg) scale(1.06);box-shadow:0 26px 50px rgba(0,0,0,.6);z-index:10">
+          <div style="font:700 16px/1.4 'Space Grotesk';color:#1c1230;flex:1">{{ hc.text }}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'Alfa Slab One';font-size:10px;color:#c8b890">GEMU · CAH</span><span style="font:700 10px 'Space Mono',monospace;color:#e84863">TAP TO PLAY ▲</span></div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</sc-if>
+
+<!-- CAH: YOU JUDGE -->
+<sc-if value="{{ isCahJudge }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:26px 0 40px">
+    <div style="font:700 12px 'Space Mono',monospace;letter-spacing:.3em;color:#ff8a9b;margin-bottom:16px">ROUND 2 · YOU'RE THE JUDGE 👑 · READ THEM OUT LOUD</div>
+    <div style="width:560px;background:#131320;border:2px solid #ff4f6f;border-radius:16px;padding:18px 22px;margin-bottom:18px">
+      <div style="font:700 20px/1.35 'Space Grotesk';color:#fff">I couldn't finish my homework because of <span style="color:#ff8a9b">______</span></div>
+    </div>
+    <div style="display:flex;gap:20px;margin-bottom:22px;perspective:900px">
+      <sc-for list="{{ judgeCards }}" as="jc" hint-placeholder-count="3">
+        <div onClick="{{ jc.pick }}" style="width:190px;height:240px;background:{{ jc.bg }};border:{{ jc.borderCss }};border-radius:16px;padding:18px;box-sizing:border-box;cursor:pointer;box-shadow:{{ jc.shadow }};opacity:{{ jc.opacity }};transform:rotate({{ jc.rot }}deg);transition:transform .18s ease,box-shadow .18s ease;animation:{{ jc.anim }};display:flex;flex-direction:column" style-hover="transform:translateY(-14px) rotate(0deg) scale(1.04);box-shadow:0 26px 50px rgba(0,0,0,.6)">
+          <div style="font:700 17px/1.4 'Space Grotesk';color:#1c1230;flex:1">{{ jc.text }}</div>
+          <span style="font-family:'Alfa Slab One';font-size:11px;color:#fff;background:#ff4f6f;border-radius:99px;padding:5px 12px;opacity:{{ jc.tagOpacity }};text-align:center">{{ jc.tag }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <sc-if value="{{ cahJudged }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:14px;animation:rise .4s ease-out">
+        <span style="font:700 12px 'Space Mono',monospace;color:#ffd23f">✨ THAT WAS {{ cahAuthor }}'S CARD · +1 AWESOME POINT</span>
+        <button onClick="{{ finishCah }}" style="font-family:'Alfa Slab One';font-size:15px;color:#fff;background:linear-gradient(180deg,#ff6b85,#e84863);border:none;border-radius:14px;padding:14px 36px;box-shadow:0 5px 0 #8f1f33;cursor:pointer" style-active="transform:translateY(4px);box-shadow:0 1px 0 #8f1f33">FINISH CAH → STANDINGS</button>
+      </div>
+    </sc-if>
+    <sc-if value="{{ cahNotJudged }}" hint-placeholder-val="{{ true }}">
+      <div style="font:400 10px 'Space Mono',monospace;color:rgba(255,233,168,.35)">TAP THE FUNNIEST · AUTHOR REVEALED AFTER YOU PICK</div>
+    </sc-if>
+  </div>
+</sc-if>
+
+<!-- SCOREBOARD -->
+<sc-if value="{{ isBoard }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 0 40px">
+    <div style="text-align:center;margin-bottom:22px">
+      <div style="font:700 12px 'Space Mono',monospace;letter-spacing:.4em;color:#35d4b9">{{ boardAfter }}</div>
+      <div style="font-family:'Alfa Slab One';font-size:40px;color:#ffe9a8;text-shadow:0 5px 0 #c2452d">TONIGHT'S BOARD</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:11px;width:560px;margin-bottom:26px">
+      <sc-for list="{{ boardRows }}" as="s" hint-placeholder-count="5">
+        <div style="display:flex;align-items:center;gap:14px;background:{{ s.bg }};border:{{ s.borderCss }};border-radius:16px;padding:12px 18px;box-shadow:{{ s.shadow }};animation:rise .5s ease-out both;animation-delay:{{ s.delay }}">
+          <div style="font-family:'Alfa Slab One';font-size:19px;color:{{ s.rankColor }};width:30px;text-align:center">{{ s.rank }}</div>
+          <div style="width:42px;height:42px;border-radius:99px;background:#fff8e7;border:2px solid {{ s.hue }};display:flex;align-items:center;justify-content:center;font:400 7px 'Space Mono',monospace;color:#8a7f60">doodle</div>
+          <div style="flex:1;font:700 16px 'Space Grotesk';color:{{ s.nameColor }}">{{ s.name }}</div>
+          <div style="display:flex;gap:5px;margin-right:14px"><span style="width:12px;height:12px;border-radius:4px;background:#ffd23f;opacity:{{ s.dot1 }}"></span><span style="width:12px;height:12px;border-radius:4px;background:#35d4b9;opacity:{{ s.dot2 }}"></span></div>
+          <div style="font-family:'Alfa Slab One';font-size:23px;color:{{ s.nameColor }}">{{ s.total }}</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;gap:14px">
+      <button onClick="{{ toVote }}" style="font-family:'Alfa Slab One';font-size:15px;color:#ffe9a8;background:#2b1a3d;border:2px solid #ffe9a8;border-radius:14px;padding:14px 30px;box-shadow:0 4px 0 rgba(0,0,0,.4);cursor:pointer" style-active="transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.4)">KEEP PLAYING</button>
+      <button onClick="{{ endNight }}" style="font-family:'Alfa Slab One';font-size:15px;color:#fff;background:linear-gradient(180deg,#ff6b85,#e84863);border:none;border-radius:14px;padding:14px 30px;box-shadow:0 4px 0 #8f1f33;cursor:pointer" style-active="transform:translateY(3px);box-shadow:0 1px 0 #8f1f33">END THE NIGHT</button>
+    </div>
+  </div>
+</sc-if>
+
+<!-- PODIUM -->
+<sc-if value="{{ isPodium }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 0 50px;position:relative">
+    <sc-for list="{{ confetti }}" as="cf" hint-placeholder-count="10">
+      <span style="position:absolute;left:{{ cf.left }};top:-30px;width:10px;height:15px;background:{{ cf.color }};border-radius:2px;animation:fall {{ cf.dur }} linear {{ cf.delay }} infinite"></span>
+    </sc-for>
+    <div style="text-align:center;margin-bottom:26px">
+      <div style="font:700 12px 'Space Mono',monospace;letter-spacing:.4em;color:#35d4b9">THAT'S A WRAP 🔊</div>
+      <div style="font-family:'Alfa Slab One';font-size:44px;color:#ffe9a8;text-shadow:0 5px 0 #c2452d">CHAMPION OF THE NIGHT</div>
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:16px;width:620px;height:290px;margin-bottom:24px">
+      <sc-for list="{{ podium }}" as="p" hint-placeholder-count="3">
+        <div style="flex:{{ p.flex }};display:flex;flex-direction:column;align-items:center;gap:8px;justify-content:flex-end;height:100%;animation:rise .6s ease-out both;animation-delay:{{ p.delay }}">
+          <div style="font-size:26px">{{ p.crown }}</div>
+          <div style="width:{{ p.av }};height:{{ p.av }};border-radius:99px;background:#fff8e7;border:3px solid {{ p.hue }};display:flex;align-items:center;justify-content:center;font:400 8px 'Space Mono',monospace;color:#8a7f60">doodle</div>
+          <div style="font:700 16px 'Space Grotesk';color:{{ p.nameColor }}">{{ p.name }} · {{ p.total }}</div>
+          <div style="width:100%;height:{{ p.h }};background:{{ p.bg }};border:{{ p.borderCss }};border-radius:14px 14px 0 0;box-shadow:{{ p.glow }};display:flex;align-items:center;justify-content:center"><span style="font-family:'Alfa Slab One';font-size:38px;color:{{ p.rankColor }}">{{ p.rank }}</span></div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:7px;width:420px;margin-bottom:24px">
+      <sc-for list="{{ podiumRest }}" as="r" hint-placeholder-count="2">
+        <div style="display:flex;align-items:center;gap:12px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:99px;padding:8px 18px"><span style="font:700 12px 'Space Mono',monospace;color:rgba(255,233,168,.5)">{{ r.rank }}</span><span style="flex:1;font:600 14px 'Space Grotesk';color:#ffe9a8">{{ r.name }}</span><span style="font:700 13px 'Space Mono',monospace;color:rgba(255,233,168,.6)">{{ r.total }}</span></div>
+      </sc-for>
+    </div>
+    <button onClick="{{ playAgain }}" style="font-family:'Alfa Slab One';font-size:16px;color:#3d1f0e;background:linear-gradient(180deg,#ffd23f,#f5b32a);border:none;border-radius:14px;padding:15px 40px;box-shadow:0 5px 0 #c2452d;cursor:pointer" style-active="transform:translateY(4px);box-shadow:0 1px 0 #c2452d">SAME TIME NEXT WEEK? · NEW ROOM</button>
+  </div>
+</sc-if>
+
+</div>
+
+<!-- SLAM OVERLAY -->
+<sc-if value="{{ isSlam }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;z-index:30;background:rgba(18,9,24,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+    <div style="width:64px;height:64px;border-radius:99px;background:#fff8e7;border:3px solid #ff4f6f;display:flex;align-items:center;justify-content:center;font:400 8px 'Space Mono',monospace;color:#8a7f60">doodle</div>
+    <div style="font:700 14px 'Space Mono',monospace;letter-spacing:.3em;color:#ff8a9b">{{ slammer }} SLAMMED</div>
+    <div style="font-family:'Alfa Slab One';font-size:100px;color:#fff;text-shadow:0 8px 0 #8f1f33;animation:slam .5s ease-out;transform:rotate(-2deg);line-height:1">STOP!</div>
+    <div style="font:600 16px 'Space Grotesk';color:rgba(255,233,168,.7)">finish what you can…</div>
+    <div style="font-family:'Alfa Slab One';font-size:56px;color:#fff;background:linear-gradient(180deg,#ff6b85,#e84863);border-radius:20px;padding:2px 30px;box-shadow:0 6px 0 #8f1f33;animation:tick 1s infinite">{{ slamSecs }}</div>
+  </div>
+</sc-if>
+
+<!-- PAUSE OVERLAY -->
+<sc-if value="{{ isPaused }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;z-index:35;background:rgba(18,9,24,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px">
+    <div style="font-size:52px">🍕</div>
+    <div style="font-family:'Alfa Slab One';font-size:52px;color:#ffe9a8;text-shadow:0 6px 0 #c2452d">SHOW PAUSED</div>
+    <div style="font:600 15px 'Space Grotesk';color:rgba(255,233,168,.6)">The host froze the clock. Grab a slice — nothing moves until they're back.</div>
+    <button onClick="{{ togglePause }}" style="font-family:'Alfa Slab One';font-size:17px;color:#3d1f0e;background:linear-gradient(180deg,#ffd23f,#f5b32a);border:none;border-radius:15px;padding:16px 42px;box-shadow:0 5px 0 #c2452d;cursor:pointer;margin-top:8px" style-active="transform:translateY(4px);box-shadow:0 1px 0 #c2452d">▶ RESUME THE SHOW</button>
+    <div style="font:400 10px 'Space Mono',monospace;color:rgba(255,233,168,.3)">★ HOST ONLY · TIMERS FREEZE FOR EVERYONE</div>
+  </div>
+</sc-if>
+
+<!-- RULES MODAL -->
+<sc-if value="{{ rulesOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeRules }}" style="position:fixed;inset:0;z-index:40;background:rgba(18,9,24,.8);display:flex;align-items:center;justify-content:center">
+    <div style="width:420px;background:#2b1a3d;border:3px solid {{ rulesHue }};border-radius:22px;overflow:hidden;box-shadow:0 14px 0 rgba(0,0,0,.35)">
+      <div style="background:{{ rulesHeadBg }};padding:16px 22px">
+        <div style="font:700 10px 'Space Mono',monospace;letter-spacing:.3em;color:rgba(0,0,0,.5)">HOW TO PLAY</div>
+        <div style="font-family:'Alfa Slab One';font-size:24px;color:{{ rulesHeadFg }}">{{ rulesTitle }}</div>
+      </div>
+      <div style="padding:20px 22px;display:flex;flex-direction:column;gap:13px">
+        <sc-for list="{{ rulesSteps }}" as="rs" hint-placeholder-count="3">
+          <div style="display:flex;gap:12px"><div style="flex:none;width:26px;height:26px;border-radius:99px;background:{{ rulesHue }};color:#1c1230;font-family:'Alfa Slab One';font-size:13px;display:flex;align-items:center;justify-content:center">{{ rs.n }}</div><div style="font:500 14px/1.45 'Space Grotesk';color:#ffe9a8">{{ rs.text }}</div></div>
+        </sc-for>
+        <button onClick="{{ closeRules }}" style="font-family:'Alfa Slab One';font-size:14px;color:#1c1230;background:{{ rulesHeadBg }};border:none;border-radius:12px;padding:13px;cursor:pointer;margin-top:4px">GOT IT</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:800}}">
+class Component extends DCLogic {
+  state = {
+    phase: 'home', nick: 'Flavio', secs: 0, elapsed: 0,
+    lobbyReady: 0, drumIdx: 0,
+    catVals: ['', '', '', ''],
+    slammer: '', slamSecs: 5,
+    judgeIdx: 0, judgeVoted: false, tally: null,
+    round: 1, roundRaw: 0, garticPts: { Dani: 0, Rafa: 0, Bia: 0 },
+    optRounds: 3, optTimer: 60, paused: false, myReady: false,
+    myVote: null, votes: { stop: 0, gartic: 0, gphone: 0, cah: 0 }, voteDone: false, voteNum: 0,
+    cahStage: 'pick', cahPickedIdx: null, cahJudgePick: null, cahWins: { me: 0, Gustavo: 0, Dani: 0, Rafa: 0, Bia: 0 }, cahDone: false,
+    chat: [], guessed: 0,
+    gColor: '#131320', gEraser: false,
+    rulesOpen: false,
+    stopRaw: 0, sessionTotals: null,
+  };
+  canvasNode = null; undoStack = []; drawing = false;
+  gameTotals = null;
+  botRounds = { Gustavo: [30, 28, 27], Dani: [20, 15, 20], Rafa: [15, 10, 15], Bia: [10, 12, 8] };
+  STOP_ROUNDS = 3;
+
+  setCanvas = (node) => {
+    this.canvasNode = node;
+    if (node) {
+      this.gctx = node.getContext('2d');
+      this.gctx.lineCap = 'round'; this.gctx.lineJoin = 'round';
+    }
+  };
+
+  componentDidMount() {
+    this.int = setInterval(() => this.tick(), 1000);
+  }
+  componentWillUnmount() { clearInterval(this.int); clearInterval(this.fast); }
+
+  go(phase, secs) { this.setState({ phase, secs: secs ?? 0, elapsed: 0 }); }
+
+  tick() {
+    const s = this.state;
+    if (s.paused) return;
+    const next = { secs: Math.max(0, s.secs - 1), elapsed: s.elapsed + 1 };
+    if (s.phase === 'lobby') {
+      if (s.elapsed === 1) next.lobbyReady = 1;
+      if (s.elapsed === 2) next.lobbyReady = 2;
+      if (s.elapsed === 4) next.lobbyReady = 3;
+      if (s.elapsed === 5) next.lobbyReady = 4;
+    }
+    if (s.phase === 'stop') {
+      if (next.secs === 0) return this.beginSlam('TIME');
+      if (s.elapsed === 18) return this.beginSlam('GUSTAVO');
+    }
+    if (s.phase === 'slam') {
+      if (s.slamSecs <= 1) { this.setState({ slamSecs: 5 }); return this.go('judge'); }
+      next.slamSecs = s.slamSecs - 1;
+    }
+    if (s.phase === 'vote') {
+      const fav = s.voteNum <= 1 ? 'gartic' : 'cah';
+      const alt = s.voteNum <= 1 ? 'stop' : 'gphone';
+      if (s.elapsed === 2) next.votes = { ...s.votes, [fav]: s.votes[fav] + 1 };
+      if (s.elapsed === 4) next.votes = { ...s.votes, [fav]: s.votes[fav] + 1 };
+      if (s.elapsed === 6) next.votes = { ...s.votes, [alt]: s.votes[alt] + 1 };
+      if (s.elapsed === 8) next.votes = { ...s.votes, [fav]: s.votes[fav] + 1 };
+      if (next.secs === 0) { this.setState(next); return this.winnerReveal(); }
+    }
+    if (s.phase === 'cah') {
+      if (s.cahStage === 'pick' && next.secs === 0 && s.cahPickedIdx === null) { this.setState(next); return this.cahPick(0); }
+      if (s.cahStage === 'wait' && s.elapsed >= 2) { next.cahStage = 'read'; next.elapsed = 0; }
+      else if (s.cahStage === 'read' && s.elapsed >= 4) { next.cahStage = 'won'; next.elapsed = 0; next.cahWins = { ...s.cahWins, me: s.cahWins.me + 1 }; }
+      else if (s.cahStage === 'won' && s.elapsed >= 3) { this.setState(next); return this.go('cahJudge'); }
+    }
+    if (s.phase === 'gartic') {
+      const msgs = {
+        4: { text: 'Rafa: rato gigante?', color: 'rgba(255,233,168,.75)' },
+        8: { text: 'Bia: hamster', color: 'rgba(255,233,168,.75)' },
+        13: { text: 'Dani ✓ guessed it! (+18)', color: '#35d4b9', g: 1, who: 'Dani', pts: 18 },
+        20: { text: 'Rafa: capivara??', color: 'rgba(255,233,168,.75)' },
+        22: { text: 'Rafa ✓ guessed it! (+14)', color: '#35d4b9', g: 1, who: 'Rafa', pts: 14 },
+        30: { text: 'Bia ✓ guessed it! (+10)', color: '#35d4b9', g: 1, who: 'Bia', pts: 10 },
+      };
+      const m = msgs[s.elapsed];
+      if (m) {
+        next.chat = [...s.chat, m].slice(-7);
+        if (m.g) { next.guessed = s.guessed + 1; next.garticPts = { ...s.garticPts, [m.who]: m.pts }; }
+      }
+      if (next.secs === 0) { this.setState(next); return this.go('board'); }
+    }
+    if (s.phase === 'drumroll') {
+      next.drumIdx = s.drumIdx + 1;
+      if (s.elapsed >= 3) {
+        this.setState(next);
+        if (s.drumTarget === 'gartic') return this.go('gartic', 45);
+        if (s.drumTarget === 'cah') { this.setState({ rulesOpen: true, cahStage: 'pick', cahPickedIdx: null, cahJudgePick: null }); return this.go('cah', 45); }
+        return this.go('intro', 0);
+      }
+    }
+    this.setState(next);
+  }
+
+  beginSlam(who) {
+    this.setState({ slammer: who === 'TIME' ? "TIME'S UP —" : who, slamSecs: 5, phase: 'slam', elapsed: 0 });
+  }
+  winnerReveal() {
+    const s = this.state;
+    const v = { ...s.votes };
+    if (s.myVote) v[s.myVote]++;
+    let top = 'gartic', max = -1;
+    Object.keys(v).forEach(k => { if (v[k] > max) { max = v[k]; top = k; } });
+    if (top === 'gphone' || top === 'stop') top = s.voteNum <= 1 ? 'gartic' : 'cah';
+    this.setState({ phase: 'drumroll', drumTarget: top, elapsed: 0, drumIdx: 0, secs: 0 });
+  }
+  cahPick(i) {
+    if (this.state.cahPickedIdx !== null) return;
+    this.setState({ cahPickedIdx: i, cahStage: 'wait', elapsed: 0 });
+  }
+  myHand = ['My collection of novelty spoons.', 'Aggressive interpretive dance.', 'A vague sense of dread.', 'The group chat lore.'];
+  botSubs = [
+    { who: 'Gustavo', text: 'An unskippable ad.' },
+    { who: 'Rafa', text: "The neighbor's wifi password." },
+    { who: 'Bia', text: 'Financial literacy.' },
+  ];
+  judgeSubs = [
+    { who: 'Gustavo', text: 'A capybara with a clipboard.' },
+    { who: 'Rafa', text: 'Twelve consecutive naps.' },
+    { who: 'Bia', text: 'The mitochondria.' },
+  ];
+
+  // gartic canvas
+  gpos(e) {
+    const r = this.canvasNode.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * 760 / r.width, y: (e.clientY - r.top) * 560 / r.height };
+  }
+  gdown = (e) => {
+    if (!this.gctx) return;
+    e.preventDefault();
+    e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId);
+    this.undoStack.push(this.gctx.getImageData(0, 0, 760, 560));
+    if (this.undoStack.length > 20) this.undoStack.shift();
+    this.drawing = true;
+    const p = this.gpos(e), ctx = this.gctx;
+    ctx.globalCompositeOperation = this.state.gEraser ? 'destination-out' : 'source-over';
+    ctx.strokeStyle = this.state.gColor;
+    ctx.lineWidth = this.state.gEraser ? 26 : 7;
+    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + 0.01, p.y + 0.01); ctx.stroke();
+  };
+  gmove = (e) => {
+    if (!this.drawing) return;
+    e.preventDefault();
+    const p = this.gpos(e);
+    this.gctx.lineTo(p.x, p.y); this.gctx.stroke();
+  };
+  gup = () => { this.drawing = false; if (this.gctx) this.gctx.globalCompositeOperation = 'source-over'; };
+
+  judgeItems = [
+    { cat: 'CITY', who: 'DANI', word: 'Bhurgatinho', valid: 2, nope: 4 },
+    { cat: 'ANIMAL', who: 'GUSTAVO', word: 'Bicho-preguiça', valid: 5, nope: 1 },
+    { cat: 'FOOD', who: 'RAFA', word: 'Brigadeiro', valid: 6, nope: 0 },
+  ];
+
+  vote(kind) {
+    if (this.state.judgeVoted) return;
+    const it = this.judgeItems[this.state.judgeIdx];
+    this.setState({ judgeVoted: true, tally: { valid: it.valid + (kind === 'valid' ? 1 : 0), nope: it.nope + (kind === 'nope' ? 1 : 0) } });
+    setTimeout(() => {
+      if (this.state.judgeIdx >= this.judgeItems.length - 1) {
+        const filled = this.state.catVals.filter(v => v.trim()).length;
+        const myPts = filled * 10 + 5;
+        const r = this.state.round;
+        if (!this.gameTotals) this.gameTotals = { me: 0, Gustavo: 0, Dani: 0, Rafa: 0, Bia: 0 };
+        this.gameTotals.me += myPts;
+        Object.keys(this.botRounds).forEach(b => { this.gameTotals[b] += this.botRounds[b][(r - 1) % 3]; });
+        this.setState({ roundRaw: myPts, stopRaw: this.gameTotals.me });
+        this.go('results');
+      } else {
+        this.setState(s => ({ judgeIdx: s.judgeIdx + 1, judgeVoted: false, tally: null }));
+      }
+    }, 1400);
+  }
+
+  computeStandings() {
+    const gt = this.gameTotals || { me: 0, Gustavo: 0, Dani: 0, Rafa: 0, Bia: 0 };
+    const r = this.state.round;
+    const roundGain = (n) => n === 'me' ? this.state.roundRaw : this.botRounds[n][(r - 1) % 3];
+    const hues = { me: '#ffd23f', Gustavo: '#35d4b9', Dani: '#ff4f6f', Rafa: '#b78bff', Bia: '#ff9d3f' };
+    const rows = Object.keys(gt).map(k => ({
+      key: k, name: k === 'me' ? (this.state.nick || 'You') : k,
+      raw: gt[k], roundGain: roundGain(k), hue: hues[k], me: k === 'me',
+    })).sort((a, b) => b.raw - a.raw);
+    const gains = [100, 75, 60, 50, 45];
+    const final = r >= this.state.optRounds;
+    return rows.map((row, i) => ({ ...row, rank: i + 1, gain: final ? gains[i] : row.roundGain }));
+  }
+
+  renderVals() {
+    const s = this.state;
+    const phase = s.phase;
+    const P = this.props;
+    const drumNames = ['GARTIC', 'G. PHONE', 'STOP!', 'CAH', 'GARTIC', 'STOP!'];
+    const drumColors = ['#35d4b9', '#b78bff', '#ffd23f', '#ff4f6f', '#35d4b9', '#ffd23f'];
+    const targetMap = { gartic: ['GARTIC', '#35d4b9'], cah: ['CAH', '#ff4f6f'], stop: ['STOP!', '#ffd23f'] };
+    const tgt = targetMap[s.drumTarget] || targetMap.stop;
+    const isGarticDrum = s.drumTarget === 'gartic' || s.drumTarget === 'cah';
+    const drumName = s.elapsed >= 2 ? tgt[0] : drumNames[s.drumIdx % drumNames.length];
+    const drumColor = s.elapsed >= 2 ? tgt[1] : drumColors[s.drumIdx % drumColors.length];
+
+    const bots = ['Gustavo', 'Dani', 'Rafa', 'Bia'];
+    const hues = ['#35d4b9', '#ff4f6f', '#b78bff', '#ff9d3f'];
+    const lobbyPlayers = [
+      { name: s.nick || 'You', star: '★', hue: '#ffd23f', border: s.myReady ? '#35d4b9' : '#5a3f7a', state: s.myReady ? '✓ READY' : 'NOT READY', stateColor: s.myReady ? '#35d4b9' : '#ff8a9b' },
+      ...bots.map((b, i) => ({
+        name: b, star: '', hue: hues[i],
+        border: i < s.lobbyReady ? '#35d4b9' : '#5a3f7a',
+        state: i < s.lobbyReady ? '✓ READY' : 'JOINING…',
+        stateColor: i < s.lobbyReady ? '#35d4b9' : 'rgba(255,233,168,.4)',
+      })),
+    ];
+
+    const catLabels = ['ANIMAL', 'FOOD', 'CITY', 'MOVIE'];
+    const cats = catLabels.map((label, i) => ({
+      label, val: s.catVals[i],
+      set: (e) => { const v = [...this.state.catVals]; v[i] = e.target.value; this.setState({ catVals: v }); },
+      border: s.catVals[i].trim() ? '#35d4b9' : '#5a3f7a',
+      check: s.catVals[i].trim() ? '✓' : '',
+    }));
+    const filled = s.catVals.filter(v => v.trim()).length;
+
+    const rivalStates = s.elapsed > 12 ? ['ALMOST DONE!', 'FILLING…', 'FILLING…', 'STUCK 😩'] : ['FILLING…', 'FILLING…', 'THINKING…', 'FILLING…'];
+    const gt = this.gameTotals || { me: 0, Gustavo: 0, Dani: 0, Rafa: 0, Bia: 0 };
+    const gameBoard = [
+      { key: 'me', name: (s.nick || 'You') + ' (you)', hue: '#ffd23f', state: filled + '/4', stateColor: '#35d4b9', pts: gt.me },
+      ...bots.map((b, i) => ({ key: b, name: b, hue: hues[i], state: rivalStates[i], stateColor: rivalStates[i].includes('ALMOST') ? '#ffd23f' : 'rgba(255,233,168,.4)', pts: gt[b] })),
+    ].sort((a, b) => b.pts - a.pts).map((r, i) => ({ ...r, border: i === 0 && r.pts > 0 ? '#ffd23f' : '#5a3f7a' }));
+
+    const ji = this.judgeItems[Math.min(s.judgeIdx, this.judgeItems.length - 1)];
+    const totalTally = s.tally ? s.tally.valid + s.tally.nope : 1;
+
+    const standings = this.computeStandings().map((r, i) => {
+      const top = i === 0;
+      return {
+        rank: r.rank, name: r.name + (r.me ? ' (you)' : ''), raw: r.raw, gain: r.gain, hue: r.hue,
+        bg: top ? 'linear-gradient(180deg,#ffd23f,#f5b32a)' : '#2b1a3d',
+        borderCss: top ? 'none' : '2px solid #5a3f7a',
+        shadow: top ? '0 5px 0 #c2452d' : 'none',
+        rankColor: top ? '#3d1f0e' : 'rgba(255,233,168,.6)',
+        nameColor: top ? '#3d1f0e' : '#ffe9a8',
+        subColor: top ? 'rgba(61,31,14,.6)' : 'rgba(255,233,168,.45)',
+        gainColor: top ? '#3d1f0e' : '#35d4b9',
+        delay: (0.15 * (4 - i)) + 's',
+      };
+    });
+
+    const roomSize = 5;
+    const voteDefs = [
+      { id: 'stop', letter: 'A', name: 'STOP!', sub: 'CATEGORIES', min: 3, hue: '#ffd23f', dark: '#3d1f0e', grad: 'linear-gradient(180deg,#ffd23f,#f5b32a)', shadowC: '#9c7413' },
+      { id: 'gartic', letter: 'B', name: 'GARTIC', sub: 'DRAW & GUESS', min: 3, hue: '#35d4b9', dark: '#0c3d33', grad: 'linear-gradient(180deg,#41e0c4,#28b89e)', shadowC: '#0f6e5c' },
+      { id: 'gphone', letter: 'C', name: 'G. PHONE', sub: 'TELEPHONE', min: 4, hue: '#b78bff', dark: '#2d1650', grad: 'linear-gradient(180deg,#c9a4ff,#a678f2)', shadowC: '#5f3d99' },
+      { id: 'cah', letter: 'D', name: 'CAH', sub: 'JUDGE PICKS', min: 4, hue: '#ff4f6f', dark: '#4a0f1c', grad: 'linear-gradient(180deg,#ff6b85,#e84863)', shadowC: '#8f1f33' },
+    ];
+    const voteOpts = voteDefs.map(v => {
+      const mine = s.myVote === v.id;
+      const count = s.votes[v.id] + (mine ? 1 : 0);
+      return {
+        letter: v.letter, name: v.name, sub: v.sub, count,
+        pick: () => this.setState({ myVote: v.id }),
+        bg: mine ? v.grad : '#2b1a3d',
+        borderCss: mine ? 'none' : '2px solid ' + v.hue,
+        shadow: mine ? '0 6px 0 ' + v.shadowC : 'none',
+        letterColor: mine ? v.dark : v.hue,
+        nameColor: mine ? v.dark : '#ffe9a8',
+        subColor: mine ? 'rgba(0,0,0,.5)' : 'rgba(255,233,168,.45)',
+        countColor: mine ? v.dark : 'rgba(255,233,168,.7)',
+        you: mine ? 'YOUR VOTE ✓' : '',
+        youColor: mine ? v.dark : 'transparent',
+        minLabel: roomSize >= v.min ? 'MIN ' + v.min + ' PLAYERS · ' + roomSize + ' IN ROOM ✓' : 'NEEDS ' + v.min + '+ PLAYERS — ONLY ' + roomSize + ' HERE',
+        minColor: roomSize >= v.min ? (mine ? 'rgba(0,0,0,.45)' : 'rgba(53,212,185,.8)') : '#ff8a9b',
+      };
+    });
+    const votesIn = Object.values(s.votes).reduce((a, b) => a + b, 0) + (s.myVote ? 1 : 0);
+
+    const gPalette = ['#131320', '#e84863', '#ff9d3f', '#ffd23f', '#57c75a', '#35d4b9', '#3f8cff', '#b78bff'];
+    const gSwatches = gPalette.map(hex => ({
+      hex,
+      pick: () => this.setState({ gColor: hex, gEraser: false }),
+      border: (s.gColor === hex && !s.gEraser) ? '3px solid #ffe9a8' : '2px solid rgba(255,255,255,.2)',
+    }));
+
+    const cahBump = s.cahDone ? { Gustavo: 60, me: 100, Dani: 50, Rafa: 75, Bia: 45 } : { Gustavo: 0, me: 0, Dani: 0, Rafa: 0, Bia: 0 };
+    const totals = [
+      { name: 'Gustavo', total: 185 + cahBump.Gustavo, hue: '#35d4b9', d1: 1, d2: .5 },
+      { name: (s.nick || 'You') + ' (you)', total: (this.computeStandings().find(r => r.me)?.gain + 75 || 150) + cahBump.me, hue: '#ffd23f', d1: 1, d2: 1, me: true },
+      { name: 'Dani', total: 138 + cahBump.Dani, hue: '#ff4f6f', d1: .5, d2: 1 },
+      { name: 'Rafa', total: 110 + cahBump.Rafa, hue: '#b78bff', d1: .5, d2: .5 },
+      { name: 'Bia', total: 95 + cahBump.Bia, hue: '#ff9d3f', d1: .4, d2: .4 },
+    ].sort((a, b) => b.total - a.total);
+    const boardRows = totals.map((r, i) => ({
+      rank: i + 1, name: r.name, total: r.total, hue: r.hue, dot1: r.d1, dot2: r.d2,
+      bg: i === 0 ? 'linear-gradient(180deg,#ffd23f,#f5b32a)' : '#2b1a3d',
+      borderCss: i === 0 ? 'none' : '2px solid #5a3f7a',
+      shadow: i === 0 ? '0 5px 0 #c2452d' : 'none',
+      rankColor: i === 0 ? '#3d1f0e' : 'rgba(255,233,168,.6)',
+      nameColor: i === 0 ? '#3d1f0e' : '#ffe9a8',
+      delay: (0.12 * i) + 's',
+    }));
+
+    const pod = [totals[1], totals[0], totals[2]];
+    const podium = pod.map((r, i) => {
+      const first = i === 1;
+      return {
+        name: r.name.replace(' (you)', ''), total: r.total, hue: r.hue,
+        rank: first ? 1 : (i === 0 ? 2 : 3),
+        crown: first ? '👑' : '', flex: first ? 1.15 : 1,
+        av: first ? '64px' : '54px',
+        h: first ? '150px' : (i === 0 ? '104px' : '78px'),
+        bg: first ? 'linear-gradient(180deg,#ffd23f,#f5b32a)' : '#2b1a3d',
+        borderCss: first ? 'none' : '2px solid #5a3f7a',
+        glow: first ? '0 0 40px rgba(255,210,63,.35)' : 'none',
+        rankColor: first ? '#3d1f0e' : 'rgba(255,233,168,.7)',
+        nameColor: first ? '#ffd23f' : '#ffe9a8',
+        delay: first ? '.6s' : (i === 0 ? '.3s' : '0s'),
+      };
+    });
+    const podiumRest = totals.slice(3).map((r, i) => ({ rank: i + 4, name: r.name.replace(' (you)', ''), total: r.total }));
+
+    const confColors = ['#ffd23f', '#ff4f6f', '#35d4b9', '#b78bff', '#ff9d3f'];
+    const confetti = Array.from({ length: 14 }, (_, i) => ({
+      left: (4 + i * 7) + '%', color: confColors[i % 5],
+      dur: (2.4 + (i % 4) * 0.5) + 's', delay: (i * 0.28) + 's',
+    }));
+
+    const isCahPhase = phase === 'cah' || phase === 'cahJudge';
+    const inGame = phase === 'stop' || phase === 'slam' || phase === 'judge' || phase === 'gartic' || isCahPhase;
+    const isGarticPhase = phase === 'gartic';
+    const low = s.secs <= 10 && s.secs > 0 && (phase === 'stop' || phase === 'gartic' || (phase === 'cah' && s.cahStage === 'pick'));
+
+    const hueMap = { me: '#ffd23f', Gustavo: '#35d4b9', Dani: '#ff4f6f', Rafa: '#b78bff', Bia: '#ff9d3f' };
+    const handCards = s.cahStage === 'pick' ? this.myHand.map((t, i) => {
+      const off = i - (this.myHand.length - 1) / 2;
+      const y = Math.abs(off) * Math.abs(off) * 14;
+      return {
+        text: t, pick: () => this.cahPick(i),
+        x: Math.round(off * 135), y: Math.round(y), yUp: Math.round(y - 58),
+        rot: (off * 8).toFixed(1),
+        anim: 'dealUp .55s cubic-bezier(.2,.8,.3,1.15) ' + (i * 0.09) + 's both',
+      };
+    }) : [];
+    const pileCards = [0, 1, 2, 3].map(i => ({
+      x: 10 + (i % 2) * 14, y: 8 + i * 5, rot: (i * 7 - 10),
+      delay: (i * 0.25) + 's',
+    }));
+    const tableSubs = [{ text: this.myHand[s.cahPickedIdx ?? 0], who: 'YOURS', mine: true }, ...this.botSubs.map(b => ({ text: b.text, who: b.who.toUpperCase(), mine: false }))];
+    const tableCards = tableSubs.map((c, i) => {
+      const winner = s.cahStage === 'won' && c.mine;
+      const loser = s.cahStage === 'won' && !c.mine;
+      return {
+        text: c.text,
+        tag: s.cahStage === 'won' ? (winner ? '👑 WINNER — ' + c.who : c.who) : 'DANI IS READING…',
+        tagColor: winner ? '#e84863' : '#c8b890',
+        rot: winner ? 0 : (i * 3 - 4),
+        borderCss: winner ? '3px solid #ff4f6f' : '2px solid transparent',
+        shadow: winner ? '0 20px 50px rgba(232,72,99,.45),0 0 0 6px rgba(255,79,111,.15)' : '0 10px 26px rgba(0,0,0,.5)',
+        opacity: loser ? 0.45 : 1,
+        anim: winner ? 'winPop .5s ease-out both' : 'flipIn .45s ease-out ' + (i * 0.35) + 's both',
+      };
+    });
+    const cahCaption = s.cahStage === 'pick' ? 'YOUR HAND · TAP THE FUNNIEST' : s.cahStage === 'wait' ? 'EVERYONE IS IN — CARDS GO TO DANI…' : s.cahStage === 'read' ? 'DANI IS READING THEM OUT LOUD… 🔊' : 'THE VERDICT IS IN';
+    const cahBoard = Object.keys(s.cahWins).map(k => ({
+      key: k, name: k === 'me' ? (s.nick || 'You') + ' (you)' : k, hue: hueMap[k], pts: s.cahWins[k],
+      state: k === 'Dani' ? 'JUDGE 👑' : (s.cahStage === 'pick' && k !== 'me' && k !== 'Dani' ? 'PICKING…' : ''),
+      stateColor: k === 'Dani' ? '#ff8a9b' : 'rgba(255,233,168,.4)',
+    })).sort((a, b) => b.pts - a.pts).map((r, i) => ({ ...r, border: i === 0 && r.pts > 0 ? '#ffd23f' : '#5a3f7a' }));
+    const judgeCards = this.judgeSubs.map((c, i) => {
+      const picked = s.cahJudgePick === i;
+      const revealed = s.cahJudgePick !== null;
+      return {
+        text: c.text,
+        tag: picked ? 'WINNER 👑 ' + c.who.toUpperCase() : (revealed ? c.who.toUpperCase() : ''),
+        tagOpacity: revealed ? 1 : 0,
+        rot: picked ? 0 : (i * 4 - 4),
+        pick: () => { if (this.state.cahJudgePick === null) this.setState(st => ({ cahJudgePick: i, cahWins: { ...st.cahWins, [c.who]: st.cahWins[c.who] + 1 } })); },
+        bg: 'linear-gradient(160deg,#fff8e7,#f2e6c4)',
+        borderCss: picked ? '3px solid #ff4f6f' : '2px solid transparent',
+        shadow: picked ? '0 20px 50px rgba(232,72,99,.45),0 0 0 6px rgba(255,79,111,.15)' : '0 10px 26px rgba(0,0,0,.5)',
+        opacity: revealed && !picked ? 0.45 : 1,
+        anim: picked ? 'winPop .5s ease-out both' : 'dealUp .5s cubic-bezier(.2,.8,.3,1.15) ' + (i * 0.1) + 's both',
+      };
+    });
+    const mm = Math.floor(s.secs / 60), ss = String(s.secs % 60).padStart(2, '0');
+
+    const rulesGartic = isGarticPhase;
+
+    return {
+      isHome: phase === 'home', isLobby: phase === 'lobby', isDrumroll: phase === 'drumroll',
+      isIntro: phase === 'intro', isStop: phase === 'stop', isSlam: phase === 'slam',
+      isJudge: phase === 'judge', isResults: phase === 'results', isVote: phase === 'vote',
+      isGartic: isGarticPhase, isBoard: phase === 'board', isPodium: phase === 'podium',
+      isCah: phase === 'cah', isCahJudge: phase === 'cahJudge',
+      handCards, pileCards, tableCards, cahCaption, cahBoard, judgeCards,
+      cahPicking: s.cahStage === 'pick',
+      handHeight: s.cahStage === 'pick' ? '250px' : '0px',
+      cahWaiting: s.cahStage === 'wait',
+      cahRevealing: s.cahStage === 'read' || s.cahStage === 'won',
+      cahWon: s.cahStage === 'won',
+      cahJudged: s.cahJudgePick !== null,
+      cahNotJudged: phase === 'cahJudge' && s.cahJudgePick === null,
+      cahAuthor: s.cahJudgePick !== null ? this.judgeSubs[s.cahJudgePick].who.toUpperCase() : '',
+      finishCah: () => { this.setState({ cahDone: true }); this.go('board'); },
+      nick: s.nick,
+      setNick: (e) => this.setState({ nick: e.target.value }),
+      createOpacity: s.nick.trim() ? 1 : 0.45,
+      createRoom: () => { if (this.state.nick.trim()) this.go('lobby'); },
+      devCah: () => { this.setState({ cahStage: 'pick', cahPickedIdx: null, cahJudgePick: null, cahWins: { me: 0, Gustavo: 0, Dani: 0, Rafa: 0, Bia: 0 }, rulesOpen: false }); this.go('cah', 45); },
+      readyLabel: (s.lobbyReady + (s.myReady ? 1 : 0)) + ' READY / ' + (s.lobbyReady + 1),
+      lobbyPlayers,
+      toggleReady: () => this.setState(st => ({ myReady: !st.myReady })),
+      readyBtnLabel: s.myReady ? '✓ READY!' : 'READY UP',
+      readyBtnBg: s.myReady ? 'linear-gradient(180deg,#41e0c4,#28b89e)' : '#2b1a3d',
+      readyBtnFg: s.myReady ? '#0c3d33' : '#35d4b9',
+      readyBtnBorder: s.myReady ? 'none' : '2px solid #35d4b9',
+      readyBtnShadow: s.myReady ? '#0f6e5c' : 'rgba(0,0,0,.4)',
+      startOpacity: s.lobbyReady >= 2 && s.myReady ? 1 : 0.45,
+      startShow: () => { const st = this.state; if (st.lobbyReady >= 2 && st.myReady) this.setState({ phase: 'drumroll', drumTarget: 'stop', elapsed: 0, drumIdx: 0, secs: 0 }); },
+      drumName, drumColor,
+      drumCaption: isGarticDrum ? 'THE PEOPLE HAVE SPOKEN…' : 'DRUMROLL…',
+      startStop: () => this.go('stop', s.optTimer),
+      roundOpts: [1, 3, 5, 10].map(n => ({
+        label: String(n), pick: () => this.setState({ optRounds: n }),
+        bg: s.optRounds === n ? 'linear-gradient(180deg,#ffd23f,#f5b32a)' : '#1c1230',
+        fg: s.optRounds === n ? '#3d1f0e' : 'rgba(255,233,168,.6)',
+        border: s.optRounds === n ? '#ffd23f' : '#5a3f7a',
+      })),
+      timerOpts: [30, 60, 90].map(n => ({
+        label: n + 's', pick: () => this.setState({ optTimer: n }),
+        bg: s.optTimer === n ? 'linear-gradient(180deg,#ffd23f,#f5b32a)' : '#1c1230',
+        fg: s.optTimer === n ? '#3d1f0e' : 'rgba(255,233,168,.6)',
+        border: s.optTimer === n ? '#ffd23f' : '#5a3f7a',
+      })),
+      togglePause: () => this.setState(st => ({ paused: !st.paused })),
+      isPaused: s.paused,
+      cats, filledLabel: filled + ' of 4 filled — keep going!',
+      slamStop: () => this.beginSlam(s.nick.toUpperCase() || 'YOU'),
+      slammer: s.slammer, slamSecs: s.slamSecs,
+      judgeCat: ji.cat, judgeWho: ji.who, judgeWord: ji.word,
+      judgeProgress: (s.judgeIdx + 1) + ' OF ' + this.judgeItems.length,
+      voteValid: () => this.vote('valid'), voteNope: () => this.vote('nope'),
+      judgeTallyVisible: !!s.tally,
+      tallyValid: s.tally ? s.tally.valid : 0, tallyNope: s.tally ? s.tally.nope : 0,
+      tallyPct: s.tally ? Math.round(100 * s.tally.valid / totalTally) + '%' : '50%',
+      standings,
+      resultsTitle: s.round >= s.optRounds ? 'STOP! FINAL STANDINGS' : 'STOP! · ROUND ' + s.round + ' OF ' + s.optRounds,
+      resultsNotFinal: phase === 'results' && s.round < s.optRounds,
+      resultsFinal: phase === 'results' && s.round >= s.optRounds,
+      nextRound: () => { this.setState(st => ({ round: st.round + 1, catVals: ['', '', '', ''], judgeIdx: 0, judgeVoted: false, tally: null })); this.go('stop', this.state.optTimer); },
+      playSame: () => { this.gameTotals = null; this.setState({ round: 1, catVals: ['', '', '', ''], judgeIdx: 0, judgeVoted: false, tally: null }); this.go('drumroll'); this.setState({ drumTarget: 'stop', drumIdx: 0 }); },
+      roundLabel: Math.min(s.round, s.optRounds) + '/' + s.optRounds,
+      gameBoard,
+      toVote: () => { this.gameTotals = null; this.setState(st => ({ myVote: null, votes: { stop: 0, gartic: 0, gphone: 0, cah: 0 }, round: 1, voteNum: st.voteNum + 1 })); this.go('vote', 20); },
+      voteOpts,
+      vTimerLabel: '00:' + String(s.secs).padStart(2, '0'),
+      vTimerFg: s.secs <= 5 ? '#fff' : '#1c1230',
+      vTimerBg: s.secs <= 5 ? 'linear-gradient(180deg,#ff6b85,#e84863)' : '#ffd23f',
+      vTimerShadow: s.secs <= 5 ? '#8f1f33' : '#c2452d',
+      vTimerAnim: s.secs <= 5 ? 'tick 1s infinite' : 'none',
+      voteProgress: votesIn + ' OF 5 CONTESTANTS VOTED · TAP A CARD',
+      canvasRef: this.setCanvas,
+      gDown: this.gdown, gMove: this.gmove, gUp: this.gup,
+      gSwatches,
+      gEraser: () => this.setState(st => ({ gEraser: !st.gEraser })),
+      eraserBg: s.gEraser ? '#ffe9a8' : '#2b1a3d',
+      eraserFg: s.gEraser ? '#1c1230' : '#ffe9a8',
+      eraserBorder: s.gEraser ? '#ffe9a8' : '#5a3f7a',
+      gUndo: () => { const img = this.undoStack.pop(); if (img && this.gctx) this.gctx.putImageData(img, 0, 0); },
+      gClear: () => { if (this.gctx) { this.undoStack.push(this.gctx.getImageData(0, 0, 760, 560)); this.gctx.clearRect(0, 0, 760, 560); } },
+      chat: s.chat, guessedLabel: s.guessed + ' OF 4 GUESSED ✓',
+      garticBoard: [
+        { key: 'me', name: (s.nick || 'You') + ' (you)', hue: '#ffd23f', state: 'DRAWING ✏️', stateColor: '#35d4b9', pts: s.guessed * 8 },
+        { key: 'Dani', name: 'Dani', hue: '#ff4f6f', state: s.garticPts.Dani ? 'GOT IT ✓' : 'GUESSING…', stateColor: s.garticPts.Dani ? '#35d4b9' : 'rgba(255,233,168,.4)', pts: s.garticPts.Dani },
+        { key: 'Rafa', name: 'Rafa', hue: '#b78bff', state: s.garticPts.Rafa ? 'GOT IT ✓' : 'GUESSING…', stateColor: s.garticPts.Rafa ? '#35d4b9' : 'rgba(255,233,168,.4)', pts: s.garticPts.Rafa },
+        { key: 'Bia', name: 'Bia', hue: '#ff9d3f', state: s.garticPts.Bia ? 'GOT IT ✓' : 'GUESSING…', stateColor: s.garticPts.Bia ? '#35d4b9' : 'rgba(255,233,168,.4)', pts: s.garticPts.Bia },
+      ].sort((a, b) => b.pts - a.pts).map((r, i) => ({ ...r, border: i === 0 && r.pts > 0 ? '#ffd23f' : '#5a3f7a' })),
+      boardRows, boardAfter: s.cahDone ? 'AFTER 3 GAMES' : 'AFTER 2 GAMES', endNight: () => this.go('podium'),
+      podium, podiumRest, confetti,
+      playAgain: () => { this.gameTotals = null; this.setState({ phase: 'home', catVals: ['', '', '', ''], chat: [], guessed: 0, myVote: null, votes: { stop: 0, gartic: 0, gphone: 0 }, judgeIdx: 0, judgeVoted: false, tally: null, lobbyReady: 0, elapsed: 0, secs: 0, round: 1, roundRaw: 0, garticPts: { Dani: 0, Rafa: 0, Bia: 0 } }); },
+      showHeader: inGame,
+      chipLabel: isCahPhase ? 'CAH' : (isGarticPhase ? 'GARTIC' : 'STOP!'),
+      chipBg: isCahPhase ? '#ff4f6f' : (isGarticPhase ? '#35d4b9' : '#ffd23f'),
+      chipFg: isCahPhase ? '#fff' : (isGarticPhase ? '#0c3d33' : '#3d1f0e'),
+      subLabel: isCahPhase ? (phase === 'cahJudge' ? 'RD 2/2 · YOU JUDGE 👑' : 'RD 1/2 · DANI JUDGES') : (isGarticPhase ? 'RD 1/2 · YOU DRAW' : (phase === 'judge' ? 'RD ' + s.round + '/' + s.optRounds + ' · JUDGING' : 'RD ' + s.round + '/' + s.optRounds + ' · FILL FAST')),
+      hTimerLabel: mm + ':' + ss,
+      hTimerFg: low ? '#fff' : '#1c1230',
+      hTimerBg: low ? 'linear-gradient(180deg,#ff6b85,#e84863)' : '#ffe9a8',
+      hTimerShadow: low ? '#8f1f33' : '#c2452d',
+      hTimerAnim: low ? 'tick 1s infinite' : 'none',
+      scorePeek: '#2 · ' + (phase === 'gartic' || phase === 'board' ? '150' : '75'),
+      openRules: () => this.setState({ rulesOpen: true }),
+      closeRules: () => this.setState({ rulesOpen: false }),
+      rulesOpen: s.rulesOpen,
+      rulesHue: isCahPhase ? '#ff4f6f' : (rulesGartic ? '#35d4b9' : '#ffd23f'),
+      rulesHeadBg: isCahPhase ? 'linear-gradient(180deg,#ff6b85,#e84863)' : (rulesGartic ? 'linear-gradient(180deg,#41e0c4,#28b89e)' : 'linear-gradient(180deg,#ffd23f,#f5b32a)'),
+      rulesHeadFg: isCahPhase ? '#4a0f1c' : (rulesGartic ? '#0c3d33' : '#3d1f0e'),
+      rulesTitle: isCahPhase ? 'CARDS AGAINST HUMANITY' : (rulesGartic ? 'GARTIC' : 'STOP!'),
+      rulesSteps: isCahPhase ? [
+        { n: 1, text: 'The black card has a blank. Play the funniest white card from your hand.' },
+        { n: 2, text: 'The judge reads every combo out loud and picks a winner — authors stay secret until then.' },
+        { n: 3, text: 'Winner takes the round. The judge crown rotates. Most wins takes the game.' },
+      ] : rulesGartic ? [
+        { n: 1, text: 'One player draws a secret word. No letters, no numbers!' },
+        { n: 2, text: 'Everyone else guesses in the chat. Faster = more points.' },
+        { n: 3, text: 'The artist scores when people guess. Everyone draws once.' },
+      ] : [
+        { n: 1, text: 'Fill every category with a word starting with the letter.' },
+        { n: 2, text: 'Done first? Slam STOP! — everyone else gets 5 seconds.' },
+        { n: 3, text: 'Everyone judges answers. Unique = 10, duplicate = 5.' },
+      ],
+    };
+  }
+}
+
+</script>
+</body>
+</html>

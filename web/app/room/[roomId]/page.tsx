@@ -238,24 +238,8 @@ export default function RoomPage() {
               </div>
             )}
 
-            {/* Room header with code */}
-            <div className="rounded-2xl border-2 border-(--line) bg-(--panel) p-6 flex items-center justify-between flex-wrap gap-4">
-              <div>
-                <h1 className="slab text-2xl">{room.snapshot.name}</h1>
-                <p className="text-xs text-(--ink)/60">
-                  {room.snapshot.gameName || room.snapshot.nextGameName || "—"}
-                  {" · "}
-                  {players.length}
-                  {room.snapshot.maxPlayers > 0
-                    ? `/${room.snapshot.maxPlayers}`
-                    : ""}
-                </p>
-              </div>
-              {room.snapshot.joinCode ? (
-                <CodePill code={room.snapshot.joinCode} label={t("common.roomCode")} />
-              ) : null}
-            </div>
-
+            {/* Each screen owns its own header (design has no separate
+                page-level bar) — see LobbyScreen's green-room header etc. */}
             {/* Main content by status */}
             {showPodium ? (
               <PodiumScreen
