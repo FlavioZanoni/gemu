@@ -60,6 +60,12 @@ body,
   min-height: 100%;
 }
 
+/* Phones: any stray wide element must clip, never sideways-scroll the page. */
+html,
+body {
+  overflow-x: hidden;
+}
+
 /* ---- shared primitives ---- */
 
 /* Slab display text with the hard warm-red drop shadow */

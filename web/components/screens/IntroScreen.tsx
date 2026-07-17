@@ -44,7 +44,9 @@ export function IntroScreen({
       {/* Game intro on left */}
       <div className="text-center animate-slam">
         <div className="mono-caption mb-3">{t("common.upNext")}</div>
-        <h1 className="slab text-9xl">{game?.name.toUpperCase() || gameType}</h1>
+        <h1 className="slab break-words text-5xl sm:text-7xl lg:text-9xl">
+          {game?.name.toUpperCase() || gameType}
+        </h1>
         <p className="text-sm text-(--ink)/60 mt-4">
           Everyone else is ready · Waiting on you
         </p>

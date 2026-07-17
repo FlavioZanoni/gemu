@@ -106,7 +106,7 @@ export function LobbyScreen({
                   · Edit ›
                 </span>
               </div>
-              <div className="grid gap-3 grid-cols-3 mb-6">
+              <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 mb-6">
                 {gamesCatalog.map((game) => {
                   const selected = snapshot.playlist.includes(game.type);
                   // The night's playlist can hold any games — the per-game

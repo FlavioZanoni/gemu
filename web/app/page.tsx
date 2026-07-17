@@ -203,7 +203,7 @@ function HomeContent() {
                   placeholder={t("home.codePlaceholder")}
                   data-testid="join-code-input"
                   maxLength={6}
-                  className="flex-1 rounded-xl border-2 border-(--line) bg-(--bg-deep) px-3 py-3 text-center font-mono text-[15px] font-bold uppercase tracking-[0.25em] text-(--ink) placeholder:text-(--ink)/30 focus:border-(--accent-2) focus:outline-none"
+                  className="min-w-0 flex-1 rounded-xl border-2 border-(--line) bg-(--bg-deep) px-3 py-3 text-center font-mono text-base font-bold uppercase tracking-[0.25em] text-(--ink) placeholder:text-(--ink)/30 focus:border-(--accent-2) focus:outline-none"
                 />
                 <button
                   type="button"
