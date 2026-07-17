@@ -149,15 +149,15 @@ export function CahGame(props: GameProps) {
             {/* Center: Black card + play zone + hand area */}
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "40px" }}>
               {/* Black card */}
-              <div style={{ width: "200px", height: "225px", flex: "none", background: "linear-gradient(165deg,#1a1a28,#0e0e18)", border: "2px solid var(--hue-cah)", borderRadius: "18px", padding: "18px", boxSizing: "border-box", transform: "rotate(-3deg)", boxShadow: "0 18px 40px rgba(0,0,0,.55),0 0 30px rgba(255,79,111,.15)", display: "flex", flexDirection: "column" }}>
-                <div style={{ font: "700 9px 'Space Mono',monospace", letterSpacing: ".25em", color: "var(--hue-cah)", marginBottom: "10px" }}>
+              <div style={{ width: "200px", height: "225px", flex: "none", background: "#131320", border: "2px solid #ff4f6f", borderRadius: "16px", padding: "18px", boxSizing: "border-box", transform: "rotate(-3deg)", boxShadow: "0 6px 0 rgba(0,0,0,.45)", display: "flex", flexDirection: "column" }}>
+                <div style={{ font: "700 9px 'Space Mono',monospace", letterSpacing: ".25em", color: "#ff4f6f", marginBottom: "10px" }}>
                   THE BLACK CARD
                 </div>
-                <div style={{ font: "700 19px/1.35 'Space Grotesk'", color: "#fff", flex: 1 }}>
+                <div style={{ font: "700 18px/1.35 'Space Grotesk'", color: "#fff", flex: 1 }}>
                   {blackCard.text.split(/_{2,}/).map((part, i) => (
                     <span key={i}>
                       {part}
-                      {i < blackCard.text.split(/_{2,}/).length - 1 && <span style={{ color: "var(--hue-cah)" }}>______</span>}
+                      {i < blackCard.text.split(/_{2,}/).length - 1 && <span style={{ color: "#ff8a9b" }}>______</span>}
                     </span>
                   ))}
                 </div>
@@ -225,9 +225,9 @@ export function CahGame(props: GameProps) {
                     position: "absolute",
                     left: "50%",
                     bottom: "-36px",
-                    width: "185px",
-                    height: "235px",
-                    marginLeft: "-92px",
+                    width: "155px",
+                    height: "205px",
+                    marginLeft: "-77.5px",
                     transform: `translate(${xOffset}px, ${isSelected ? yOffset - 40 : yOffset}px) rotate(${angle}deg)`,
                     transformOrigin: "50% 130%",
                     background: isSelected ? "linear-gradient(165deg,#ffe9a8,#ffd23f)" : "linear-gradient(160deg,#fff8e7,#f2e6c4)",
@@ -235,11 +235,11 @@ export function CahGame(props: GameProps) {
                     padding: "18px",
                     boxSizing: "border-box",
                     cursor: hasSubmitted ? "default" : "pointer",
-                    boxShadow: isSelected ? "0 26px 50px rgba(0,0,0,.6)" : "-6px 8px 22px rgba(0,0,0,.45)",
-                    transition: "transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease",
+                    border: isSelected ? "3px solid #ff4f6f" : "none",
+                    boxShadow: isSelected ? "0 14px 34px rgba(232,72,99,.4)" : "-6px 8px 22px rgba(0,0,0,.45)",
+                    transition: "transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border 0.18s ease",
                     display: "flex",
                     flexDirection: "column",
-                    border: "none",
                     opacity: hasSubmitted ? 0.5 : 1,
                     zIndex: isSelected ? 10 : idx,
                   }}
@@ -316,12 +316,12 @@ export function CahGame(props: GameProps) {
         <div style={{ font: "700 12px 'Space Mono',monospace", letterSpacing: ".3em", color: "var(--hue-cah)", marginBottom: "16px" }}>
           ROUND {round} · YOU&apos;RE THE JUDGE 👑 · READ THEM OUT LOUD
         </div>
-        <div style={{ width: "560px", background: "#131320", border: "2px solid var(--hue-cah)", borderRadius: "16px", padding: "18px 22px", marginBottom: "18px" }}>
-          <div style={{ font: "700 20px/1.35 'Space Grotesk'", color: "#fff" }}>
+        <div style={{ width: "560px", background: "#131320", border: "2px solid #ff4f6f", borderRadius: "14px", padding: "13px 16px", marginBottom: "18px" }}>
+          <div style={{ font: "700 18px/1.35 'Space Grotesk'", color: "#fff" }}>
             {blackCard.text.split(/_{2,}/).map((part, i) => (
               <span key={i}>
                 {part}
-                {i < blackCard.text.split(/_{2,}/).length - 1 && <span style={{ color: "var(--hue-cah)" }}>______</span>}
+                {i < blackCard.text.split(/_{2,}/).length - 1 && <span style={{ color: "#ff8a9b" }}>______</span>}
               </span>
             ))}
           </div>
@@ -409,22 +409,28 @@ export function CahGame(props: GameProps) {
             style={{
               width: "100%",
               maxWidth: "480px",
-              background: item.winner ? "linear-gradient(160deg,#fff8e7,#f2e6c4)" : "linear-gradient(160deg,#221530,#131320)",
-              border: item.winner ? "2px solid #ffd23f" : "2px solid #3a2751",
+              background: item.winner ? "linear-gradient(180deg,#fff8e7,#f4e9c8)" : "linear-gradient(160deg,#221530,#131320)",
+              border: item.winner ? "3px solid #ff4f6f" : "2px solid #3a2751",
               borderRadius: "14px",
               padding: "14px",
               boxSizing: "border-box",
               transform: item.winner ? "rotate(-1deg)" : "rotate(0deg)",
-              boxShadow: item.winner ? "0 8px 30px rgba(255,210,63,.2)" : "0 6px 16px rgba(0,0,0,.3)",
+              boxShadow: item.winner ? "0 5px 0 #8f1f33" : "0 6px 16px rgba(0,0,0,.3)",
               animation: item.winner ? "slam 0.45s ease-out" : "none",
+              opacity: item.winner ? 1 : 0.65,
             }}
           >
             <div style={{ font: "700 16px/1.4 'Space Grotesk'", color: item.winner ? "#1c1230" : "#fff", marginBottom: "8px" }}>
               {item.cards.join(" • ")}
             </div>
             {item.winner && (
-              <div style={{ font: "700 13px 'Space Mono',monospace", color: "#ffd23f", textAlign: "center" }}>
-                ✨ {playerNames.get(item.playerId)} PICKED THIS · +1 AWESOME POINT 🔊
+              <div style={{ font: "700 11px 'Space Mono',monospace", textAlign: "center", background: "#ff4f6f", color: "#fff", borderRadius: "99px", padding: "5px 10px" }}>
+                WINNER 👑
+              </div>
+            )}
+            {item.winner && (
+              <div style={{ font: "700 11px 'Space Mono',monospace", color: "#ffd23f", textAlign: "center", marginTop: "8px" }}>
+                ✨ THAT WAS {playerNames.get(item.playerId)?.toUpperCase()}'S CARD · +1 AWESOME POINT
               </div>
             )}
           </div>

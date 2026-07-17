@@ -271,7 +271,7 @@ export function GarticPhoneGame(props: GameProps) {
                 <div style={{ textAlign: "center", fontSize: "10px", fontWeight: 700, letterSpacing: "0.25em", color: "#b78bff", marginBottom: "12px", textTransform: "uppercase" }}>
                   RAFA DREW THIS… WHAT IS IT?!
                 </div>
-                <div style={{ height: "290px", backgroundColor: "#fff8e7", borderRadius: "16px", border: "3px solid #b78bff", boxShadow: "0 5px 0 rgba(0,0,0,.35)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                <div style={{ height: "290px", backgroundColor: "#fff8e7", borderRadius: "16px", border: "3px solid #b78bff", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
                   {prevEntry.kind === "text" ? (
                     <div style={{ padding: "16px", textAlign: "center", color: "#1c1230" }}>{prevEntry.text}</div>
                   ) : (
@@ -316,7 +316,7 @@ export function GarticPhoneGame(props: GameProps) {
     <div className="space-y-4">
       {chains.length > 0 && revealChain < chains.length && (
         <>
-          <div style={{ padding: "16px", background: "radial-gradient(ellipse at 50% -10%, rgba(183,139,255,.25), transparent 55%)" }}>
+          <div style={{ padding: "16px", background: "radial-gradient(ellipse at 50% -10%, rgba(183,139,255,.25), transparent 55%)", borderRadius: "16px", marginBottom: "12px" }}>
             {/* Chain header */}
             <div style={{ marginBottom: "12px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>

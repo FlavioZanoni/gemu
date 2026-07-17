@@ -328,13 +328,13 @@ export function InventionGame(props: GameProps & { onFullscreenToggle?: () => vo
           {currentSubmission ? (
             <div style={{ background: "#fff8e7", borderRadius: "18px", padding: "20px 18px", boxShadow: "0 6px 0 rgba(0,0,0,.35)", position: "relative" }}>
               {/* PATENT PENDING sticker */}
-              <div style={{ position: "absolute", top: "-10px", right: "14px", background: "#ff9d3f", color: "#3d1f0e", fontSize: "9px", fontWeight: 700, borderRadius: "99px", padding: "4px 10px", transform: "rotate(3deg)", textTransform: "uppercase" }}>
+              <div style={{ position: "absolute", top: "-10px", right: "14px", background: "#ff9d3f", color: "#3d1f0e", fontSize: "9px", fontWeight: 700, borderRadius: "99px", padding: "4px 10px", transform: "rotate(3deg)", textTransform: "uppercase", fontFamily: "'Space Mono',monospace" }}>
                 PATENT PENDING
               </div>
 
               {/* Invention number */}
-              <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.2em", color: "#8a7f60", marginBottom: "6px", textTransform: "uppercase" }}>
-                INVENTION Nº 042
+              <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: ".2em", color: "#8a7f60", marginBottom: "6px", textTransform: "uppercase", fontFamily: "'Space Mono',monospace" }}>
+                INVENTION Nº {Math.floor(Math.random() * 999) + 1}
               </div>
 
               {/* Title */}
@@ -344,7 +344,7 @@ export function InventionGame(props: GameProps & { onFullscreenToggle?: () => vo
 
               {/* Tagline */}
               {currentSubmission.tagline ? (
-                <div style={{ fontSize: "13px", lineHeight: "1.5", color: "#4a4232", marginBottom: "8px", fontStyle: "italic" }}>
+                <div style={{ fontFamily: "'Space Grotesk'", fontSize: "13px", fontWeight: 500, lineHeight: "1.5", color: "#4a4232", marginBottom: "8px" }}>
                   {currentSubmission.tagline}
                 </div>
               ) : null}
