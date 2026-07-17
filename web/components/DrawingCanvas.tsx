@@ -32,7 +32,6 @@ type UndoAction = {
 type CanvasAction = StrokeEvent | ClearAction | UndoAction;
 
 type DrawingCanvasProps = {
-  gameType?: string;
   onStrokeBatch?: (action: CanvasAction) => void;
   value?: string;
   onChange?: (dataUrl: string) => void;
@@ -69,7 +68,6 @@ export const DrawingCanvas = forwardRef<
   DrawingCanvasProps
 >(function DrawingCanvasComponent(
   {
-    gameType = "gartic",
     onStrokeBatch,
     value,
     onChange,
@@ -496,7 +494,7 @@ export const DrawingCanvas = forwardRef<
   );
 
   const getEventPos = (
-    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+    e: React.PointerEvent<HTMLCanvasElement>
   ): [number, number] => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
@@ -504,15 +502,7 @@ export const DrawingCanvas = forwardRef<
 
     const rect = canvas.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
-
     const scale = CANVAS_WIDTH / containerRect.width;
-
-    if ("touches" in e) {
-      const touch = e.touches[0];
-      const x = (touch.clientX - rect.left) * scale;
-      const y = (touch.clientY - rect.top) * scale;
-      return [Math.max(0, Math.min(CANVAS_WIDTH, x)), Math.max(0, Math.min(CANVAS_HEIGHT, y))];
-    }
 
     const x = (e.clientX - rect.left) * scale;
     const y = (e.clientY - rect.top) * scale;
@@ -538,10 +528,6 @@ export const DrawingCanvas = forwardRef<
                 key={t.id}
                 onClick={() => {
                   setTool(t.id);
-                  // If picking a color-applying tool when eraser is active, revert to brush behavior
-                  if (tool === "eraser" && (t.id === "brush" || t.id === "line" || t.id === "rect" || t.id === "ellipse" || t.id === "fill")) {
-                    // color is already set, just switch tool
-                  }
                 }}
                 className="flex-1 max-w-14 h-12 rounded-2xl font-bold text-lg transition flex items-center justify-center"
                 style={{
@@ -695,26 +681,17 @@ export const DrawingCanvas = forwardRef<
             maxWidth: "100%",
             maxHeight: "100%",
           }}
-          onMouseDown={(e) => {
+          onPointerDown={(e) => {
             const pos = getEventPos(e);
             start(pos[0], pos[1]);
           }}
-          onMouseMove={(e) => {
+          onPointerMove={(e) => {
             const pos = getEventPos(e);
             draw(pos[0], pos[1]);
           }}
-          onMouseUp={end}
-          onMouseLeave={end}
-          onTouchStart={(e) => {
-            const pos = getEventPos(e);
-            start(pos[0], pos[1]);
-          }}
-          onTouchMove={(e) => {
-            const pos = getEventPos(e);
-            draw(pos[0], pos[1]);
-          }}
-          onTouchEnd={end}
-          onTouchCancel={end}
+          onPointerUp={end}
+          onPointerLeave={end}
+          onPointerCancel={end}
         />
       </div>
     </div>

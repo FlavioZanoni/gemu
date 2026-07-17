@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import { Rocket, Trash2, Coins } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { DrawingCanvas } from "../DrawingCanvas";
-import { Card, Button, Banner, HowToPlayModal, ScoreStrip } from "../ui";
+import { Card, Button, Banner, HowToPlayModal } from "../ui";
 import type { GameProps } from "./types";
 
 type InventionDrawing = {
@@ -16,7 +16,7 @@ type InventionDrawing = {
 
 const FUNDING_BUDGET = 1000;
 
-export function InventionGame(props: GameProps & { onFullscreenToggle?: () => void; onLeave?: () => void }) {
+export function InventionGame(props: GameProps & { onLeave?: () => void }) {
   const { t } = useI18n();
   const {
     playerId,
@@ -72,13 +72,6 @@ export function InventionGame(props: GameProps & { onFullscreenToggle?: () => vo
   );
 
   const connectedCount = players.length;
-  const standings = useMemo(
-    () =>
-      Object.entries(totalFunding)
-        .map(([playerId, score]) => ({ playerId, score }))
-        .sort((a, b) => b.score - a.score),
-    [totalFunding]
-  );
 
   const totalAllocated = useMemo(
     () => Object.values(fundAllocations).reduce((sum, v) => sum + v, 0),
@@ -109,14 +102,6 @@ export function InventionGame(props: GameProps & { onFullscreenToggle?: () => vo
       setShowHowTo(round === 1);
     }
   }, [phase, round]);
-
-  useEffect(() => {
-    if (assigned && drawStep === "idea" && !drawing) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setDrawStep("idea");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assigned]);
 
   return (
     <>
@@ -279,7 +264,6 @@ export function InventionGame(props: GameProps & { onFullscreenToggle?: () => vo
               </div>
               <div className="flex-1 min-h-0">
                 <DrawingCanvas
-                  gameType="invention"
                   value={canvasData}
                   onChange={setCanvasData}
                 />
@@ -571,7 +555,6 @@ export function InventionGame(props: GameProps & { onFullscreenToggle?: () => vo
           ) : null}
         </div>
       ) : null}
-      <ScoreStrip standings={standings} players={players} playerId={playerId} className="mt-6" />
     </div>
     </>
   );

@@ -10,6 +10,7 @@ import { useRoomStore } from "@/lib/roomStore";
 import { LangToggle, Bulbs, SfxToggle } from "@/components/ui";
 import { hueFor } from "@/components/ui/gameHues";
 import { AvatarDrawModal } from "@/components/screens/AvatarDrawModal";
+import { joinErrorText } from "@/lib/joinErrors";
 
 export default function Page() {
   return (
@@ -81,7 +82,7 @@ function HomeContent() {
 
   if (hasRedirected) return null;
 
-  const errorText = room.joinError ? errorMessage(room.joinError, t) : null;
+  const errorText = room.joinError ? joinErrorText(room.joinError, t) : null;
 
   return (
     <div className="min-h-screen bg-(--bg-deep)">
@@ -311,16 +312,3 @@ function HomeContent() {
   );
 }
 
-function errorMessage(code: string, t: (k: string) => string): string {
-  const map: Record<string, string> = {
-    not_found: "edge.errorNotFound",
-    invalid_code: "edge.errorInvalidCode",
-    invalid_password: "edge.errorInvalidPassword",
-    name_taken: "edge.errorNameTaken",
-    room_full: "edge.errorRoomFull",
-    session_in_room: "edge.errorSessionInRoom",
-    already_in_room: "edge.errorSessionInRoom",
-    not_enough_players: "edge.errorNotEnoughPlayers",
-  };
-  return map[code] ? t(map[code]) : code;
-}

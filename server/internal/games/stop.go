@@ -2,7 +2,6 @@ package games
 
 import (
 	"math/rand"
-	"sort"
 	"time"
 )
 
@@ -37,7 +36,6 @@ var stopLetters = map[string][]string{
 }
 
 type StopGame struct {
-	roomID        string
 	room          RoomInfo
 	locale        string
 	phase         string
@@ -50,10 +48,9 @@ type StopGame struct {
 	categories   []string
 	usedLetters  map[string]bool
 	answers      map[string]map[string]string // playerID -> category -> answer
-	stopped      bool
-	stoppedBy    string
-	stopDeadline time.Time
-	deadline     time.Time
+	stopped   bool
+	stoppedBy string
+	deadline  time.Time
 	deadlineName string
 	finished     bool
 
@@ -77,12 +74,8 @@ func NewStopFactory() Factory {
 	}
 }
 
-func (g *StopGame) Type() string {
-	return "stop"
-}
 
 func (g *StopGame) Start(roomID string, opts Options) {
-	g.roomID = roomID
 	g.room = opts.Room
 	locale := opts.Locale
 	if locale == "" {
@@ -136,7 +129,6 @@ func (g *StopGame) startRound() {
 	g.answers = make(map[string]map[string]string)
 	g.stopped = false
 	g.stoppedBy = ""
-	g.stopDeadline = time.Time{}
 	g.validations = make(map[string]map[string]bool)
 	g.validatedPlayers = make(map[string]bool)
 	g.autoInvalid = make(map[string]map[string]bool)
@@ -433,25 +425,7 @@ func (g *StopGame) Status() Status {
 }
 
 func (g *StopGame) Standings() []Standing {
-	standings := make([]Standing, 0)
-	seen := make(map[string]bool)
-
-	for playerID, score := range g.totalScores {
-		standings = append(standings, Standing{PlayerID: playerID, Score: score})
-		seen[playerID] = true
-	}
-
-	// Add connected players with 0 if not already included
-	if g.room != nil {
-		for _, playerID := range g.room.ConnectedPlayerIDs() {
-			if !seen[playerID] {
-				standings = append(standings, Standing{PlayerID: playerID, Score: 0})
-			}
-		}
-	}
-
-	sort.SliceStable(standings, func(i, j int) bool { return standings[i].Score > standings[j].Score })
-	return standings
+	return standings(g.totalScores, g.room)
 }
 
 func (g *StopGame) PublicState() map[string]any {

@@ -28,7 +28,6 @@ type gpEntry struct {
 // passed through everyone. The admin-paced reveal is the payoff; reactions
 // during the reveal are the score.
 type GarticPhoneGame struct {
-	roomID string
 	room   RoomInfo
 
 	turnOrder []string       // roster snapshot at start; chains[i] starts with turnOrder[i]
@@ -63,12 +62,8 @@ func NewGarticPhoneFactory() Factory {
 	}
 }
 
-func (g *GarticPhoneGame) Type() string {
-	return "garticphone"
-}
 
 func (g *GarticPhoneGame) Start(roomID string, opts Options) {
-	g.roomID = roomID
 	g.room = opts.Room
 	g.turnOrder = nil
 	if g.room != nil {

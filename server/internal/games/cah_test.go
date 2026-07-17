@@ -512,10 +512,6 @@ func TestCahPlayerJoinDealedNextRound(t *testing.T) {
 	room.players = append(room.players, "p3")
 	game.OnPlayerJoin("p3")
 
-	if !game.pendingJoins["p3"] {
-		t.Fatalf("expected p3 to be marked for dealing")
-	}
-
 	// p3 shouldn't have cards yet
 	if len(game.hands["p3"]) > 0 {
 		t.Fatalf("expected p3 to not have cards until next round")

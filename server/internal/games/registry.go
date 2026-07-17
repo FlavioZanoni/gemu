@@ -1,7 +1,5 @@
 package games
 
-import "sync"
-
 type Factory struct {
 	Type string
 	Name string
@@ -18,7 +16,6 @@ func (f Factory) MinConnected() int {
 }
 
 type Registry struct {
-	mu    sync.RWMutex
 	games map[string]Factory
 }
 
@@ -27,21 +24,15 @@ func NewRegistry() *Registry {
 }
 
 func (r *Registry) Register(factory Factory) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
 	r.games[factory.Type] = factory
 }
 
 func (r *Registry) Get(gameType string) (Factory, bool) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
 	factory, ok := r.games[gameType]
 	return factory, ok
 }
 
 func (r *Registry) List() []map[string]any {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
 	out := make([]map[string]any, 0, len(r.games))
 	for _, game := range r.games {
 		out = append(out, map[string]any{

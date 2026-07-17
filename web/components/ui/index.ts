@@ -1,9 +1,9 @@
 export { Button } from "./Button";
 export { Card } from "./Card";
-export { Pill, CodePill } from "./Pill";
+export { CodePill } from "./Pill";
 export { Bulbs } from "./Bulbs";
 export { Marquee } from "./Marquee";
-export { TimerBadge, TimerBar } from "./Timer";
+export { TimerBadge } from "./Timer";
 export { Modal } from "./Modal";
 export { HowToPlayModal } from "./HowToPlayModal";
 export { Banner } from "./Banner";
@@ -12,5 +12,5 @@ export { PlayerChip, ScoreChip } from "./PlayerChip";
 export { ScoreStrip } from "./ScoreStrip";
 export { DoodlePad } from "./DoodlePad";
 export { SfxToggle } from "./SfxToggle";
-export { gameHues, hueFor, playerColorFor, playerColors } from "./gameHues";
+export { hueFor, playerColorFor } from "./gameHues";
 export type { GameHue } from "./gameHues";

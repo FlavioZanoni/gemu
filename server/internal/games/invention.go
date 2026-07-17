@@ -3,7 +3,6 @@ package games
 import (
 	"errors"
 	"math/rand"
-	"sort"
 	"time"
 )
 
@@ -36,10 +35,8 @@ const (
 )
 
 type InventionGame struct {
-	roomID      string
 	room        RoomInfo
 	phase       string
-	started     bool
 	round       int
 	totalRounds int
 
@@ -74,15 +71,10 @@ func NewInventionFactory() Factory {
 	}
 }
 
-func (g *InventionGame) Type() string {
-	return "invention"
-}
 
 func (g *InventionGame) Start(roomID string, opts Options) {
-	g.roomID = roomID
 	g.room = opts.Room
 	g.phase = "collecting"
-	g.started = true
 	g.round = 1
 	g.totalRounds = SettingInt(opts.Settings, "rounds", DefaultTotalRounds, 1, 5)
 	g.problems = make(map[string][]string)
@@ -135,21 +127,7 @@ func (g *InventionGame) Status() Status {
 }
 
 func (g *InventionGame) Standings() []Standing {
-	seen := make(map[string]bool)
-	standings := make([]Standing, 0, len(g.totalFunding))
-	for id, amount := range g.totalFunding {
-		standings = append(standings, Standing{PlayerID: id, Score: amount})
-		seen[id] = true
-	}
-	if g.room != nil {
-		for _, id := range g.room.ConnectedPlayerIDs() {
-			if !seen[id] {
-				standings = append(standings, Standing{PlayerID: id, Score: 0})
-			}
-		}
-	}
-	sort.SliceStable(standings, func(i, j int) bool { return standings[i].Score > standings[j].Score })
-	return standings
+	return standings(g.totalFunding, g.room)
 }
 
 // checkAdvance moves the game forward whenever the current phase's completion
@@ -196,7 +174,7 @@ func (g *InventionGame) OnAction(playerID string, payload map[string]any) error 
 				if len(current) >= 2 {
 					break
 				}
-				g.problems[playerID] = append(current, truncateText(problem, 140))
+				g.problems[playerID] = append(current, TruncateText(problem, 140))
 			}
 			return nil
 		}
@@ -211,7 +189,7 @@ func (g *InventionGame) OnAction(playerID string, payload map[string]any) error 
 		if len(current) >= 2 {
 			return nil
 		}
-		g.problems[playerID] = append(current, truncateText(problem, 140))
+		g.problems[playerID] = append(current, TruncateText(problem, 140))
 		return nil
 
 	case "drawing":
@@ -228,8 +206,8 @@ func (g *InventionGame) OnAction(playerID string, payload map[string]any) error 
 			g.chosen[playerID] = problem
 			g.drawings[playerID] = InventionDrawing{
 				Problem: problem,
-				Title:   truncateText(title, 80),
-				Tagline: truncateText(tagline, 140),
+				Title:   TruncateText(title, 80),
+				Tagline: TruncateText(tagline, 140),
 				DataURL: dataURL,
 			}
 			return nil
@@ -316,7 +294,7 @@ func (g *InventionGame) PublicState() map[string]any {
 	}
 	return map[string]any{
 		"phase":             g.phase,
-		"started":           g.started,
+		"started":           true,
 		"round":             g.round,
 		"totalRounds":       g.totalRounds,
 		"problemsSubmitted": g.countProblems(),

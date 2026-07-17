@@ -4,6 +4,11 @@ const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8080/ws";
 
 type Listener = (message: Envelope) => void;
 
+export const createRequestId = () =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `req-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
 export class WSClient {
   private socket: WebSocket | null = null;
   private listeners = new Set<Listener>();

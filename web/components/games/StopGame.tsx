@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { Check, X, Hand } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { Card, Button, TimerBadge, TimerBar, Banner, ScoreStrip, PlayerChip, HowToPlayModal } from "../ui";
+import { Card, Button, TimerBadge, Banner, HowToPlayModal } from "../ui";
 import type { GameProps } from "./types";
 
 type StopPublicState = {
@@ -43,13 +43,6 @@ export function StopGame(props: GameProps) {
   const stopped = publicState?.stopped ?? false;
   const stoppedBy = publicState?.stoppedBy ?? "";
   const totalScores = publicState?.totalScores ?? {};
-  const standings = useMemo(
-    () =>
-      Object.entries(totalScores)
-        .map(([playerId, score]) => ({ playerId, score }))
-        .sort((a, b) => b.score - a.score),
-    [totalScores]
-  );
 
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [judged, setJudged] = useState<Set<string>>(new Set());
@@ -283,8 +276,6 @@ export function StopGame(props: GameProps) {
           <div className="text-center text-xs font-mono text-(--ink)/35">
             SLAMMING STOP GIVES EVERYONE ELSE 5 SECONDS
           </div>
-
-          <ScoreStrip standings={standings} players={props.players} playerId={props.playerId} className="mt-4" />
         </div>
       </>
     );
@@ -327,7 +318,6 @@ export function StopGame(props: GameProps) {
               {t("stop.validate")}
             </Button>
           )}
-          <ScoreStrip standings={standings} players={props.players} playerId={props.playerId} className="mt-4" />
         </div>
       );
     }
@@ -451,8 +441,6 @@ export function StopGame(props: GameProps) {
             UNIQUE VALID = 10 · DUPLICATE = 5 · NONSENSE = 0
           </div>
         </div>
-
-        <ScoreStrip standings={standings} players={props.players} playerId={props.playerId} className="mt-4" />
       </div>
     );
   }
@@ -532,8 +520,6 @@ export function StopGame(props: GameProps) {
             {t("stop.nextRound")}
           </Button>
         )}
-
-        <ScoreStrip standings={standings} players={props.players} playerId={props.playerId} className="mt-4" />
       </div>
     );
   }

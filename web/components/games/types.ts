@@ -2,7 +2,6 @@ import type { Player } from "@/lib/protocol";
 
 /** Props every game screen receives from GameSurface. */
 export type GameProps = {
-  roomId: string;
   playerId: string;
   players: Player[];
   publicState: Record<string, unknown> | null;

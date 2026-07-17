@@ -19,7 +19,6 @@ func NewManager() *Manager {
 func (m *Manager) Create(room *Room) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	room.CreatedAt = time.Now()
 	if room.Players == nil {
 		room.Players = make(map[string]Player)
 	}

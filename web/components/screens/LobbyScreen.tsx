@@ -10,14 +10,11 @@ import { hueFor } from "@/components/ui/gameHues";
 import {
   Button,
   Card,
-  Marquee,
   PlayerChip,
   HowToPlayModal,
   CodePill,
   LangToggle,
   SfxToggle,
-  Bulbs,
-  playerColorFor,
 } from "@/components/ui";
 
 export function LobbyScreen({

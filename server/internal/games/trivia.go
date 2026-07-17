@@ -2,7 +2,6 @@ package games
 
 import (
 	"math/rand"
-	"sort"
 	"time"
 )
 
@@ -58,7 +57,6 @@ var triviaBank = map[string][]triviaQuestion{
 }
 
 type TriviaGame struct {
-	roomID      string
 	room        RoomInfo
 	locale      string
 	phase       string // "question" | "reveal"
@@ -89,10 +87,8 @@ func NewTriviaFactory() Factory {
 	}
 }
 
-func (g *TriviaGame) Type() string { return "trivia" }
 
 func (g *TriviaGame) Start(roomID string, opts Options) {
-	g.roomID = roomID
 	g.room = opts.Room
 	g.locale = opts.Locale
 	if _, ok := triviaBank[g.locale]; !ok {
@@ -201,21 +197,7 @@ func (g *TriviaGame) Status() Status {
 }
 
 func (g *TriviaGame) Standings() []Standing {
-	seen := map[string]bool{}
-	standings := make([]Standing, 0, len(g.scores))
-	for id, s := range g.scores {
-		standings = append(standings, Standing{PlayerID: id, Score: s})
-		seen[id] = true
-	}
-	if g.room != nil {
-		for _, id := range g.room.ConnectedPlayerIDs() {
-			if !seen[id] {
-				standings = append(standings, Standing{PlayerID: id, Score: 0})
-			}
-		}
-	}
-	sort.SliceStable(standings, func(i, j int) bool { return standings[i].Score > standings[j].Score })
-	return standings
+	return standings(g.scores, g.room)
 }
 
 func (g *TriviaGame) OnAction(playerID string, payload map[string]any) error {

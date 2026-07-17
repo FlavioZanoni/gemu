@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Crown, Sparkles } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Button, TimerBadge, Banner, HowToPlayModal } from "../ui";

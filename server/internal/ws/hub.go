@@ -128,7 +128,7 @@ func (h *Hub) RemoveClient(clientID string) {
 			player.LastSeen = time.Now()
 		})
 		if err == nil {
-			h.Broadcast(roomID, Envelope{Type: "room.updated", RoomID: roomID, Payload: encodeRoomSnapshot(room)})
+			h.Broadcast(roomID, Envelope{Type: "room.updated", RoomID: roomID, Payload: room.Snapshot()})
 			h.Broadcast(roomID, Envelope{Type: "room.playerDisconnected", RoomID: roomID, Payload: map[string]any{"playerId": playerID}})
 			// A disconnect can complete an "everyone submitted" gate.
 			if s, ok := h.session(roomID); ok {
@@ -321,10 +321,6 @@ func decodeInt(payload map[string]any, key string) int {
 	return 0
 }
 
-func encodeRoomSnapshot(room *rooms.Room) map[string]any {
-	return room.Snapshot()
-}
-
 const (
 	maxNameLen     = 40
 	maxRoomNameLen = 60
@@ -342,15 +338,6 @@ func sanitizeAvatar(url string) string {
 		return url
 	}
 	return ""
-}
-
-// truncate caps a rune length so client strings can't bloat every broadcast.
-func truncate(s string, max int) string {
-	r := []rune(s)
-	if len(r) > max {
-		return string(r[:max])
-	}
-	return s
 }
 
 // clampMaxPlayers turns a client value into a sane room size; 0/negative means
@@ -377,13 +364,13 @@ func (h *Hub) handleRoomCreate(client *Client, env Envelope) {
 		h.Send(client, Envelope{Type: "room.create.error", RequestID: env.RequestID, Payload: map[string]any{"code": "server_full", "message": "server is at capacity, try again later"}})
 		return
 	}
-	name := truncate(decodeString(env.Payload, "name"), maxRoomNameLen)
+	name := games.TruncateText(decodeString(env.Payload, "name"), maxRoomNameLen)
 	visibility := decodeString(env.Payload, "visibility")
 	maxPlayers := clampMaxPlayers(decodeInt(env.Payload, "maxPlayers"))
-	displayName := truncate(decodeString(env.Payload, "displayName"), maxNameLen)
-	avatarURL := sanitizeAvatar(truncate(decodeString(env.Payload, "avatarUrl"), maxAvatarLen))
+	displayName := games.TruncateText(decodeString(env.Payload, "displayName"), maxNameLen)
+	avatarURL := sanitizeAvatar(games.TruncateText(decodeString(env.Payload, "avatarUrl"), maxAvatarLen))
 	sessionID := decodeString(env.Payload, "sessionId")
-	password := truncate(decodeString(env.Payload, "password"), maxPasswordLen)
+	password := games.TruncateText(decodeString(env.Payload, "password"), maxPasswordLen)
 	locale := decodeString(env.Payload, "locale")
 	if locale == "" {
 		locale = "en"
@@ -449,15 +436,15 @@ func (h *Hub) handleRoomCreate(client *Client, env Envelope) {
 
 	h.bindClient(client, room.ID, player, sessionID)
 
-	h.Send(client, Envelope{Type: "room.create.ok", RequestID: env.RequestID, RoomID: room.ID, Payload: encodeRoomSnapshot(room)})
-	h.Broadcast(room.ID, Envelope{Type: "room.updated", RoomID: room.ID, Payload: encodeRoomSnapshot(room)})
+	h.Send(client, Envelope{Type: "room.create.ok", RequestID: env.RequestID, RoomID: room.ID, Payload: room.Snapshot()})
+	h.Broadcast(room.ID, Envelope{Type: "room.updated", RoomID: room.ID, Payload: room.Snapshot()})
 }
 
 func (h *Hub) handleRoomJoin(client *Client, env Envelope) {
 	roomID := decodeString(env.Payload, "roomId")
 	joinCode := decodeString(env.Payload, "joinCode")
-	displayName := truncate(decodeString(env.Payload, "displayName"), maxNameLen)
-	avatarURL := sanitizeAvatar(truncate(decodeString(env.Payload, "avatarUrl"), maxAvatarLen))
+	displayName := games.TruncateText(decodeString(env.Payload, "displayName"), maxNameLen)
+	avatarURL := sanitizeAvatar(games.TruncateText(decodeString(env.Payload, "avatarUrl"), maxAvatarLen))
 	sessionID := decodeString(env.Payload, "sessionId")
 	isRejoin := false
 
@@ -598,7 +585,7 @@ func (h *Hub) handleRoomLeave(client *Client, env Envelope) {
 	h.notifyPlayerLeft(roomID, playerID)
 	h.Send(client, Envelope{Type: "room.leave.ok", RequestID: env.RequestID})
 	h.Broadcast(roomID, Envelope{Type: "room.playerLeft", RoomID: roomID, Payload: map[string]any{"playerId": playerID}})
-	h.Broadcast(roomID, Envelope{Type: "room.updated", RoomID: roomID, Payload: encodeRoomSnapshot(room)})
+	h.Broadcast(roomID, Envelope{Type: "room.updated", RoomID: roomID, Payload: room.Snapshot()})
 	h.cleanupIfEmpty(roomID, room)
 }
 
@@ -732,16 +719,7 @@ func (h *Hub) handleRoomReadySet(client *Client, env Envelope) {
 		return
 	}
 	h.Send(client, Envelope{Type: "room.ready.set.ok", RequestID: env.RequestID})
-	h.Broadcast(roomID, Envelope{Type: "room.updated", RoomID: roomID, Payload: encodeRoomSnapshot(room)})
-}
-
-func (h *Hub) ReadEnvelope(client *Client) (Envelope, error) {
-	var env Envelope
-	err := client.Conn.ReadJSON(&env)
-	if err != nil {
-		return env, err
-	}
-	return env, nil
+	h.Broadcast(roomID, Envelope{Type: "room.updated", RoomID: roomID, Payload: room.Snapshot()})
 }
 
 func (h *Hub) handleGameStart(client *Client, env Envelope) {

@@ -80,4 +80,4 @@ export const playerColors = [
 ];
 
 export const playerColorFor = (index: number) =>
-  playerColors[((index % playerColors.length) + playerColors.length) % playerColors.length];
+  playerColors[index % playerColors.length];

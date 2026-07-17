@@ -7,7 +7,6 @@ import { Button } from "@/components/ui";
 
 export function ResultsScreen({
   gameResult,
-  sessionScores,
   players,
   isAdmin,
   onPlayAgain,
@@ -15,7 +14,6 @@ export function ResultsScreen({
   onEndSession,
 }: {
   gameResult: GameResult;
-  sessionScores: Record<string, number>;
   players: Player[];
   isAdmin: boolean;
   onPlayAgain: () => void;

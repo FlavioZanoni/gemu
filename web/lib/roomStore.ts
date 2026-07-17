@@ -11,7 +11,7 @@ import type {
   VoteResult,
   VoteState,
 } from "./protocol";
-import { getWSClient } from "./ws";
+import { getWSClient, createRequestId } from "./ws";
 
 type RoomState = {
   snapshot: RoomSnapshot | null;
@@ -109,11 +109,6 @@ const clearLastRoom = () => {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(storageKey);
 };
-
-const createRequestId = () =>
-  typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `req-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 const getCookie = (name: string) => {
   if (typeof document === "undefined") return null;
@@ -439,7 +434,6 @@ const setCahDecks = (decks: string[]) =>
   send("session.cahdecks.set", { decks });
 const addCustomDeck = (deck: CustomDeck) =>
   send("session.deck.add", { deck });
-const refreshDecks = () => send("lobby.decks.list");
 
 const clearActionError = () => {
   setState((prev) => {
@@ -479,7 +473,6 @@ export const useRoomStore = () => {
     resumeSession,
     setCahDecks,
     addCustomDeck,
-    refreshDecks,
     loadLastRoom,
     clearActionError,
   };

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useI18n } from "@/lib/i18n";
-import { Card, Button, TimerBadge, Banner, ScoreStrip, HowToPlayModal } from "../ui";
+import { Card, Button, TimerBadge, Banner, HowToPlayModal } from "../ui";
 import { DrawingCanvas } from "../DrawingCanvas";
 import type { GameProps } from "./types";
 
@@ -49,14 +49,12 @@ export function GarticPhoneGame(props: GameProps) {
   const phase = publicState?.phase ?? "prompt";
   const step = publicState?.step ?? 0;
   const totalSteps = publicState?.totalSteps ?? 1;
-  const turnOrder = publicState?.turnOrder ?? [];
   const scores = publicState?.scores ?? {};
   const deadline = publicState?.deadline ?? null;
   const submitted = publicState?.submitted ?? [];
   const chains = publicState?.chains ?? [];
   const revealChain = publicState?.revealChain ?? 0;
   const revealPos = publicState?.revealPos ?? 0;
-  const likes = publicState?.likes ?? {};
   const reactions = publicState?.reactions ?? {};
 
   const [promptText, setPromptText] = useState("");
@@ -68,14 +66,6 @@ export function GarticPhoneGame(props: GameProps) {
   const isSubmitted = privateState?.submitted ?? false;
   const myChain = privateState?.chain ?? -1;
   const prevEntry = privateState?.prevEntry;
-
-  const standings = useMemo(
-    () =>
-      Object.entries(scores)
-        .map(([playerId, score]) => ({ playerId, score }))
-        .sort((a, b) => b.score - a.score),
-    [scores]
-  );
 
   const playerNames = useMemo(() => {
     const map = new Map<string, string>();
@@ -180,8 +170,6 @@ export function GarticPhoneGame(props: GameProps) {
               </Button>
             </div>
           )}
-
-          <ScoreStrip standings={standings} players={props.players} playerId={props.playerId} />
         </div>
       </>
     );
@@ -223,7 +211,6 @@ export function GarticPhoneGame(props: GameProps) {
             <div className="rounded-xl border-2 overflow-hidden" style={{ borderColor: "var(--hue-garticphone)", height: "300px" }}>
               <DrawingCanvas
                 ref={canvasRef}
-                gameType="garticphone"
                 onChange={handleCanvasDrawing}
                 value={drawingData}
               />
@@ -240,8 +227,6 @@ export function GarticPhoneGame(props: GameProps) {
             </Button>
           </div>
         )}
-
-        <ScoreStrip standings={standings} players={props.players} playerId={props.playerId} />
       </div>
     );
   }
@@ -305,8 +290,6 @@ export function GarticPhoneGame(props: GameProps) {
             </Button>
           </div>
         )}
-
-        <ScoreStrip standings={standings} players={props.players} playerId={props.playerId} />
       </div>
     );
   }
@@ -452,8 +435,6 @@ export function GarticPhoneGame(props: GameProps) {
           {t("garticphone.gameOver")}
         </Banner>
       )}
-
-      <ScoreStrip standings={standings} players={props.players} playerId={props.playerId} />
     </div>
   );
 }

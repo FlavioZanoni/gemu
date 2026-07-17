@@ -45,7 +45,6 @@ export function AvatarDrawModal({
           <div className="mx-auto w-full max-w-[280px]">
             <DrawingCanvas
               ref={canvasRef}
-              gameType="invention"
               value={initial}
               onChange={setLatest}
             />

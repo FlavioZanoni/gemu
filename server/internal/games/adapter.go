@@ -58,7 +58,6 @@ type Standing struct {
 // from actions, timers, and room changes. The hub serializes all calls per
 // room, so implementations need no internal locking.
 type Adapter interface {
-	Type() string
 	Start(roomID string, opts Options)
 	OnPlayerJoin(playerID string)
 	OnPlayerLeave(playerID string)

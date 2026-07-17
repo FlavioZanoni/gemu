@@ -63,7 +63,6 @@ type Room struct {
 	Password   string     `json:"-"`
 	MaxPlayers int        `json:"maxPlayers"`
 	Locale     string     `json:"locale"`
-	CreatedAt  time.Time  `json:"createdAt"`
 
 	mu         sync.RWMutex
 	Players    map[string]Player `json:"players"`
@@ -234,16 +233,6 @@ func (r *Room) RemovePlayer(playerID string) {
 	r.AdminChain = newChain
 }
 
-func (r *Room) PlayerIDs() []string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	ids := make([]string, 0, len(r.Players))
-	for id := range r.Players {
-		ids = append(ids, id)
-	}
-	return ids
-}
-
 func (r *Room) ConnectedPlayerIDs() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -279,12 +268,6 @@ func (r *Room) SetPaused(paused bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.Paused = paused
-}
-
-func (r *Room) IsPaused() bool {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	return r.Paused
 }
 
 func (r *Room) SetPlaylist(playlist []string) {

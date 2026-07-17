@@ -5,6 +5,7 @@ import { Pencil } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui";
 import { AvatarDrawModal } from "./AvatarDrawModal";
+import { joinErrorText } from "@/lib/joinErrors";
 
 export function JoinGateScreen({
   joinError,
@@ -35,20 +36,6 @@ export function JoinGateScreen({
     onJoin(displayName.trim(), avatarUrl.trim(), joinCode.trim() || undefined, password.trim() || undefined);
   };
 
-  const getErrorMessage = (code: string) => {
-    const errors: Record<string, string> = {
-      name_taken: t("edge.errorNameTaken"),
-      invalid_password: t("edge.errorInvalidPassword"),
-      password_wrong: t("edge.errorInvalidPassword"),
-      room_full: t("edge.errorRoomFull"),
-      invalid_code: t("edge.errorInvalidCode"),
-      not_found: t("edge.errorNotFound"),
-      invalid_room: t("edge.errorNotFound"),
-      session_in_room: t("edge.errorSessionInRoom"),
-      not_enough_players: t("edge.errorNotEnoughPlayers"),
-    };
-    return errors[code] || code;
-  };
 
   return (
     <div className="min-h-screen bg-(--bg) flex items-center justify-center px-6 py-8">
@@ -135,7 +122,7 @@ export function JoinGateScreen({
             )}
             {joinError && (
               <p className="text-sm text-red-400 bg-red-400/10 px-3 py-2 rounded">
-                {getErrorMessage(joinError)}
+                {joinErrorText(joinError, t)}
               </p>
             )}
 

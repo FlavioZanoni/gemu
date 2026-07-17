@@ -96,7 +96,6 @@ export function PlayingScreen({
       <div data-testid="game-surface" className="rounded-2xl border-2 border-(--line) bg-(--panel) p-4">
         <GameSurface
           gameType={snapshot.gameType}
-          roomId={snapshot.id}
           playerId={playerId ?? ""}
           players={players}
           publicState={gamePublicState || {}}

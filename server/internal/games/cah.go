@@ -2,7 +2,6 @@ package games
 
 import (
 	"math/rand"
-	"sort"
 	"time"
 )
 
@@ -20,7 +19,6 @@ type cahBlackCard struct {
 }
 
 type CahGame struct {
-	roomID       string
 	room         RoomInfo
 	locale       string
 	phase        string // "answering", "judging", "roundResults"
@@ -31,9 +29,8 @@ type CahGame struct {
 	finished     bool
 
 	// Decks and draw piles
-	blackDeck    []cahBlackCard
-	blackDiscard []cahBlackCard
-	whiteDeck    []string
+	blackDeck []cahBlackCard
+	whiteDeck []string
 	whiteDiscard []string
 
 	// Judge rotation
@@ -50,8 +47,6 @@ type CahGame struct {
 	roundWinner  string              // playerID or ""
 	scores       map[string]int      // round wins
 
-	// For new joins mid-game
-	pendingJoins map[string]bool // players to deal cards at next round start
 }
 
 func NewCahFactory() Factory {
@@ -65,12 +60,7 @@ func NewCahFactory() Factory {
 	}
 }
 
-func (g *CahGame) Type() string {
-	return "cah"
-}
-
 func (g *CahGame) Start(roomID string, opts Options) {
-	g.roomID = roomID
 	g.room = opts.Room
 	g.locale = opts.Locale
 	if g.locale != "en" && g.locale != "pt-BR" {
@@ -98,8 +88,6 @@ func (g *CahGame) Start(roomID string, opts Options) {
 	g.scores = make(map[string]int)
 	g.hands = make(map[string][]string)
 	g.submissions = make(map[string][]string)
-	g.pendingJoins = make(map[string]bool)
-	g.blackDiscard = make([]cahBlackCard, 0)
 	g.whiteDiscard = make([]string, 0)
 
 	// Shuffle decks
@@ -142,13 +130,6 @@ func (g *CahGame) shuffleDeckCards() {
 }
 
 func (g *CahGame) drawBlackCard() cahBlackCard {
-	if len(g.blackDeck) == 0 {
-		g.blackDeck = g.blackDiscard
-		g.blackDiscard = make([]cahBlackCard, 0)
-		rand.Shuffle(len(g.blackDeck), func(i, j int) {
-			g.blackDeck[i], g.blackDeck[j] = g.blackDeck[j], g.blackDeck[i]
-		})
-	}
 	card := g.blackDeck[0]
 	g.blackDeck = g.blackDeck[1:]
 	return card
@@ -194,7 +175,6 @@ func (g *CahGame) startRound() {
 		if _, ok := g.hands[playerID]; !ok {
 			g.hands[playerID] = make([]string, 0)
 		}
-		g.pendingJoins[playerID] = false
 		// Refill to CahHandSize
 		needed := CahHandSize - len(g.hands[playerID])
 		if needed > 0 {
@@ -299,8 +279,6 @@ func (g *CahGame) rotateJudge() {
 }
 
 func (g *CahGame) OnPlayerJoin(playerID string) {
-	// Mark for dealing at next round start
-	g.pendingJoins[playerID] = true
 }
 
 func (g *CahGame) OnPlayerLeave(playerID string) {
@@ -311,7 +289,6 @@ func (g *CahGame) OnPlayerLeave(playerID string) {
 	// Remove their hand and submission
 	delete(g.hands, playerID)
 	delete(g.submissions, playerID)
-	delete(g.pendingJoins, playerID)
 
 	// If they were the judge during answering or judging, rotate to next connected player
 	if playerID == g.judge && (g.phase == "answering" || g.phase == "judging") {
@@ -503,28 +480,7 @@ func (g *CahGame) Status() Status {
 }
 
 func (g *CahGame) Standings() []Standing {
-	seen := make(map[string]bool)
-	standings := make([]Standing, 0)
-
-	// Add all scored players
-	for playerID, score := range g.scores {
-		standings = append(standings, Standing{PlayerID: playerID, Score: score})
-		seen[playerID] = true
-	}
-
-	// Add connected players not yet in standings with score 0
-	for _, playerID := range g.connectedPlayers() {
-		if !seen[playerID] {
-			standings = append(standings, Standing{PlayerID: playerID, Score: 0})
-		}
-	}
-
-	// Sort descending by score
-	sort.SliceStable(standings, func(i, j int) bool {
-		return standings[i].Score > standings[j].Score
-	})
-
-	return standings
+	return standings(g.scores, g.room)
 }
 
 func (g *CahGame) PublicState() map[string]any {

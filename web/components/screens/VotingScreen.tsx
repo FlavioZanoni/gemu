@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Check } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { VoteState, VoteResult } from "@/lib/protocol";
@@ -20,19 +20,8 @@ export function VotingScreen({
   const { t } = useI18n();
   const [selectedGameType, setSelectedGameType] = useState<string | null>(null);
 
-  // Auto-select vote after brief delay to show result
-  useEffect(() => {
-    if (voteResult && !selectedGameType) {
-      const timer = setTimeout(() => {
-        setSelectedGameType(voteResult.gameType);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [voteResult, selectedGameType]);
-
   if (voteResult) {
     const winnerGame = gamesCatalog.find((g) => g.type === voteResult.gameType);
-    const hue = hueFor(voteResult.gameType);
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-6 text-center px-6 py-12">
         <div>

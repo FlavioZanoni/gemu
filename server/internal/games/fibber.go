@@ -2,7 +2,6 @@ package games
 
 import (
 	"math/rand"
-	"sort"
 	"time"
 )
 
@@ -49,7 +48,6 @@ var fibberBank = map[string][]fibberPrompt{
 }
 
 type FibberGame struct {
-	roomID      string
 	room        RoomInfo
 	locale      string
 	phase       string // "writing" | "choosing" | "reveal"
@@ -87,10 +85,8 @@ func NewFibberFactory() Factory {
 	}
 }
 
-func (g *FibberGame) Type() string { return "fibber" }
 
 func (g *FibberGame) Start(roomID string, opts Options) {
-	g.roomID = roomID
 	g.room = opts.Room
 	g.locale = opts.Locale
 	if _, ok := fibberBank[g.locale]; !ok {
@@ -259,19 +255,7 @@ func (g *FibberGame) Status() Status {
 }
 
 func (g *FibberGame) Standings() []Standing {
-	seen := map[string]bool{}
-	standings := make([]Standing, 0, len(g.scores))
-	for id, s := range g.scores {
-		standings = append(standings, Standing{PlayerID: id, Score: s})
-		seen[id] = true
-	}
-	for _, id := range g.connected() {
-		if !seen[id] {
-			standings = append(standings, Standing{PlayerID: id, Score: 0})
-		}
-	}
-	sort.SliceStable(standings, func(i, j int) bool { return standings[i].Score > standings[j].Score })
-	return standings
+	return standings(g.scores, g.room)
 }
 
 func (g *FibberGame) OnAction(playerID string, payload map[string]any) error {
@@ -284,7 +268,7 @@ func (g *FibberGame) OnAction(playerID string, payload map[string]any) error {
 			return nil
 		}
 		lie, _ := payload["lie"].(string)
-		lie = truncateText(lie, fibberMaxLie)
+		lie = TruncateText(lie, fibberMaxLie)
 		if lie == "" {
 			return nil
 		}

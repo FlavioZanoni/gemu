@@ -42,7 +42,6 @@ export function GarticGame(props: GameProps) {
   const scores = publicState?.scores ?? {};
   const guessed = publicState?.guessed ?? [];
   const guesses = publicState?.guesses ?? [];
-  const wordLength = publicState?.wordLength ?? 0;
   const word = publicState?.word ?? "";
   const closeGuess = privateState?.closeGuess ?? "";
   const isDrawer = drawer === props.playerId;
@@ -164,7 +163,6 @@ export function GarticGame(props: GameProps) {
             <div style={{ borderRadius: "18px", border: "3px solid var(--hue-gartic)", boxShadow: "0 6px 0 rgba(0,0,0,.35)", marginBottom: "12px", overflow: "hidden" }}>
               <DrawingCanvas
                 ref={canvasRef}
-                gameType="gartic"
                 onStrokeBatch={isDrawer ? handleCanvasSendStroke : undefined}
                 readOnly={!isDrawer}
               />
@@ -356,13 +354,6 @@ export function GarticGame(props: GameProps) {
           ))}
         </div>
       </div>
-
-      <style>{`
-        @keyframes rise {
-          0% { transform: translateY(20px); opacity: 0; }
-          100% { transform: translateY(0); opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 }

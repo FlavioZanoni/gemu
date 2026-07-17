@@ -155,29 +155,10 @@ export default function RoomPage() {
     );
   }
 
-  // Join gate: show join screen if not in a room yet
+  // Join gate: show the join screen either before the auto-join attempt or
+  // after it failed (attemptedAutoJoin implies mounted, so both need mounted).
   if (!room.snapshot) {
-    if (!attemptedAutoJoin && mounted) {
-      return (
-        <JoinGateScreen
-          joinError={room.joinError}
-          pendingJoin={room.pendingJoin}
-          defaultName={name}
-          defaultAvatarUrl={avatarUrl}
-          onJoin={(displayName, avatarUrl, joinCode, password) => {
-            room.joinRoom({
-              roomId: roomId,
-              displayName,
-              avatarUrl,
-              joinCode,
-              password,
-            });
-          }}
-        />
-      );
-    }
-
-    if (attemptedAutoJoin && room.joinError) {
+    if (mounted && (!attemptedAutoJoin || room.joinError)) {
       return (
         <JoinGateScreen
           joinError={room.joinError}
@@ -339,7 +320,6 @@ export default function RoomPage() {
             {status === "results" && effectiveGameResult && (
               <ResultsScreen
                 gameResult={effectiveGameResult}
-                sessionScores={room.snapshot.sessionScores}
                 players={players}
                 isAdmin={room.isAdmin}
                 onPlayAgain={() => room.replayGame()}

@@ -1,5 +1,6 @@
 "use client";
 
+import { ComponentType } from "react";
 import { InventionGame } from "./games/InventionGame";
 import { StopGame } from "./games/StopGame";
 import { GarticGame } from "./games/GarticGame";
@@ -11,13 +12,21 @@ import type { GameProps } from "./games/types";
 
 type GameSurfaceProps = GameProps & {
   gameType: string;
-  onFullscreenToggle?: () => void;
   onLeave?: () => void;
+};
+
+const Games: Record<string, ComponentType<GameProps & { onLeave?: () => void }>> = {
+  invention: InventionGame,
+  stop: StopGame,
+  gartic: GarticGame,
+  garticphone: GarticPhoneGame,
+  cah: CahGame,
+  trivia: TriviaGame,
+  fibber: FibberGame,
 };
 
 export function GameSurface({
   gameType,
-  roomId,
   playerId,
   players,
   publicState,
@@ -25,11 +34,9 @@ export function GameSurface({
   sendAction,
   sendStream,
   isAdmin,
-  onFullscreenToggle,
   onLeave,
 }: GameSurfaceProps) {
   const gameProps: GameProps = {
-    roomId,
     playerId,
     players,
     publicState,
@@ -39,32 +46,18 @@ export function GameSurface({
     isAdmin,
   };
 
-  switch (gameType) {
-    case "invention":
-      return (
-        <InventionGame
-          {...gameProps}
-          onFullscreenToggle={onFullscreenToggle}
-          onLeave={onLeave}
-        />
-      );
-    case "stop":
-      return <StopGame {...gameProps} />;
-    case "gartic":
-      return <GarticGame {...gameProps} />;
-    case "garticphone":
-      return <GarticPhoneGame {...gameProps} />;
-    case "cah":
-      return <CahGame {...gameProps} />;
-    case "trivia":
-      return <TriviaGame {...gameProps} />;
-    case "fibber":
-      return <FibberGame {...gameProps} />;
-    default:
-      return (
-        <div className="rounded-2xl border-2 border-dashed border-(--line) bg-(--panel) p-8 text-center text-sm text-(--ink)/60">
-          Unknown game: {gameType}
-        </div>
-      );
+  const GameComponent = Games[gameType];
+  if (!GameComponent) {
+    return (
+      <div className="rounded-2xl border-2 border-dashed border-(--line) bg-(--panel) p-8 text-center text-sm text-(--ink)/60">
+        Unknown game: {gameType}
+      </div>
+    );
   }
+
+  return gameType === "invention" ? (
+    <GameComponent {...gameProps} onLeave={onLeave} />
+  ) : (
+    <GameComponent {...gameProps} />
+  );
 }

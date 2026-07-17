@@ -60,8 +60,8 @@ func (r *Router) HandleWS(w http.ResponseWriter, req *http.Request) {
 		}()
 
 		for {
-			env, err := r.hub.ReadEnvelope(client)
-			if err != nil {
+			var env Envelope
+			if err := client.Conn.ReadJSON(&env); err != nil {
 				return
 			}
 			// One bad message must never take down the process; isolate the

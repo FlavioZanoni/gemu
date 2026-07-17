@@ -65,37 +65,3 @@ export function TimerBadge({
     </span>
   );
 }
-
-/** Labeled progress bar counting down from `totalSeconds` to `deadline`. */
-export function TimerBar({
-  deadline,
-  totalSeconds,
-  label,
-  className = "",
-}: {
-  deadline: number | null | undefined;
-  totalSeconds: number;
-  label?: string;
-  className?: string;
-}) {
-  const seconds = useCountdown(deadline);
-  if (seconds === null) return null;
-  const pct = Math.max(0, Math.min(100, (seconds / totalSeconds) * 100));
-  return (
-    <div className={className}>
-      <div className="mb-1 flex justify-between font-mono text-[10px] text-(--ink)/50">
-        <span>{label}</span>
-        <span>{format(seconds)}</span>
-      </div>
-      <div className="h-2.5 overflow-hidden rounded-full border border-(--line) bg-(--panel)">
-        <div
-          className="h-full rounded-full transition-[width] duration-200"
-          style={{
-            width: `${pct}%`,
-            background: "linear-gradient(90deg,#35d4b9,#ffd23f)",
-          }}
-        />
-      </div>
-    </div>
-  );
-}

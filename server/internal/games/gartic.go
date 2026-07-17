@@ -3,7 +3,6 @@ package games
 import (
 	"errors"
 	"math/rand"
-	"sort"
 	"time"
 )
 
@@ -44,7 +43,6 @@ type garticGuess struct {
 }
 
 type GarticGame struct {
-	roomID string
 	room   RoomInfo
 	locale string
 
@@ -77,12 +75,8 @@ func NewGarticFactory() Factory {
 	}
 }
 
-func (g *GarticGame) Type() string {
-	return "gartic"
-}
 
 func (g *GarticGame) Start(roomID string, opts Options) {
-	g.roomID = roomID
 	g.room = opts.Room
 	g.locale = opts.Locale
 	if _, ok := garticWords[g.locale]; !ok {
@@ -252,19 +246,7 @@ func (g *GarticGame) Status() Status {
 }
 
 func (g *GarticGame) Standings() []Standing {
-	seen := make(map[string]bool)
-	standings := make([]Standing, 0, len(g.scores))
-	for id, score := range g.scores {
-		standings = append(standings, Standing{PlayerID: id, Score: score})
-		seen[id] = true
-	}
-	for _, id := range g.connected() {
-		if !seen[id] {
-			standings = append(standings, Standing{PlayerID: id, Score: 0})
-		}
-	}
-	sort.SliceStable(standings, func(i, j int) bool { return standings[i].Score > standings[j].Score })
-	return standings
+	return standings(g.scores, g.room)
 }
 
 func (g *GarticGame) OnAction(playerID string, payload map[string]any) error {
@@ -282,7 +264,7 @@ func (g *GarticGame) OnAction(playerID string, payload map[string]any) error {
 			return nil
 		}
 		raw, _ := payload["text"].(string)
-		text := truncateText(raw, 80)
+		text := TruncateText(raw, 80)
 		normalized := NormalizeAnswer(text)
 		if normalized == "" {
 			return nil

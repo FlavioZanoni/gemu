@@ -1,30 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
-import type { Envelope, GameSummary, PublicRoom } from "./protocol";
-import { getWSClient } from "./ws";
+import type { Envelope, PublicRoom } from "./protocol";
+import { getWSClient, createRequestId } from "./ws";
 
 type LobbyState = {
-  games: GameSummary[];
   rooms: PublicRoom[];
   connected: boolean;
 };
 
 const initialState: LobbyState = {
-  games: [],
   rooms: [],
   connected: false,
 };
-
-const createRequestId = () =>
-  typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `req-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 export const useLobbyStore = () => {
   const [state, setState] = useState(initialState);
   const refresh = useCallback(() => {
     const client = getWSClient();
     client.connect();
-    client.send({ type: "lobby.games.list", requestId: createRequestId() });
     client.send({ type: "lobby.rooms.list", requestId: createRequestId() });
   }, []);
 
@@ -42,10 +34,6 @@ export const useLobbyStore = () => {
     });
 
     const offMessage = client.onMessage((message: Envelope) => {
-      if (message.type === "lobby.games.list.ok") {
-        const games = (message.payload?.games ?? []) as GameSummary[];
-        setState((prev) => ({ ...prev, games }));
-      }
       if (message.type === "lobby.rooms.list.ok") {
         const rooms = (message.payload?.rooms ?? []) as PublicRoom[];
         setState((prev) => ({ ...prev, rooms }));

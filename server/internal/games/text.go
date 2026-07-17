@@ -6,8 +6,8 @@ import "strings"
 // frame ceiling — these get stored and rebroadcast in full game state.
 const maxDrawingBytes = 48 * 1024
 
-// truncateText caps a string to max runes.
-func truncateText(s string, max int) string {
+// TruncateText caps a string to max runes.
+func TruncateText(s string, max int) string {
 	r := []rune(s)
 	if len(r) > max {
 		return string(r[:max])

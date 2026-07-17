@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
-import { TimerBadge, ScoreStrip, Banner, Button, HowToPlayModal } from "../ui";
+import { TimerBadge, Banner, Button, HowToPlayModal } from "../ui";
 import { hueFor } from "../ui/gameHues";
 import type { GameProps } from "./types";
 
@@ -37,9 +37,6 @@ export function FibberGame(props: GameProps) {
   }, [pub?.round]);
 
   if (!pub) return null;
-  const standings = Object.entries(pub.scores ?? {})
-    .map(([playerId, score]) => ({ playerId, score }))
-    .sort((a, b) => b.score - a.score);
   const nameOf = (id: string) =>
     props.players.find((p) => p.id === id)?.name ?? "?";
 
@@ -172,7 +169,6 @@ export function FibberGame(props: GameProps) {
           {t("common.howToPlay")}
         </button>
       </div>
-      <ScoreStrip standings={standings} players={props.players} playerId={props.playerId} />
     </div>
   );
 }

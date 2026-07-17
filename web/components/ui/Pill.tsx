@@ -1,30 +1,7 @@
 "use client";
 
-import { useState, type HTMLAttributes } from "react";
+import { useState } from "react";
 import { Check, Copy } from "lucide-react";
-
-type PillProps = HTMLAttributes<HTMLSpanElement> & {
-  variant?: "code" | "ready" | "host" | "waiting" | "neutral";
-};
-
-export function Pill({ variant = "neutral", className = "", children, ...rest }: PillProps) {
-  const base = "inline-flex w-fit items-center gap-2 rounded-full px-3 py-1";
-  const variants: Record<string, string> = {
-    code: "bg-(--ink) font-mono text-xs font-bold text-(--bg)",
-    ready:
-      "border-2 border-(--accent-2) font-sans text-[11px] font-semibold text-(--accent-2)",
-    host: "bg-(--accent) font-sans text-[11px] font-semibold text-(--bg)",
-    waiting:
-      "border-2 border-dashed border-(--line) font-sans text-[11px] font-semibold text-(--ink)/50",
-    neutral:
-      "border-2 border-(--line) font-sans text-[11px] font-semibold text-(--ink)/70",
-  };
-  return (
-    <span className={`${base} ${variants[variant]} ${className}`} {...rest}>
-      {children}
-    </span>
-  );
-}
 
 /** Room-code pill with tap-to-copy. */
 export function CodePill({ code, label }: { code: string; label?: string }) {

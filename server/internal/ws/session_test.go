@@ -385,7 +385,7 @@ func TestPauseFreezesTimerAndActions(t *testing.T) {
 
 	// Non-admin pause rejected.
 	hub.handleSessionPause(joiner, Envelope{Type: "session.pause"})
-	if room.IsPaused() {
+	if room.Snapshot()["paused"].(bool) {
 		t.Fatalf("expected non-admin pause rejected")
 	}
 
@@ -397,7 +397,7 @@ func TestPauseFreezesTimerAndActions(t *testing.T) {
 	}
 
 	hub.handleSessionPause(host, Envelope{Type: "session.pause"})
-	if !room.IsPaused() {
+	if !room.Snapshot()["paused"].(bool) {
 		t.Fatalf("expected room paused")
 	}
 	s.mu.Lock()
@@ -422,7 +422,7 @@ func TestPauseFreezesTimerAndActions(t *testing.T) {
 	s.pausedAt = s.pausedAt.Add(-1 * time.Second)
 	s.mu.Unlock()
 	hub.handleSessionResume(host, Envelope{Type: "session.resume"})
-	if room.IsPaused() {
+	if room.Snapshot()["paused"].(bool) {
 		t.Fatalf("expected room resumed")
 	}
 	s.mu.Lock()

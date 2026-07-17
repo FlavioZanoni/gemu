@@ -28,31 +28,16 @@ export function IntroScreen({
   const hue = hueFor(gameType);
   const stepCount = game?.howToSteps ?? 0;
 
-  // Per-game settings from docs/session-protocol.md
-  const gameSettings: Record<string, { minRounds: number; maxRounds: number; defaultRounds: number; minTimer?: number; maxTimer?: number; defaultTimer?: number }> = {
-    invention: { minRounds: 1, maxRounds: 5, defaultRounds: 3 },
-    stop: { minRounds: 1, maxRounds: 10, defaultRounds: 3, minTimer: 30, maxTimer: 300, defaultTimer: 90 },
-    gartic: { minRounds: 1, maxRounds: 10, defaultRounds: 2, minTimer: 30, maxTimer: 180, defaultTimer: 75 },
-    garticphone: { minRounds: 1, maxRounds: 10, defaultRounds: 3, minTimer: 30, maxTimer: 300, defaultTimer: 120 },
-    cah: { minRounds: 3, maxRounds: 20, defaultRounds: 8 },
+  // Round / timer choices per game (literal — no interpolation needed).
+  const gameOptions: Record<string, { rounds: number[]; timer: number[] }> = {
+    invention: { rounds: [1, 2, 3, 4, 5], timer: [] },
+    stop: { rounds: [1, 3, 5, 7, 9], timer: [30, 165, 300] },
+    gartic: { rounds: [1, 2, 3, 5, 7, 9], timer: [30, 105, 180] },
+    garticphone: { rounds: [1, 3, 5, 7, 9], timer: [30, 165, 300] },
+    cah: { rounds: [3, 7, 8, 11, 15, 19], timer: [] },
   };
-
-  const settings = gameSettings[gameType] || gameSettings.stop;
-  const roundOptions = Array.from(
-    { length: Math.min(settings.maxRounds - settings.minRounds + 1, 5) },
-    (_, i) => settings.minRounds + i * Math.floor((settings.maxRounds - settings.minRounds) / 4)
-  );
-  if (!roundOptions.includes(settings.defaultRounds)) {
-    roundOptions.push(settings.defaultRounds);
-    roundOptions.sort((a, b) => a - b);
-  }
-
-  const timerOptions = settings.minTimer && settings.maxTimer
-    ? Array.from(
-        { length: 3 },
-        (_, i) => settings.minTimer! + Math.round(i * (settings.maxTimer! - settings.minTimer!) / 2)
-      )
-    : [];
+  const { rounds: roundOptions, timer: timerOptions } =
+    gameOptions[gameType] || gameOptions.stop;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-12 px-6 py-12">

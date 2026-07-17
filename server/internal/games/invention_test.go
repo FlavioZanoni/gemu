@@ -20,14 +20,8 @@ func TestInventionStartDefaults(t *testing.T) {
 	game := &InventionGame{}
 	game.Start("room-1", Options{})
 
-	if !game.started {
-		t.Fatalf("expected started=true after Start")
-	}
 	if game.phase != "collecting" {
 		t.Fatalf("expected phase collecting, got %s", game.phase)
-	}
-	if game.roomID != "room-1" {
-		t.Fatalf("expected roomID to be set")
 	}
 	if game.round != 1 {
 		t.Fatalf("expected round 1, got %d", game.round)

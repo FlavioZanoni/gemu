@@ -3,9 +3,8 @@
 import { useEffect, useMemo } from "react";
 import { Volume2, Trophy, Medal } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import type { SessionFinal, PlayedGame } from "@/lib/protocol";
+import type { SessionFinal } from "@/lib/protocol";
 import { Button } from "@/components/ui";
-import { gamesCatalog } from "@/lib/games";
 import { playSfx } from "@/lib/sfx";
 
 export function PodiumScreen({
@@ -37,12 +36,6 @@ export function PodiumScreen({
       delay: Math.random() * 0.5,
     }));
   }, []);
-
-
-  const getGameName = (gameType: string) => {
-    const game = gamesCatalog.find((g) => g.type === gameType);
-    return game?.name || gameType;
-  };
 
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen gap-8 px-6 py-12 overflow-hidden">

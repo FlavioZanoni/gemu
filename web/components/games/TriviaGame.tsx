@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { TimerBadge, ScoreStrip, Banner, HowToPlayModal } from "../ui";
+import { TimerBadge, Banner, HowToPlayModal } from "../ui";
 import { hueFor } from "../ui/gameHues";
 import { playSfx } from "@/lib/sfx";
 import type { GameProps } from "./types";
@@ -33,9 +33,6 @@ export function TriviaGame(props: GameProps) {
   // publicState is briefly {} between status:playing and the first game.state,
   // so guard the round payload, not just null.
   if (!pub || !pub.options) return null;
-  const standings = Object.entries(pub.scores ?? {})
-    .map(([playerId, score]) => ({ playerId, score }))
-    .sort((a, b) => b.score - a.score);
   const myChoice = priv?.choice;
   const answered = myChoice !== undefined;
 
@@ -123,7 +120,6 @@ export function TriviaGame(props: GameProps) {
           {t("common.howToPlay")}
         </button>
       </div>
-      <ScoreStrip standings={standings} players={props.players} playerId={props.playerId} />
     </div>
   );
 }
