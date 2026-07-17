@@ -281,3 +281,30 @@ func TestVoteResolvesOnAllVotes(t *testing.T) {
 		t.Fatalf("expected next game type invention, got %s", room.GetNextGameType())
 	}
 }
+
+func TestSessionReplayQueuesSameGame(t *testing.T) {
+	hub := newSessionTestHub()
+	host, joiner := setupFinishedStubGame(t, hub, []any{"stub", "invention"}, 10, 5)
+
+	room, ok := hub.rooms.Get(host.RoomID)
+	if !ok {
+		t.Fatalf("expected room to exist")
+	}
+	if room.GetStatus() != rooms.StatusResults {
+		t.Fatalf("expected results status, got %s", room.GetStatus())
+	}
+
+	// Non-admin replay rejected.
+	hub.handleSessionReplay(joiner, Envelope{Type: "session.replay"})
+	if room.GetStatus() != rooms.StatusResults {
+		t.Fatalf("expected non-admin replay ignored")
+	}
+
+	hub.handleSessionReplay(host, Envelope{Type: "session.replay"})
+	if room.GetStatus() != rooms.StatusLobby {
+		t.Fatalf("expected lobby after replay, got %s", room.GetStatus())
+	}
+	if room.GetNextGameType() != "stub" {
+		t.Fatalf("expected same game queued, got %q", room.GetNextGameType())
+	}
+}

@@ -295,6 +295,18 @@ func (r *Room) SetCurrentGame(gameType, gameName string) {
 	r.GameName = gameName
 }
 
+// LastPlayedGame returns the type and name of the most recently finished
+// game, or empty strings if none has been played yet.
+func (r *Room) LastPlayedGame() (string, string) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if len(r.PlayedGames) == 0 {
+		return "", ""
+	}
+	last := r.PlayedGames[len(r.PlayedGames)-1]
+	return last.GameType, last.GameName
+}
+
 // RecordPlayedGame appends the game record and adds its points to the
 // session totals.
 func (r *Room) RecordPlayedGame(pg PlayedGame) {

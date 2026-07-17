@@ -47,7 +47,9 @@ type Adapter interface {
 	// it after every mutating call.
 	NextDeadline() (name string, at time.Time, ok bool)
 	Status() Status
-	// Standings is valid once Status() == StatusFinished, best first.
+	// Standings returns the CURRENT running totals, best first — callable at
+	// any time (the hub broadcasts them with every game.state for the live
+	// scoreboard); once Status() == StatusFinished they are the final result.
 	Standings() []Standing
 	PublicState() map[string]any
 	PrivateState(playerID string) map[string]any

@@ -88,7 +88,10 @@ func placementRows(room *rooms.Room, standings []games.Standing) []rooms.Placeme
 }
 
 func (h *Hub) broadcastGameState(roomID string, adapter games.Adapter) {
-	h.Broadcast(roomID, Envelope{Type: "game.state", RoomID: roomID, Payload: map[string]any{"public": adapter.PublicState()}})
+	h.Broadcast(roomID, Envelope{Type: "game.state", RoomID: roomID, Payload: map[string]any{
+		"public":    adapter.PublicState(),
+		"standings": adapter.Standings(),
+	}})
 	h.hydratePrivateState(roomID, adapter)
 }
 
@@ -347,6 +350,37 @@ func (h *Hub) handleSessionVoteCast(client *Client, env Envelope) {
 		return
 	}
 	h.Broadcast(roomID, Envelope{Type: "session.vote.update", RoomID: roomID, Payload: map[string]any{"counts": voteCounts(s)}})
+}
+
+// handleSessionReplay queues the game that just finished instead of voting
+// on the next one — "same again" from the results screen.
+func (h *Hub) handleSessionReplay(client *Client, env Envelope) {
+	roomID := client.RoomID
+	room, s, errCode := h.roomAndSession(roomID)
+	if errCode != "" {
+		h.sendError(client, "session.replay.error", env.RequestID, errCode)
+		return
+	}
+	if room.AdminID() != client.Player.ID {
+		h.sendError(client, "session.replay.error", env.RequestID, "not_admin")
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if room.GetStatus() != rooms.StatusResults {
+		h.sendError(client, "session.replay.error", env.RequestID, "wrong_status")
+		return
+	}
+	gameType, gameName := room.LastPlayedGame()
+	if gameType == "" {
+		h.sendError(client, "session.replay.error", env.RequestID, "nothing_played")
+		return
+	}
+	room.SetNextGame(gameType, gameName)
+	room.SetStatus(rooms.StatusLobby)
+	room.ResetReady()
+	h.Send(client, Envelope{Type: "session.replay.ok", RequestID: env.RequestID, Payload: map[string]any{"gameType": gameType, "gameName": gameName}})
+	h.broadcastRoom(roomID)
 }
 
 func (h *Hub) handleSessionPlaylistSet(client *Client, env Envelope) {

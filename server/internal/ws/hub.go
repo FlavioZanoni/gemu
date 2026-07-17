@@ -177,6 +177,8 @@ func (h *Hub) HandleMessage(client *Client, env Envelope) {
 		h.handleSessionPlaylistSet(client, env)
 	case "session.vote.start":
 		h.handleSessionVoteStart(client, env)
+	case "session.replay":
+		h.handleSessionReplay(client, env)
 	case "session.vote.cast":
 		h.handleSessionVoteCast(client, env)
 	case "session.end":

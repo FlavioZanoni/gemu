@@ -38,8 +38,13 @@ High-frequency transient channel for canvas strokes. Client sends `{type: "game.
 
 - `session.playlist.set` `{playlist: string[]}` — admin, in `lobby`/`results`. Replaces the playlist (≥1 registered games). If the queued `nextGameType` is removed, it is cleared.
 - `session.vote.start` — admin, in `results`. Opens the next-game vote. If the playlist has ≤1 game there is nothing to vote on: the room goes straight to `lobby` with `nextGameType` queued.
+- `session.replay` — admin, in `results`. "Same again": queues the game that just finished (status → `lobby` with `nextGameType` set, ready flags cleared) instead of voting. Each play is scored as its own game in the session.
 - `session.vote.cast` `{gameType}` — any player, in `voting`. One vote per player, revotable until resolved. Errors: `no_vote_active`, `invalid_option`.
 - `session.end` — admin, any status except `playing`. Pushes the final podium then resets scores/history to a fresh lobby.
+
+## Live in-game scoreboard
+
+Every `game.state` broadcast now carries `standings: [{playerId, score}]` (best first, game-native running totals) alongside `public` — render the persistent "who's winning" scoreboard from this one field for every game instead of digging into per-game keys like `wins`/`totalScores`/`scores`.
 
 ## New pushes
 
