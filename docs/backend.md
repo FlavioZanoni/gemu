@@ -18,7 +18,10 @@ using an adapter model.
 - `internal/rooms` stores room state, players, and admin chain
 - `internal/games` registers game adapters
 
-The WebSocket server holds an in-memory hub of clients and rooms. Each room is bound to a game type and can be extended by a game adapter in the future.
+The WebSocket server holds a hub of clients and rooms. Each room runs a session
+(playlist, scores, vote state) and, while a game is live, a self-driving game
+adapter that owns its own phases and timer. Seven games are registered:
+`stop`, `gartic`, `garticphone`, `cah`, `invention`, `trivia`, `fibber`.
 
 ## WebSocket protocol
 
@@ -94,14 +97,23 @@ Clients must send a `sessionId` on `room.create` and `room.join` payloads. The s
 { "force": true }
 ```
 
-## In-memory state
+## State & durability
 
-- Rooms and players are in-memory only
-- Restarting the server clears all rooms
-- Suitable for early development and small-scale usage
+- Rooms and players live in-memory by default; restarting clears all rooms.
+- Set `REDIS_URL` to enable durability: rooms are snapshotted to Redis every 10s
+  (atomic full-replace) and reloaded on startup. A room caught mid-game or
+  mid-vote drops back to a clean lobby with session scores intact; players
+  reconnect via their persisted session id. In-progress round state is not resumed.
+
+## Rate limiting & capacity
+
+- Per-IP token buckets throttle new connections and room creation.
+- Global caps: `GEMU_MAX_CLIENTS` (5000), `GEMU_MAX_ROOMS` (1000).
+- Loopback is exempt. The client IP is the real TCP peer unless `GEMU_TRUST_PROXY`
+  is set (only enable behind a proxy that strips inbound `X-Forwarded-For`).
+- Display names and avatar URLs are truncated/sanitized on `room.create`/`room.join`.
 
 ## Next steps (future work)
 
-- Add game action routing (`game.action` messages)
-- Add server-side validation for display names and avatar URLs
-- Optional Redis backing for room/game persistence
+- CI to run the test suites on push; metrics/observability; graceful drain.
+- Multi-instance scaling (shared state + pub/sub) — a separate, larger effort.

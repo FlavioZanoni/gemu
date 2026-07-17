@@ -2,6 +2,17 @@
 
 Gemu evolves from "one room = one game" into a Jackbox-style party night: create a room, gather friends, pick a playlist of games, play them in sequence with voting between games, and crown an overall winner at the end.
 
+## Status (2026-07-17)
+
+Milestones 0–5 below are **shipped**: the platform refactor, session/vote-next
+layer, all games (Stop, Gartic, Gartic Phone, CAH with deck import, plus Trivia
+and Fibber), the canvas rebuild, i18n, auto-reconnect, sound effects, and the
+podium. On top of the original plan the project now also has: lucide icons,
+a Playwright E2E suite (`web/e2e`), per-IP + global rate limiting, and optional
+Redis durability. Remaining before a public (non-friends) release: CI, metrics,
+graceful drain, and — only if needed — multi-instance scaling. The sections below
+are kept as the original design record.
+
 ## Product decisions (locked 2026-07-17)
 
 - **Build order:** Stop (Scattergories) → Gartic (draw & guess) → Gartic Phone → Cards Against Humanity.

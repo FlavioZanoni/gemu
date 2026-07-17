@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Gemu — Web
 
-## Getting Started
+Next.js (App Router) + React + Tailwind v4 frontend for Gemu. Renders the ticket-booth
+home, the green-room lobby, and every game surface using the shared "Technicolor
+Broadcast" design system and a module-level room store over a WebSocket connection.
 
-First, run the development server:
+## Develop
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Create `.env.local`:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Layout
 
-## Learn More
+- `app/` — routes: `/` (home) and `/room/[roomId]`
+- `components/screens/` — lobby, playing, results, voting, podium, intro, join gate
+- `components/games/` — one component per game surface
+- `components/ui/` — design-system kit (Button, Timer, ScoreStrip, HowToPlayModal, …) + lucide icons
+- `lib/` — `roomStore`/`lobbyStore` (WebSocket state), `ws` client (auto-reconnect), `i18n` (en / pt-BR), `sfx` (Web Audio cues)
 
-To learn more about Next.js, take a look at the following resources:
+## Tests
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run test:e2e   # Playwright — boots a dedicated Go server (:8099) + Next (:3939)
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The E2E suite drives real multi-player flows in separate browser contexts and fails any
+test on a React render error (see `e2e/fixtures.ts`).
