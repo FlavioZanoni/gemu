@@ -84,3 +84,8 @@ Every `game.state` broadcast now carries `standings: [{playerId, score}]` (best 
 ## For game implementers (backend)
 
 Games implement `games.Adapter` (`server/internal/games/adapter.go`): a self-driving state machine. Advance phases inside `OnAction`/`OnTimer`/`OnRoomChange` (roster via `Options.Room.ConnectedPlayerIDs()`), report a single pending countdown via `NextDeadline()` (the hub re-arms it after every call and calls `OnTimer(name)` when it fires), flip `Status()` to finished and expose `Standings()` when done. The hub handles everything else: scoring, results, votes. No hub changes needed to add a game — register a `Factory` in `cmd/server/main.go` and add the frontend component in `web/components/GameSurface.tsx`.
+
+## Pause (host)
+
+- `session.pause` — admin, `playing` status only. Freezes the show: the pending game timer stops, `game.action`/`game.stream` are rejected (`paused`) until resume, and the room snapshot carries `paused: true` (render the pause overlay from it).
+- `session.resume` — admin. Shifts every pending game deadline forward by the frozen duration (games implement `Shift`), re-arms the timer, and re-broadcasts `game.state` so client countdowns pick up the shifted deadline.

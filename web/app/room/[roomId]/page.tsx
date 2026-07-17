@@ -10,6 +10,7 @@ import { ResultsScreen } from "@/components/screens/ResultsScreen";
 import { VotingScreen } from "@/components/screens/VotingScreen";
 import { PodiumScreen } from "@/components/screens/PodiumScreen";
 import { JoinGateScreen } from "@/components/screens/JoinGateScreen";
+import { PauseOverlay } from "@/components/screens/PauseOverlay";
 import { Banner, CodePill } from "@/components/ui";
 
 export default function RoomPage() {
@@ -242,6 +243,14 @@ export default function RoomPage() {
                 onSendAction={(payload) => room.sendGameAction(payload)}
                 onSendStream={(payload) => room.sendGameStream(payload)}
                 onLeave={() => room.leaveRoom()}
+                onPause={() => room.pauseSession()}
+              />
+            )}
+
+            {room.snapshot.paused && (
+              <PauseOverlay
+                isAdmin={room.isAdmin}
+                onResume={() => room.resumeSession()}
               />
             )}
 

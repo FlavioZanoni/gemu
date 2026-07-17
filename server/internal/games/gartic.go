@@ -377,3 +377,7 @@ func levenshtein(a, b string) int {
 	}
 	return prev[len(rb)]
 }
+
+func (g *GarticGame) Shift(delta time.Duration) {
+	g.deadline = g.deadline.Add(delta)
+}

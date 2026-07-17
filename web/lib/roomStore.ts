@@ -430,6 +430,10 @@ export const useRoomStore = () => {
 
   const endSession = () => send("session.end");
 
+  const pauseSession = () => send("session.pause");
+
+  const resumeSession = () => send("session.resume");
+
   const isAdmin = useMemo(() => {
     if (!state.snapshot || !state.playerId) return false;
     return state.snapshot.adminId === state.playerId;
@@ -451,6 +455,8 @@ export const useRoomStore = () => {
     castVote,
     replayGame,
     endSession,
+    pauseSession,
+    resumeSession,
     loadLastRoom,
   };
 };

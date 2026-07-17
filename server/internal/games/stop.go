@@ -601,3 +601,7 @@ func (g *StopGame) PrivateState(playerID string) map[string]any {
 		"rejected":  rejectedList,
 	}
 }
+
+func (g *StopGame) Shift(delta time.Duration) {
+	g.deadline = g.deadline.Add(delta)
+}

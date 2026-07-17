@@ -87,6 +87,13 @@ export const screens = {
     "podium.place3": "🥉 3rd Place",
     "podium.place": "Place {n}",
 
+    // Pause overlay
+    "pause.title": "Show paused",
+    "pause.body": "The host froze the clock. Grab a slice — nothing moves until they're back.",
+    "pause.resume": "Resume the show",
+    "pause.caption": "★ Host only · timers freeze for everyone",
+    "pause.pause": "Pause",
+
     // Edge states
     "edge.kicked": "You've been kicked",
     "edge.kickedDesc": "The host removed you from this room. You can head back to the lobby to join a different game.",
@@ -187,6 +194,13 @@ export const screens = {
     "podium.place2": "🥈 2º Lugar",
     "podium.place3": "🥉 3º Lugar",
     "podium.place": "Lugar {n}",
+
+    // Pause overlay
+    "pause.title": "Show pausado",
+    "pause.body": "O anfitrião congelou o relógio. Pega uma fatia — nada anda até ele voltar.",
+    "pause.resume": "Retomar o show",
+    "pause.caption": "★ Só o anfitrião · o tempo congela para todos",
+    "pause.pause": "Pausar",
 
     // Edge states
     "edge.kicked": "Você foi expulso",

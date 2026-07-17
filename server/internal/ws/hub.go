@@ -134,7 +134,7 @@ func (h *Hub) handleGameStream(client *Client, env Envelope) {
 		return
 	}
 	s.mu.Lock()
-	if s.adapter == nil {
+	if s.adapter == nil || !s.pausedAt.IsZero() {
 		s.mu.Unlock()
 		return
 	}
@@ -179,6 +179,10 @@ func (h *Hub) HandleMessage(client *Client, env Envelope) {
 		h.handleSessionVoteStart(client, env)
 	case "session.replay":
 		h.handleSessionReplay(client, env)
+	case "session.pause":
+		h.handleSessionPause(client, env)
+	case "session.resume":
+		h.handleSessionResume(client, env)
 	case "session.vote.cast":
 		h.handleSessionVoteCast(client, env)
 	case "session.end":
@@ -644,6 +648,10 @@ func (h *Hub) handleGameAction(client *Client, env Envelope) {
 	defer s.mu.Unlock()
 	if s.adapter == nil {
 		h.Send(client, Envelope{Type: "game.action.error", RequestID: env.RequestID, Payload: map[string]any{"code": "no_active_game", "message": "no game running"}})
+		return
+	}
+	if !s.pausedAt.IsZero() {
+		h.Send(client, Envelope{Type: "game.action.error", RequestID: env.RequestID, Payload: map[string]any{"code": "paused", "message": "game is paused"}})
 		return
 	}
 

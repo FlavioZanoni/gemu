@@ -54,6 +54,8 @@ func (s *stubAdapter) OnAction(playerID string, payload map[string]any) error {
 
 func (s *stubAdapter) OnTimer(name string) {}
 
+func (s *stubAdapter) Shift(delta time.Duration) {}
+
 func (s *stubAdapter) NextDeadline() (string, time.Time, bool) {
 	return "", time.Time{}, false
 }
@@ -360,5 +362,77 @@ func TestRoomJoinRejectsDuplicateName(t *testing.T) {
 	}})
 	if ok.RoomID == "" {
 		t.Fatalf("expected distinct name accepted")
+	}
+}
+
+func TestPauseFreezesTimerAndActions(t *testing.T) {
+	registry := games.NewRegistry()
+	registry.Register(games.NewStopFactory())
+	hub := NewHub(registry)
+
+	host := &Client{ID: "host"}
+	hub.handleRoomCreate(host, Envelope{Type: "room.create", Payload: map[string]any{
+		"name": "Pause", "playlist": []any{"stop"}, "displayName": "Host", "sessionId": "sess-host",
+	}})
+	joiner := &Client{ID: "joiner"}
+	hub.handleRoomJoin(joiner, Envelope{Type: "room.join", Payload: map[string]any{
+		"roomId": host.RoomID, "displayName": "Joiner", "sessionId": "sess-joiner",
+	}})
+	hub.handleGameStart(host, Envelope{Type: "game.start", Payload: map[string]any{"force": true}})
+
+	room, _ := hub.rooms.Get(host.RoomID)
+	s, _ := hub.session(host.RoomID)
+
+	// Non-admin pause rejected.
+	hub.handleSessionPause(joiner, Envelope{Type: "session.pause"})
+	if room.IsPaused() {
+		t.Fatalf("expected non-admin pause rejected")
+	}
+
+	s.mu.Lock()
+	_, before, ok := s.adapter.NextDeadline()
+	s.mu.Unlock()
+	if !ok {
+		t.Fatalf("expected a pending deadline while answering")
+	}
+
+	hub.handleSessionPause(host, Envelope{Type: "session.pause"})
+	if !room.IsPaused() {
+		t.Fatalf("expected room paused")
+	}
+	s.mu.Lock()
+	if s.timer != nil {
+		t.Fatalf("expected timer stopped while paused")
+	}
+	pausedActionState := s.adapter.PublicState()["answersFilled"]
+	s.mu.Unlock()
+
+	// Actions rejected while paused.
+	hub.handleGameAction(host, Envelope{Type: "game.action", Payload: map[string]any{
+		"action": "set_answers", "answers": map[string]any{},
+	}})
+	s.mu.Lock()
+	if len(s.adapter.PublicState()["answersFilled"].(map[string]int)) != len(pausedActionState.(map[string]int)) {
+		t.Fatalf("expected action ignored while paused")
+	}
+	s.mu.Unlock()
+
+	// Simulate one second of frozen time, then resume: deadline shifts forward.
+	s.mu.Lock()
+	s.pausedAt = s.pausedAt.Add(-1 * time.Second)
+	s.mu.Unlock()
+	hub.handleSessionResume(host, Envelope{Type: "session.resume"})
+	if room.IsPaused() {
+		t.Fatalf("expected room resumed")
+	}
+	s.mu.Lock()
+	_, after, _ := s.adapter.NextDeadline()
+	rearmed := s.timer != nil
+	s.mu.Unlock()
+	if !after.After(before.Add(900 * time.Millisecond)) {
+		t.Fatalf("expected deadline shifted by ~1s, before=%v after=%v", before, after)
+	}
+	if !rearmed {
+		t.Fatalf("expected timer re-armed after resume")
 	}
 }

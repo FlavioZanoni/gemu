@@ -18,6 +18,7 @@ export function PlayingScreen({
   onSendAction,
   onSendStream,
   onLeave,
+  onPause,
 }: {
   snapshot: RoomSnapshot;
   players: Player[];
@@ -29,6 +30,7 @@ export function PlayingScreen({
   onSendAction: (payload: Record<string, unknown>) => void;
   onSendStream: (payload: Record<string, unknown>) => void;
   onLeave: () => void;
+  onPause?: () => void;
 }) {
   const { t } = useI18n();
   const [howToOpen, setHowToOpen] = useState(false);
@@ -53,6 +55,15 @@ export function PlayingScreen({
         {/* Timer and actions */}
         <div className="flex items-center gap-3">
           {deadline && <TimerBadge deadline={deadline} />}
+          {isAdmin && onPause && (
+            <button
+              onClick={onPause}
+              className="text-xs px-3 py-2 rounded border border-(--line) text-(--ink)/70 hover:bg-(--panel-raised) transition"
+              title={t("pause.caption")}
+            >
+              ⏸ {t("pause.pause")}
+            </button>
+          )}
           <button
             onClick={() => setHowToOpen(true)}
             className="text-xs px-3 py-2 rounded border border-(--line) text-(--accent-2) hover:bg-(--panel-raised) transition"

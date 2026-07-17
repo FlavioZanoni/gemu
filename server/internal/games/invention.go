@@ -431,3 +431,5 @@ func (g *InventionGame) countProblems() int {
 	}
 	return total
 }
+
+func (g *InventionGame) Shift(delta time.Duration) {}

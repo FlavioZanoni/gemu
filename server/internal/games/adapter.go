@@ -68,6 +68,9 @@ type Adapter interface {
 	// NextDeadline reports the single pending timer, if any. The hub re-arms
 	// it after every mutating call.
 	NextDeadline() (name string, at time.Time, ok bool)
+	// Shift moves any pending deadline forward by delta — called on resume
+	// after a host pause so frozen time doesn't count against the players.
+	Shift(delta time.Duration)
 	Status() Status
 	// Standings returns the CURRENT running totals, best first — callable at
 	// any time (the hub broadcasts them with every game.state for the live

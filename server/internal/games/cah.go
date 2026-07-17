@@ -649,3 +649,7 @@ func (g *CahGame) PrivateState(playerID string) map[string]any {
 
 	return state
 }
+
+func (g *CahGame) Shift(delta time.Duration) {
+	g.deadline = g.deadline.Add(delta)
+}

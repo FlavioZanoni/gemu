@@ -23,6 +23,7 @@ type gameSession struct {
 	adapter  games.Adapter
 	timer    *time.Timer
 	timerSeq int
+	pausedAt time.Time // zero when not paused
 
 	voteOptions  []string
 	votes        map[string]string
@@ -114,7 +115,11 @@ func (h *Hub) afterAdapterCall(roomID string, s *gameSession) {
 		return
 	}
 	h.broadcastGameState(roomID, adapter)
-	h.armGameTimer(roomID, s)
+	// While paused (e.g. a player left mid-pause) the timer stays frozen;
+	// resume re-arms it after shifting the deadline.
+	if s.pausedAt.IsZero() {
+		h.armGameTimer(roomID, s)
+	}
 }
 
 // armGameTimer must be called with s.mu held.
@@ -391,6 +396,59 @@ func (h *Hub) handleSessionReplay(client *Client, env Envelope) {
 	room.ResetReady()
 	h.Send(client, Envelope{Type: "session.replay.ok", RequestID: env.RequestID, Payload: map[string]any{"gameType": gameType, "gameName": gameName}})
 	h.broadcastRoom(roomID)
+}
+
+// handleSessionPause freezes the show: the pending game timer stops and all
+// game actions/streams are rejected until resume. Host only, mid-game only.
+func (h *Hub) handleSessionPause(client *Client, env Envelope) {
+	roomID := client.RoomID
+	room, s, errCode := h.roomAndSession(roomID)
+	if errCode != "" {
+		h.sendError(client, "session.pause.error", env.RequestID, errCode)
+		return
+	}
+	if room.AdminID() != client.Player.ID {
+		h.sendError(client, "session.pause.error", env.RequestID, "not_admin")
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if room.GetStatus() != rooms.StatusPlaying || s.adapter == nil || !s.pausedAt.IsZero() {
+		h.sendError(client, "session.pause.error", env.RequestID, "wrong_status")
+		return
+	}
+	s.pausedAt = time.Now()
+	s.stopTimer()
+	room.SetPaused(true)
+	h.Send(client, Envelope{Type: "session.pause.ok", RequestID: env.RequestID})
+	h.broadcastRoom(roomID)
+}
+
+func (h *Hub) handleSessionResume(client *Client, env Envelope) {
+	roomID := client.RoomID
+	room, s, errCode := h.roomAndSession(roomID)
+	if errCode != "" {
+		h.sendError(client, "session.resume.error", env.RequestID, errCode)
+		return
+	}
+	if room.AdminID() != client.Player.ID {
+		h.sendError(client, "session.resume.error", env.RequestID, "not_admin")
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.pausedAt.IsZero() || s.adapter == nil {
+		h.sendError(client, "session.resume.error", env.RequestID, "not_paused")
+		return
+	}
+	frozen := time.Since(s.pausedAt)
+	s.pausedAt = time.Time{}
+	s.adapter.Shift(frozen)
+	room.SetPaused(false)
+	h.Send(client, Envelope{Type: "session.resume.ok", RequestID: env.RequestID})
+	h.broadcastRoom(roomID)
+	// Re-broadcast state (shifted deadlines) and re-arm the timer.
+	h.afterAdapterCall(roomID, s)
 }
 
 func (h *Hub) handleSessionPlaylistSet(client *Client, env Envelope) {

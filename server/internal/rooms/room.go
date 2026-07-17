@@ -70,6 +70,7 @@ type Room struct {
 	AdminChain []string          `json:"adminChain"`
 
 	Status        Status         `json:"status"`
+	Paused        bool           `json:"paused"`
 	Playlist      []string       `json:"playlist"`
 	NextGameType  string         `json:"nextGameType"`
 	NextGameName  string         `json:"nextGameName"`
@@ -123,6 +124,7 @@ func (r *Room) Snapshot() map[string]any {
 		"adminId":       adminID,
 		"players":       players,
 		"status":        r.Status,
+		"paused":        r.Paused,
 		"playlist":      playlist,
 		"nextGameType":  r.NextGameType,
 		"nextGameName":  r.NextGameName,
@@ -264,6 +266,21 @@ func (r *Room) SetStatus(status Status) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.Status = status
+	if status != StatusPlaying {
+		r.Paused = false
+	}
+}
+
+func (r *Room) SetPaused(paused bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.Paused = paused
+}
+
+func (r *Room) IsPaused() bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.Paused
 }
 
 func (r *Room) SetPlaylist(playlist []string) {

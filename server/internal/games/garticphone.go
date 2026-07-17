@@ -386,3 +386,7 @@ func decodePayloadInt(payload map[string]any, key string) int {
 		return -1
 	}
 }
+
+func (g *GarticPhoneGame) Shift(delta time.Duration) {
+	g.deadline = g.deadline.Add(delta)
+}

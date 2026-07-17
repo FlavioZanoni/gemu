@@ -67,6 +67,7 @@ export type RoomSnapshot = {
   adminId: string;
   players: Player[];
   status: RoomStatus;
+  paused: boolean;
   playlist: string[];
   nextGameType: string;
   nextGameName: string;
