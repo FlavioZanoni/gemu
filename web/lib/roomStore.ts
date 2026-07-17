@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from "react";
 import type {
+  CustomDeck,
+  DeckMeta,
   Envelope,
   GameResult,
   GameSettings,
@@ -36,6 +38,7 @@ type RoomState = {
   } | null;
   actionError: { code: string; message: string } | null;
   actionErrorTimeout: NodeJS.Timeout | null;
+  decks: DeckMeta[];
 };
 
 const initialState: RoomState = {
@@ -58,6 +61,7 @@ const initialState: RoomState = {
   pendingProfile: null,
   actionError: null,
   actionErrorTimeout: null,
+  decks: [],
 };
 
 const storageKey = "gemu:last-room";
@@ -191,6 +195,16 @@ const handleMessage = (message: Envelope) => {
     });
     saveLastRoomIfPresent(snapshot, pendingProfile);
     pendingProfile = null;
+    // Fetch the available CAH decks for this room.
+    send("lobby.decks.list");
+  }
+  if (message.type === "lobby.decks.list.ok") {
+    const decks = (message.payload?.decks as DeckMeta[]) ?? [];
+    setState((prev) => ({ ...prev, decks }));
+  }
+  if (message.type === "session.deck.add.ok") {
+    // A custom deck was accepted — refresh the list.
+    send("lobby.decks.list");
   }
   if (message.type === "room.updated") {
     const snapshot = message.payload as unknown as RoomSnapshot;
@@ -421,6 +435,12 @@ const replayGame = () => send("session.replay");
 const endSession = () => send("session.end");
 const pauseSession = () => send("session.pause");
 const resumeSession = () => send("session.resume");
+const setCahDecks = (decks: string[]) =>
+  send("session.cahdecks.set", { decks });
+const addCustomDeck = (deck: CustomDeck) =>
+  send("session.deck.add", { deck });
+const refreshDecks = () => send("lobby.decks.list");
+
 const clearActionError = () => {
   setState((prev) => {
     if (prev.actionErrorTimeout) clearTimeout(prev.actionErrorTimeout);
@@ -457,6 +477,9 @@ export const useRoomStore = () => {
     endSession,
     pauseSession,
     resumeSession,
+    setCahDecks,
+    addCustomDeck,
+    refreshDecks,
     loadLastRoom,
     clearActionError,
   };

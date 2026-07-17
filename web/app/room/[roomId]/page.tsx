@@ -259,6 +259,9 @@ export default function RoomPage() {
                 onSetPlaylist={(playlist) => room.setPlaylist(playlist)}
                 onLeave={() => room.leaveRoom()}
                 onKick={(id) => room.kickPlayer(id)}
+                decks={room.decks}
+                onSetCahDecks={(ids) => room.setCahDecks(ids)}
+                onAddCustomDeck={(deck) => room.addCustomDeck(deck)}
               />
             )}
 

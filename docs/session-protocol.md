@@ -92,3 +92,9 @@ Games implement `games.Adapter` (`server/internal/games/adapter.go`): a self-dri
 
 - `session.pause` — admin, `playing` status only. Freezes the show: the pending game timer stops, `game.action`/`game.stream` are rejected (`paused`) until resume, and the room snapshot carries `paused: true` (render the pause overlay from it).
 - `session.resume` — admin. Shifts every pending game deadline forward by the frozen duration (games implement `Shift`), re-arms the timer, and re-broadcasts `game.state` so client countdowns pick up the shifted deadline.
+
+## CAH decks
+
+- `lobby.decks.list` → `lobby.decks.list.ok {decks: [{id,name,locale,nsfw,black,white}]}` — decks the room can pick (built-in ∪ this room's custom uploads). Fetched on room entry.
+- `session.cahdecks.set {decks: [id,...]}` — admin. Records which decks CAH shuffles together (invalid ids dropped; empty = the locale's base deck). Selection is on `room.cahDeckIds` in the snapshot.
+- `session.deck.add {deck: {name, locale?, nsfw?, black:[{text,pick}], white:[]}}` — admin. Validates + stores a custom deck for the room (namespaced id `custom:<name>`), auto-selects it. Errors: `invalid_deck` (message carries the reason), `too_many_decks`. Deck format: black cards are `{text, pick}` where `pick` ∈ {1,2}; a question card (no `____`) is pick 1, a fill-in has `pick` blanks. Built-in decks: base_en, base_pt-BR, party_en, nsfw_en, nsfw_pt-BR.

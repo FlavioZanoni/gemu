@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
-import type { Player, RoomSnapshot } from "@/lib/protocol";
+import type { CustomDeck, DeckMeta, Player, RoomSnapshot } from "@/lib/protocol";
 import { gamesCatalog } from "@/lib/games";
+import { DeckPicker } from "./DeckPicker";
 import { hueFor } from "@/components/ui/gameHues";
 import {
   Button,
@@ -27,6 +28,9 @@ export function LobbyScreen({
   onSetPlaylist,
   onLeave,
   onKick,
+  decks,
+  onSetCahDecks,
+  onAddCustomDeck,
 }: {
   snapshot: RoomSnapshot;
   players: Player[];
@@ -37,9 +41,22 @@ export function LobbyScreen({
   onSetPlaylist: (playlist: string[]) => void;
   onLeave: () => void;
   onKick?: (playerId: string) => void;
+  decks: DeckMeta[];
+  onSetCahDecks: (ids: string[]) => void;
+  onAddCustomDeck: (deck: CustomDeck) => void;
 }) {
   const { t } = useI18n();
   const [howToOpen, setHowToOpen] = useState(false);
+  const [deckPickerOpen, setDeckPickerOpen] = useState(false);
+
+  const toggleDeck = (id: string) => {
+    const base = decks.filter((d) => d.id.startsWith("base_")).map((d) => d.id);
+    const current = snapshot.cahDeckIds.length > 0 ? snapshot.cahDeckIds : base;
+    const next = current.includes(id)
+      ? current.filter((d) => d !== id)
+      : [...current, id];
+    onSetCahDecks(next);
+  };
 
   const connectedPlayers = useMemo(
     () => players.filter((p) => p.connected),
@@ -147,12 +164,38 @@ export function LobbyScreen({
                           ✓ in playlist
                         </div>
                       )}
+                      {/* CAH: a decks button (host tunes the deck set). */}
+                      {game.type === "cah" && selected && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeckPickerOpen(true);
+                          }}
+                          className="mt-2 rounded-full border-2 px-2.5 py-1 font-mono text-[10px] font-bold"
+                          style={{ borderColor: hue.ink, color: hue.ink }}
+                        >
+                          🃏 {t("decks.button")}
+                          {snapshot.cahDeckIds.length > 0
+                            ? ` · ${snapshot.cahDeckIds.length}`
+                            : ""}
+                        </button>
+                      )}
                     </div>
                   );
                 })}
               </div>
             </div>
           )}
+
+          <DeckPicker
+            open={deckPickerOpen}
+            onClose={() => setDeckPickerOpen(false)}
+            decks={decks}
+            selected={snapshot.cahDeckIds}
+            onToggle={toggleDeck}
+            onAddCustom={onAddCustomDeck}
+          />
 
           {/* Ready/Start buttons */}
           <div className="flex gap-3 flex-wrap">

@@ -68,6 +68,7 @@ export type RoomSnapshot = {
   players: Player[];
   status: RoomStatus;
   paused: boolean;
+  cahDeckIds: string[];
   playlist: string[];
   nextGameType: string;
   nextGameName: string;
@@ -105,3 +106,21 @@ export type SessionFinal = {
 
 // Host-configurable knobs per game (docs/session-protocol.md).
 export type GameSettings = Record<string, number>;
+
+export type DeckMeta = {
+  id: string;
+  name: string;
+  locale: string;
+  nsfw: boolean;
+  black: number;
+  white: number;
+};
+
+// A custom deck the host uploads (Gemu deck JSON format).
+export type CustomDeck = {
+  name: string;
+  locale?: string;
+  nsfw?: boolean;
+  black: { text: string; pick: number }[];
+  white: string[];
+};

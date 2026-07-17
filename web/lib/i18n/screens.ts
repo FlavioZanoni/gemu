@@ -58,6 +58,20 @@ export const screens = {
     "home.drawDesc": "Draw on the canvas to create your unique avatar",
     "home.clearDoodle": "Clear",
 
+    // CAH deck picker
+    "decks.button": "Decks",
+    "decks.title": "Cartas — Decks",
+    "decks.pickHint": "Tick the decks to shuffle together",
+    "decks.cards": "cards",
+    "decks.custom": "Custom",
+    "decks.importCustom": "Import a custom deck",
+    "decks.pasteLabel": "Paste deck JSON",
+    "decks.pastePlaceholder": "{ \"name\": \"My deck\", \"black\": [{\"text\":\"____ ruined it.\",\"pick\":1}], \"white\": [\"...\"] }",
+    "decks.addDeck": "Add deck",
+    "decks.done": "Done",
+    "decks.badJson": "That's not valid JSON.",
+    "decks.badShape": "Deck needs a name, black[], and white[].",
+
     // Lobby screen
     "lobby.playlist": "Playlist",
     "lobby.playlistDesc": "Games to play in order",
@@ -183,6 +197,20 @@ export const screens = {
     "home.drawYourAvatar": "Desenhe seu avatar",
     "home.drawDesc": "Desenhe na tela para criar seu avatar único",
     "home.clearDoodle": "Limpar",
+
+    // CAH deck picker
+    "decks.button": "Decks",
+    "decks.title": "Cartas — Decks",
+    "decks.pickHint": "Marque os decks para embaralhar juntos",
+    "decks.cards": "cartas",
+    "decks.custom": "Próprio",
+    "decks.importCustom": "Importar deck próprio",
+    "decks.pasteLabel": "Cole o JSON do deck",
+    "decks.pastePlaceholder": "{ \"name\": \"Meu deck\", \"black\": [{\"text\":\"____ estragou tudo.\",\"pick\":1}], \"white\": [\"...\"] }",
+    "decks.addDeck": "Adicionar deck",
+    "decks.done": "Pronto",
+    "decks.badJson": "JSON inválido.",
+    "decks.badShape": "O deck precisa de name, black[] e white[].",
 
     // Lobby screen
     "lobby.playlist": "Lista de reprodução",
