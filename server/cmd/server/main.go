@@ -19,6 +19,8 @@ func main() {
 	registry.Register(games.NewInventionFactory())
 	registry.Register(games.NewGarticFactory())
 	registry.Register(games.NewStopFactory())
+	registry.Register(games.NewGarticPhoneFactory())
+	registry.Register(games.NewCahFactory())
 
 	hub := ws.NewHub(registry)
 	router := ws.NewRouter(hub)
