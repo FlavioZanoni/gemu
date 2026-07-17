@@ -80,9 +80,22 @@ func (h *Hub) RemoveClient(clientID string) {
 	h.mu.Lock()
 	client, ok := h.clients[clientID]
 	delete(h.clients, clientID)
+	// Check if this session has been taken over by a newer client (e.g. after
+	// a refresh / brief network blip rejoined before the old socket timed out).
+	// In that case the session is still very much connected and we must not
+	// flip it back to disconnected when the old socket finally drains.
+	sessionTakenOver := false
+	if ok && client.SessionID != "" && client.RoomID != "" {
+		for _, other := range h.clients {
+			if other.SessionID == client.SessionID && other.RoomID == client.RoomID {
+				sessionTakenOver = true
+				break
+			}
+		}
+	}
 	h.mu.Unlock()
 
-	if ok && client.RoomID != "" {
+	if ok && client.RoomID != "" && !sessionTakenOver {
 		roomID := client.RoomID
 		playerID := client.Player.ID
 		room, err := h.rooms.UpdatePlayer(roomID, playerID, func(player *rooms.Player) {
