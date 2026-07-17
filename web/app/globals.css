@@ -142,6 +142,97 @@ body,
   animation: pop-in 0.35s cubic-bezier(0.2, 1.4, 0.4, 1) both;
 }
 
+.animate-slam {
+  animation: slam 0.5s ease-out both;
+}
+
+.animate-rise {
+  animation: rise 0.5s ease-out both;
+}
+
+.animate-fall {
+  animation: fall linear both;
+}
+
+.animate-winPop {
+  animation: winPop 0.6s ease-out both;
+}
+
+@keyframes slam {
+  0% {
+    transform: scale(0.6) rotate(-8deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15) rotate(2deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(-2deg);
+    opacity: 1;
+  }
+}
+
+@keyframes rise {
+  0% {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fall {
+  0% {
+    transform: translateY(-40px) rotate(0);
+  }
+  100% {
+    transform: translateY(105vh) rotate(720deg);
+  }
+}
+
+@keyframes dealUp {
+  from {
+    transform: translate(0, 360px) rotate(0deg);
+    opacity: 0;
+  }
+}
+
+@keyframes throwIn {
+  from {
+    transform: translate(0, 260px) rotate(40deg);
+    opacity: 0;
+  }
+}
+
+@keyframes flipIn {
+  from {
+    transform: rotateY(90deg) scale(0.9);
+    opacity: 0;
+  }
+}
+
+@keyframes winPop {
+  0% {
+    transform: scale(1) rotate(0);
+  }
+  45% {
+    transform: scale(1.14) rotate(-3deg);
+  }
+  100% {
+    transform: scale(1.07) rotate(-1.5deg);
+  }
+}
+
+@keyframes handOff {
+  to {
+    transform: translate(0, 340px) rotate(6deg);
+    opacity: 0;
+  }
+}
+
 button,
 [role="button"],
 [role="checkbox"],

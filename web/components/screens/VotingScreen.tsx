@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import type { VoteState, VoteResult } from "@/lib/protocol";
 import { gamesCatalog } from "@/lib/games";
-import { Card, Marquee, TimerBadge } from "@/components/ui";
+import { Marquee, TimerBadge, Bulbs } from "@/components/ui";
 import { hueFor } from "@/components/ui/gameHues";
 
 export function VotingScreen({
@@ -31,8 +31,9 @@ export function VotingScreen({
 
   if (voteResult) {
     const winnerGame = gamesCatalog.find((g) => g.type === voteResult.gameType);
+    const hue = hueFor(voteResult.gameType);
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-6 text-center px-6">
+      <div className="flex flex-col items-center justify-center min-h-screen gap-6 text-center px-6 py-12">
         <div>
           <h1 className="slab text-4xl">{t("voting.upComingNext")}</h1>
           <p className="text-(--ink)/70 text-sm mt-2">
@@ -40,7 +41,7 @@ export function VotingScreen({
           </p>
         </div>
 
-        <Marquee caption={t("common.upNext")} className="pop-in">
+        <Marquee caption={t("common.upNext")} className="animate-winPop">
           {winnerGame?.name.toUpperCase() || voteResult.gameName}
         </Marquee>
 
@@ -56,52 +57,69 @@ export function VotingScreen({
   const votes = vote.counts || {};
 
   return (
-    <div className="flex flex-col gap-6 min-h-screen">
-      <div className="text-center px-6">
-        <h1 className="slab text-3xl">{t("voting.title")}</h1>
-        <p className="text-(--ink)/70 text-sm mt-2">
-          {t("voting.selectGame")}
-        </p>
-        <div className="mt-4 flex justify-center">
-          <TimerBadge deadline={vote.deadline} />
+    <div className="flex flex-col items-center justify-center min-h-screen gap-6 px-6 py-12">
+      {/* Header */}
+      <div className="text-center mb-4">
+        <div className="relative inline-block bg-(--panel) border-4 border-(--accent) rounded-2xl px-8 py-4 mb-6">
+          <Bulbs
+            count={3}
+            size={9}
+            className="absolute -top-4 left-0 right-0 px-8"
+            style={{ justifyContent: "space-between" }}
+          />
+          <h1 className="slab text-4xl">{t("voting.title")}</h1>
+          <div className="mono-caption mt-1">{t("voting.selectGame")}</div>
         </div>
       </div>
 
-      <div className="px-6 flex-1">
-        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
-          {vote.options.map((option) => {
-            const game = gamesCatalog.find((g) => g.type === option.type);
-            const hue = hueFor(option.type);
-            const isSelected = selectedGameType === option.type;
-            const voteCount = votes[option.type] || 0;
+      {/* Timer */}
+      <div className="mb-6">
+        <TimerBadge deadline={vote.deadline} />
+      </div>
 
-            return (
-              <Card
-                key={option.type}
-                variant={isSelected ? "selected" : "panel"}
-                gameType={option.type}
-                className="cursor-pointer transition active:scale-95"
-                onClick={() => {
-                  setSelectedGameType(option.type);
-                  onCastVote(option.type);
-                }}
-              >
-                <div className="text-sm font-bold text-(--ink) mb-1">
-                  {game?.name || option.name}
-                </div>
-                <div
-                  className="text-xs font-mono px-2 py-1 rounded inline-block mt-2"
-                  style={{
-                    background: `${hue.base}20`,
-                    color: hue.base,
-                  }}
-                >
-                  {voteCount} {voteCount === 1 ? t("voting.voteCount", { count: 1 }) : t("voting.voteCounts", { count: voteCount })}
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+      {/* Vote cards */}
+      <div className="flex gap-5 flex-wrap justify-center max-w-4xl">
+        {vote.options.map((option) => {
+          const game = gamesCatalog.find((g) => g.type === option.type);
+          const hue = hueFor(option.type);
+          const isSelected = selectedGameType === option.type;
+          const voteCount = votes[option.type] || 0;
+
+          return (
+            <div
+              key={option.type}
+              onClick={() => {
+                setSelectedGameType(option.type);
+                onCastVote(option.type);
+              }}
+              className={`w-56 rounded-2xl p-6 text-center cursor-pointer transition ${
+                isSelected ? "scale-105" : "hover:-translate-y-1"
+              }`}
+              style={{
+                background: `linear-gradient(180deg, ${hue.gradFrom}, ${hue.gradTo})`,
+                border: `2px solid ${isSelected ? "#fff" : hue.drop}`,
+                boxShadow: `0 5px 0 ${hue.drop}`,
+                color: hue.ink,
+              }}
+            >
+              <div className="text-sm font-bold opacity-75 mb-2">
+                {option.type.toUpperCase()}
+              </div>
+              <h3 className="slab text-2xl mb-1">{game?.name || option.name}</h3>
+              <div className="text-xs mb-2 opacity-75">{game?.players}</div>
+              <div className="text-xs font-bold mb-3 opacity-60">
+                {game?.minPlayers}–{Math.max(game?.minPlayers ?? 2, 10)}
+              </div>
+              <div className="slab text-5xl">{voteCount}</div>
+              <div className="text-xs font-bold mt-2">
+                {voteCount === 1 ? "vote" : "votes"}
+              </div>
+              {isSelected && (
+                <div className="text-sm font-bold mt-3">✓ Your vote</div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

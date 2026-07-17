@@ -320,42 +320,63 @@ export function InventionGame(props: GameProps & { onFullscreenToggle?: () => vo
 
       {phase === "presenting" ? (
         <div className="space-y-4">
-          <Banner variant="waiting">
+          <div style={{ textAlign: "center", fontSize: "10px", fontWeight: 700, letterSpacing: "0.25em", color: "#ff9d3f", marginBottom: "12px", textTransform: "uppercase" }}>
             {presenterId === playerId
-              ? t("invention.youPresenting")
-              : t("invention.watchPresenting", {
-                  name: playerNames.get(presenterId) ?? "the",
-                })}
-          </Banner>
+              ? "YOU'RE PITCHING…"
+              : `${playerNames.get(presenterId) ?? "SOMEONE"} IS PITCHING…`}
+          </div>
           {currentSubmission ? (
-            <Card variant="hero" gameType="invention">
-              <div className="space-y-2">
-                <div className="text-xs font-semibold text-(--ink)/70 uppercase tracking-wider">
-                  {t("invention.problemLabel")}
-                </div>
-                <div className="text-sm text-(--ink) mb-3">
-                  {currentSubmission.problem}
-                </div>
-                <div className="text-2xl font-bold text-(--ink)">
-                  {currentSubmission.title}
-                </div>
-                {currentSubmission.tagline ? (
-                  <div className="text-base italic text-(--ink)/80 mt-1">
-                    &ldquo;{currentSubmission.tagline}&rdquo;
-                  </div>
-                ) : null}
-                {currentSubmission.dataURL ? (
-                  <div className="mt-4 rounded-lg overflow-hidden border-2 border-(--ink)/20">
-                    <img
-                      src={currentSubmission.dataURL}
-                      alt={currentSubmission.title}
-                      className="w-full"
-                    />
-                  </div>
-                ) : null}
+            <div style={{ background: "#fff8e7", borderRadius: "18px", padding: "20px 18px", boxShadow: "0 6px 0 rgba(0,0,0,.35)", position: "relative" }}>
+              {/* PATENT PENDING sticker */}
+              <div style={{ position: "absolute", top: "-10px", right: "14px", background: "#ff9d3f", color: "#3d1f0e", fontSize: "9px", fontWeight: 700, borderRadius: "99px", padding: "4px 10px", transform: "rotate(3deg)", textTransform: "uppercase" }}>
+                PATENT PENDING
               </div>
-            </Card>
+
+              {/* Invention number */}
+              <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.2em", color: "#8a7f60", marginBottom: "6px", textTransform: "uppercase" }}>
+                INVENTION Nº 042
+              </div>
+
+              {/* Title */}
+              <div style={{ fontFamily: "'Alfa Slab One'", fontSize: "22px", color: "#1c1230", marginBottom: "8px", fontWeight: "bold" }}>
+                {currentSubmission.title}
+              </div>
+
+              {/* Tagline */}
+              {currentSubmission.tagline ? (
+                <div style={{ fontSize: "13px", lineHeight: "1.5", color: "#4a4232", marginBottom: "8px", fontStyle: "italic" }}>
+                  {currentSubmission.tagline}
+                </div>
+              ) : null}
+
+              {/* Drawing */}
+              {currentSubmission.dataURL ? (
+                <div style={{ marginTop: "12px", borderRadius: "8px", overflow: "hidden" }}>
+                  <img
+                    src={currentSubmission.dataURL}
+                    alt={currentSubmission.title}
+                    style={{ width: "100%", display: "block" }}
+                  />
+                </div>
+              ) : null}
+            </div>
           ) : null}
+
+          {/* Reaction pills (visual only - no backend functionality) */}
+          {currentSubmission && (
+            <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "12px" }}>
+              <span style={{ fontSize: "16px", background: "#2b1a3d", border: "2px solid #5a3f7a", borderRadius: "99px", padding: "6px 14px", display: "flex", alignItems: "center", gap: "4px" }}>
+                💰 <b style={{ fontFamily: "'Space Mono'", fontSize: "11px", fontWeight: 700, color: "#ffe9a8" }}>3</b>
+              </span>
+              <span style={{ fontSize: "16px", background: "#2b1a3d", border: "2px solid #5a3f7a", borderRadius: "99px", padding: "6px 14px", display: "flex", alignItems: "center", gap: "4px" }}>
+                🗑 <b style={{ fontFamily: "'Space Mono'", fontSize: "11px", fontWeight: 700, color: "#ffe9a8" }}>1</b>
+              </span>
+              <span style={{ fontSize: "16px", background: "#2b1a3d", border: "2px solid #ff9d3f", borderRadius: "99px", padding: "6px 14px", boxShadow: "0 0 12px rgba(255,157,63,.3)", display: "flex", alignItems: "center", gap: "4px" }}>
+                🚀 <b style={{ fontFamily: "'Space Mono'", fontSize: "11px", fontWeight: 700, color: "#ff9d3f" }}>4</b>
+              </span>
+            </div>
+          )}
+
           {isPresenter ? (
             <Button
               variant="hue"

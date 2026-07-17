@@ -11,6 +11,8 @@ import { VotingScreen } from "@/components/screens/VotingScreen";
 import { PodiumScreen } from "@/components/screens/PodiumScreen";
 import { JoinGateScreen } from "@/components/screens/JoinGateScreen";
 import { PauseOverlay } from "@/components/screens/PauseOverlay";
+import { IntroScreen } from "@/components/screens/IntroScreen";
+import { DrumrollOverlay } from "@/components/screens/DrumrollOverlay";
 import { Banner, CodePill } from "@/components/ui";
 
 export default function RoomPage() {
@@ -91,6 +93,19 @@ export default function RoomPage() {
   }, [room.gameResult, room.snapshot?.playedGames, status]);
 
   const showPodium = Boolean(room.sessionFinal) && !podiumDismissed;
+
+  // Drumroll moment: flash the winner overlay when the next-game vote lands.
+  const [drumrollFor, setDrumrollFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!room.voteResult) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDrumrollFor(room.voteResult.gameType);
+    const timer = setTimeout(() => setDrumrollFor(null), 3500);
+    return () => clearTimeout(timer);
+  }, [room.voteResult]);
+
+  // Game settings chosen on the intro screen, sent with game.start.
+  const [introSettings, setIntroSettings] = useState<{ rounds?: number; timer?: number }>({});
 
   if (room.kicked) {
     return (
@@ -218,7 +233,7 @@ export default function RoomPage() {
               />
             ) : (
               <>
-            {status === "lobby" && (
+            {status === "lobby" && !room.snapshot.nextGameType && (
               <LobbyScreen
                 snapshot={room.snapshot}
                 players={players}
@@ -229,6 +244,51 @@ export default function RoomPage() {
                 onSetPlaylist={(playlist) => room.setPlaylist(playlist)}
                 onLeave={() => room.leaveRoom()}
               />
+            )}
+
+            {/* Intro: a queued next game (vote winner / replay) gets the
+                "up next" treatment with how-to steps and host options. */}
+            {status === "lobby" && room.snapshot.nextGameType && (
+              <>
+                <IntroScreen
+                  gameType={room.snapshot.nextGameType}
+                  roundCount={introSettings.rounds ?? 3}
+                  roundTimer={introSettings.timer ?? 90}
+                  isAdmin={room.isAdmin}
+                  onSetRounds={(rounds) =>
+                    setIntroSettings((prev) => ({ ...prev, rounds }))
+                  }
+                  onSetTimer={(timer) =>
+                    setIntroSettings((prev) => ({ ...prev, timer }))
+                  }
+                  onReady={() => room.setReady(true)}
+                />
+                {room.isAdmin && (
+                  <div className="flex justify-center">
+                    <button
+                      className="buzzer rounded-2xl px-8 py-3.5 text-base"
+                      style={{
+                        background: "linear-gradient(180deg,#ffd23f,#f5b32a)",
+                        color: "var(--dark-ink)",
+                      }}
+                      onClick={() => {
+                        const timerKey: Record<string, string> = {
+                          stop: "answerSeconds",
+                          gartic: "turnSeconds",
+                          garticphone: "drawSeconds",
+                        };
+                        const settings: Record<string, number> = {};
+                        if (introSettings.rounds) settings.rounds = introSettings.rounds;
+                        const key = timerKey[room.snapshot!.nextGameType];
+                        if (introSettings.timer && key) settings[key] = introSettings.timer;
+                        room.startGame({ force: true, settings });
+                      }}
+                    >
+                      {t("lobby.startGame").toUpperCase()}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
 
             {status === "playing" && (
@@ -253,6 +313,8 @@ export default function RoomPage() {
                 onResume={() => room.resumeSession()}
               />
             )}
+
+            {drumrollFor && <DrumrollOverlay gameType={drumrollFor} />}
 
             {status === "results" && effectiveGameResult && (
               <ResultsScreen

@@ -51,6 +51,7 @@ export function StopGame(props: GameProps) {
   );
 
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [judged, setJudged] = useState<Set<string>>(new Set());
   const [rejected, setRejected] = useState<Set<string>>(new Set());
   const [showHowTo, setShowHowTo] = useState(round === 1 && phase === "answering");
 
@@ -109,8 +110,36 @@ export function StopGame(props: GameProps) {
   // Answering phase
   if (phase === "answering") {
     const allAnswered = categories.every((cat) => answers[cat]?.trim());
+    const filledCount = categories.filter((cat) => answers[cat]?.trim()).length;
+    const timeRemaining = deadline ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000)) : 0;
+    const showStopMoment = stopped && stoppedBy && deadline;
+
     return (
       <>
+        {showStopMoment && (
+          <div className="fixed inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_50%_40%,rgba(232,72,99,.35),transparent_70%)] bg-(--bg) z-50">
+            <div className="flex flex-col items-center justify-center gap-4 text-center">
+              <div className="w-14 h-14 rounded-full bg-[#fff8e7] border-4 border-[#ff4f6f] flex items-center justify-center">
+                <span className="text-xs font-mono text-(--dark-ink)">doodle</span>
+              </div>
+              <div className="text-lg font-mono text-(--danger) uppercase tracking-wider">
+                {playerNames.get(stoppedBy)} SLAMMED
+              </div>
+              <div className="font-display text-7xl text-white" style={{ textShadow: "0 6px 0 #8f1f33" }}>
+                STOP!
+              </div>
+              <div className="text-base font-sans text-(--ink)/70">
+                finish what you can…
+              </div>
+              <div
+                className="font-display text-5xl text-white bg-[linear-gradient(180deg,#ff6b85,#e84863)] rounded-2xl px-8 py-2 shadow-md"
+                style={{ animation: "tick 1s infinite" }}
+              >
+                {timeRemaining}
+              </div>
+            </div>
+          </div>
+        )}
         <HowToPlayModal
           open={showHowTo}
           gameType="stop"
@@ -119,13 +148,24 @@ export function StopGame(props: GameProps) {
           onClose={() => setShowHowTo(false)}
         />
         <div className="space-y-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="text-sm font-mono text-(--ink)/60">ROUND {round} OF {totalRounds}</div>
-              <div className="slab mt-1 text-4xl" style={{ color: "var(--hue-stop)" }}>
+          {/* Header with big letter tile and progress */}
+          <div className="flex items-start gap-4">
+            {/* Big letter tile */}
+            <div className="w-16 h-16 rounded-2xl bg-[linear-gradient(180deg,#ffd23f,#f5b32a)] shadow-lg flex items-center justify-center flex-shrink-0">
+              <div className="font-display text-4xl text-(--dark-ink)">
                 {letter}
               </div>
             </div>
+
+            <div className="flex-1">
+              <div className="text-xs font-mono text-(--ink)/50 uppercase tracking-wider mb-1">
+                EVERYTHING STARTS WITH
+              </div>
+              <div className="text-lg font-sans font-(--ink) font-semibold">
+                {filledCount} of {categories.length} filled — {allAnswered ? "ready!" : "keep going!"}
+              </div>
+            </div>
+
             <TimerBadge deadline={deadline} />
           </div>
 
@@ -135,34 +175,52 @@ export function StopGame(props: GameProps) {
             </Banner>
           )}
 
+          {/* Category rows */}
           <div className="space-y-2">
-            {categories.map((category) => (
-              <div key={category}>
-                <label className="block text-xs font-semibold text-(--ink)/70 mb-1">
-                  {category}
-                </label>
-                <input
-                  type="text"
-                  value={answers[category] ?? ""}
-                  onChange={(e) => handleAnswerChange(category, e.target.value)}
-                  disabled={stopped}
-                  placeholder={t("stop.answerFor", { category })}
-                  className="w-full rounded-lg border-2 border-(--line) bg-(--panel) px-3 py-2 text-(--ink) placeholder-text-(--ink)/40 font-sans disabled:opacity-50"
-                />
-              </div>
-            ))}
+            {categories.map((category, idx) => {
+              const hasAnswer = answers[category]?.trim() ?? false;
+              const isActive = idx === 0; // Highlight first empty or typing
+              return (
+                <div
+                  key={category}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-2xl border-2 transition ${
+                    isActive && !hasAnswer
+                      ? "border-[#ffd23f] bg-[rgba(255,210,63,.12)] shadow-sm"
+                      : hasAnswer
+                        ? "border-[#5a3f7a] bg-(--panel)"
+                        : "border-[#5a3f7a] bg-(--panel) opacity-75"
+                  }`}
+                >
+                  <label className="w-28 text-xs font-mono text-(--ink)/60 uppercase tracking-wider flex-shrink-0">
+                    {category}
+                  </label>
+                  <input
+                    type="text"
+                    value={answers[category] ?? ""}
+                    onChange={(e) => handleAnswerChange(category, e.target.value)}
+                    disabled={stopped}
+                    placeholder={letter + "..."}
+                    className="flex-1 bg-transparent border-none text-(--ink) placeholder-text-(--ink)/40 font-sans text-base disabled:opacity-50 outline-none"
+                  />
+                  {hasAnswer && (
+                    <span className="text-(--accent-2) text-lg flex-shrink-0">✓</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
-          <div className="flex gap-2">
-            <Button
-              variant="hue"
-              gameType="stop"
-              onClick={handleStop}
-              disabled={!allAnswered || stopped}
-              className="flex-1"
-            >
-              {t("stop.stopButton")}
-            </Button>
+          {/* STOP button */}
+          <button
+            onClick={handleStop}
+            disabled={!allAnswered || stopped}
+            className="w-full font-display text-2xl text-white bg-[linear-gradient(180deg,#ff6b85,#e84863)] rounded-2xl py-4 shadow-md disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition"
+            style={!allAnswered || stopped ? {} : { boxShadow: "0 7px 0 #8f1f33" }}
+          >
+            🛑 STOP!
+          </button>
+          <div className="text-center text-xs font-mono text-(--ink)/35">
+            SLAMMING STOP GIVES EVERYONE ELSE 5 SECONDS
           </div>
 
           <ScoreStrip standings={standings} players={props.players} playerId={props.playerId} className="mt-4" />
@@ -175,79 +233,131 @@ export function StopGame(props: GameProps) {
   if (phase === "validating") {
     const answers_data = publicState?.answers ?? {};
     const isValidated = privateState?.validated ?? false;
+    const validatedCount = publicState?.validatedCount ?? 0;
+
+    // Get all category-playerId pairs to validate
+    const allAnswerPairs: Array<{ category: string; playerId: string; item: any; index: number }> = [];
+    Object.entries(answers_data).forEach(([category, items]: [string, any]) => {
+      (items ?? []).forEach((item: any, index: number) => {
+        if (!item.autoInvalid) {
+          allAnswerPairs.push({ category, playerId: item.playerId, item, index });
+        }
+      });
+    });
+
+    // Find current answer to judge (first not yet judged)
+    const currentPairIndex = allAnswerPairs.findIndex(
+      (pair) => !judged.has(`${pair.category}|${pair.playerId}`)
+    );
+    const currentPair = currentPairIndex >= 0 ? allAnswerPairs[currentPairIndex] : null;
+
+    if (!currentPair) {
+      // All answers judged, show submit button
+      return (
+        <div className="space-y-4">
+          <Banner variant="waiting">{t("stop.validated")}</Banner>
+          {!isValidated && (
+            <Button
+              variant="hue"
+              gameType="stop"
+              onClick={handleValidate}
+              className="w-full"
+            >
+              {t("stop.validate")}
+            </Button>
+          )}
+          <ScoreStrip standings={standings} players={props.players} playerId={props.playerId} className="mt-4" />
+        </div>
+      );
+    }
+
+    // One-at-a-time validation
+    const { category, item } = currentPair;
+    const judgedCount = judged.size;
+    const totalToJudge = allAnswerPairs.length;
+    const tallyValid = totalToJudge - rejected.size;
+    const tallyNope = rejected.size;
+    const tallyPct = totalToJudge > 0 ? ((tallyValid / totalToJudge) * 100).toFixed(0) : "0";
 
     return (
       <div className="space-y-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="text-sm font-mono text-(--ink)/60">VALIDATION</div>
-            <div className="slab mt-1 text-2xl">Round {round}</div>
+        <div className="flex items-center justify-between gap-4 text-center">
+          <div className="text-xs font-mono text-(--ink)/60 uppercase tracking-wider">
+            JUDGING · {judgedCount + 1}/{totalToJudge}
           </div>
           <TimerBadge deadline={deadline} />
         </div>
 
-        {isValidated && (
-          <Banner variant="waiting">{t("stop.validated")}</Banner>
-        )}
+        <div className="text-center">
+          <div className="text-xs font-mono text-(--ink)/50 uppercase mb-3">
+            CATEGORY · {category} · LETTER {letter}
+          </div>
 
-        <div className="space-y-3">
-          {categories.map((category) => (
-            <div key={category} className="space-y-2">
-              <div className="text-sm font-semibold text-(--ink)">{category}</div>
-              <div className="space-y-1">
-                {(answers_data[category] ?? []).map((item: any, idx: number) => {
-                  const key = `${category}|${item.playerId}`;
-                  const isRejected = rejected.has(key);
-                  const isAutoInvalid = item.autoInvalid;
-
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        if (isAutoInvalid) return;
-                        setRejected((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(key)) {
-                            next.delete(key);
-                          } else {
-                            next.add(key);
-                          }
-                          return next;
-                        });
-                      }}
-                      disabled={isValidated || isAutoInvalid}
-                      className={`w-full rounded-lg border-2 px-3 py-2 text-left text-sm font-sans transition ${
-                        isAutoInvalid
-                          ? "border-dashed border-(--danger) bg-(--panel) text-(--danger) opacity-50"
-                          : isRejected
-                            ? "border-(--danger) bg-[#3d1420] text-(--ink)"
-                            : "border-(--line) bg-(--panel) text-(--ink)"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span>{item.answer}</span>
-                        <span className="text-xs text-(--ink)/50">
-                          {playerNames.get(item.playerId)}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+          {/* Cream card with answer */}
+          <div className="bg-[#fff8e7] rounded-3xl p-6 shadow-lg mb-4">
+            <div className="text-sm font-mono text-(--dark-ink)/70 mb-2 uppercase tracking-wider">
+              {playerNames.get(item.playerId)} WROTE
             </div>
-          ))}
-        </div>
+            <div className="font-display text-4xl text-(--bg) mb-2">
+              &ldquo;{item.answer}&rdquo;
+            </div>
+          </div>
 
-        {!isValidated && (
-          <Button
-            variant="hue"
-            gameType="stop"
-            onClick={handleValidate}
-            className="w-full"
-          >
-            {t("stop.validate")}
-          </Button>
-        )}
+          <div className="text-xs font-mono text-(--ink)/40 mb-4 uppercase">
+            IS THIS REAL?!
+          </div>
+
+          {/* VALID and NONSENSE buttons */}
+          <div className="flex gap-3 mb-4">
+            <button
+              onClick={() => {
+                // Mark as VALID - add to judged
+                setJudged((prev) => {
+                  const next = new Set(prev);
+                  next.add(`${category}|${item.playerId}`);
+                  return next;
+                });
+              }}
+              className="flex-1 font-display text-lg text-(--dark-ink) bg-[linear-gradient(180deg,#41e0c4,#28b89e)] rounded-2xl py-4 shadow-md hover:shadow-lg transition"
+              style={{ boxShadow: "0 5px 0 #0f6e5c" }}
+            >
+              ✓ VALID
+            </button>
+            <button
+              onClick={() => {
+                // Mark as NONSENSE - add to both judged and rejected
+                setJudged((prev) => {
+                  const next = new Set(prev);
+                  next.add(`${category}|${item.playerId}`);
+                  return next;
+                });
+                setRejected((prev) => {
+                  const next = new Set(prev);
+                  next.add(`${category}|${item.playerId}`);
+                  return next;
+                });
+              }}
+              className="flex-1 font-display text-lg text-white bg-[linear-gradient(180deg,#ff6b85,#e84863)] rounded-2xl py-4 shadow-md hover:shadow-lg transition"
+              style={{ boxShadow: "0 5px 0 #8f1f33" }}
+            >
+              ✗ NONSENSE
+            </button>
+          </div>
+
+          {/* Tally bar */}
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <span className="text-sm font-mono text-(--accent-2) font-bold">VALID {tallyValid}</span>
+            <div className="w-40 h-3 rounded-full bg-(--panel) border border-(--line) overflow-hidden flex">
+              <div className="bg-(--accent-2)" style={{ width: tallyPct + "%" }}></div>
+              <div className="flex-1 bg-(--danger)"></div>
+            </div>
+            <span className="text-sm font-mono text-(--danger) font-bold">{tallyNope} NOPE</span>
+          </div>
+
+          <div className="text-xs font-mono text-(--ink)/30">
+            UNIQUE VALID = 10 · DUPLICATE = 5 · NONSENSE = 0
+          </div>
+        </div>
 
         <ScoreStrip standings={standings} players={props.players} playerId={props.playerId} className="mt-4" />
       </div>
