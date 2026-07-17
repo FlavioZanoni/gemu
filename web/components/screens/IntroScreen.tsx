@@ -3,7 +3,7 @@
 import { useI18n } from "@/lib/i18n";
 import { gamesCatalog } from "@/lib/games";
 import { hueFor } from "@/components/ui/gameHues";
-import { Button } from "@/components/ui";
+import { Button, Bulbs } from "@/components/ui";
 
 export function IntroScreen({
   gameType,

@@ -57,28 +57,28 @@ export function VotingScreen({
   const votes = vote.counts || {};
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-6 px-6 py-12">
+    <div className="flex flex-col items-center justify-center min-h-screen gap-8 px-6 py-12">
       {/* Header */}
-      <div className="text-center mb-4">
-        <div className="relative inline-block bg-(--panel) border-4 border-(--accent) rounded-2xl px-8 py-4 mb-6">
+      <div className="text-center">
+        <div className="relative inline-block bg-(--panel) border-4 border-(--accent) rounded-2xl px-10 py-5 mb-8">
           <Bulbs
             count={3}
             size={9}
-            className="absolute -top-4 left-0 right-0 px-8"
-            style={{ justifyContent: "space-between" }}
+            className="absolute -top-4 left-0 right-0"
+            style={{ justifyContent: "space-between", padding: "0 2rem" }}
           />
-          <h1 className="slab text-4xl">{t("voting.title")}</h1>
-          <div className="mono-caption mt-1">{t("voting.selectGame")}</div>
+          <h1 className="slab text-4xl mb-1">{t("voting.title")}</h1>
+          <div className="mono-caption">{t("voting.selectGame")}</div>
         </div>
       </div>
 
       {/* Timer */}
-      <div className="mb-6">
+      <div>
         <TimerBadge deadline={vote.deadline} />
       </div>
 
       {/* Vote cards */}
-      <div className="flex gap-5 flex-wrap justify-center max-w-4xl">
+      <div className="flex gap-6 flex-wrap justify-center max-w-5xl">
         {vote.options.map((option) => {
           const game = gamesCatalog.find((g) => g.type === option.type);
           const hue = hueFor(option.type);
@@ -93,33 +93,38 @@ export function VotingScreen({
                 onCastVote(option.type);
               }}
               className={`w-56 rounded-2xl p-6 text-center cursor-pointer transition ${
-                isSelected ? "scale-105" : "hover:-translate-y-1"
+                isSelected ? "scale-105 shadow-xl" : "hover:-translate-y-1"
               }`}
               style={{
                 background: `linear-gradient(180deg, ${hue.gradFrom}, ${hue.gradTo})`,
-                border: `2px solid ${isSelected ? "#fff" : hue.drop}`,
+                border: `2px solid ${isSelected ? "rgba(255,255,255,0.4)" : "transparent"}`,
                 boxShadow: `0 5px 0 ${hue.drop}`,
                 color: hue.ink,
               }}
             >
-              <div className="text-sm font-bold opacity-75 mb-2">
-                {option.type.toUpperCase()}
+              <div className="text-xs font-bold opacity-75 mb-2 uppercase tracking-widest">
+                {option.type}
               </div>
-              <h3 className="slab text-2xl mb-1">{game?.name || option.name}</h3>
-              <div className="text-xs mb-2 opacity-75">{game?.players}</div>
-              <div className="text-xs font-bold mb-3 opacity-60">
+              <h3 className="slab text-2xl mb-2">{game?.name || option.name}</h3>
+              <div className="text-xs mb-1 opacity-80 font-semibold">{game?.players}</div>
+              <div className="text-xs font-bold mb-4 opacity-60">
                 {game?.minPlayers}–{Math.max(game?.minPlayers ?? 2, 10)}
               </div>
-              <div className="slab text-5xl">{voteCount}</div>
-              <div className="text-xs font-bold mt-2">
+              <div className="slab text-5xl mb-1">{voteCount}</div>
+              <div className="text-xs font-bold mb-3">
                 {voteCount === 1 ? "vote" : "votes"}
               </div>
               {isSelected && (
-                <div className="text-sm font-bold mt-3">✓ Your vote</div>
+                <div className="text-xs font-bold">✓ Your vote</div>
               )}
             </div>
           );
         })}
+      </div>
+
+      {/* Progress */}
+      <div className="mt-4 text-xs font-semibold text-(--ink)/70 uppercase tracking-widest">
+        {Object.values(votes).reduce((a, b) => a + b, 0)} of {vote.options.length} contestants voted
       </div>
     </div>
   );

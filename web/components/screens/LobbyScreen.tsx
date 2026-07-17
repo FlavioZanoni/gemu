@@ -14,6 +14,7 @@ import {
   CodePill,
   LangToggle,
   Bulbs,
+  playerColorFor,
 } from "@/components/ui";
 
 export function LobbyScreen({

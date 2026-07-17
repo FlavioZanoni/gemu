@@ -522,9 +522,9 @@ export const DrawingCanvas = forwardRef<
     <div className="flex flex-col gap-3">
       {/* Toolbar */}
       {!readOnly && (
-        <div className="flex flex-col gap-2 bg-(--panel-raised) rounded-lg p-3">
-          {/* Tools row 1: Drawing tools */}
-          <div className="flex gap-2 flex-wrap justify-center">
+        <div className="flex flex-col gap-2 rounded-lg p-3" style={{ background: "#2b1a3d" }}>
+          {/* Tools row 1: Drawing tools (6 tools) */}
+          <div className="flex gap-2 justify-center flex-wrap">
             {[
               { id: "brush" as const, label: "✏️" },
               { id: "eraser" as const, label: "◻" },
@@ -535,12 +535,21 @@ export const DrawingCanvas = forwardRef<
             ].map((t) => (
               <button
                 key={t.id}
-                onClick={() => setTool(t.id)}
-                className={`px-3 py-2 rounded-lg font-bold text-sm transition ${
-                  tool === t.id
-                    ? "bg-(--accent) text-(--dark-ink) border-2 border-(--accent)"
-                    : "bg-(--panel) text-(--ink) border-2 border-(--line)"
-                }`}
+                onClick={() => {
+                  setTool(t.id);
+                  // If picking a color-applying tool when eraser is active, revert to brush behavior
+                  if (tool === "eraser" && (t.id === "brush" || t.id === "line" || t.id === "rect" || t.id === "ellipse" || t.id === "fill")) {
+                    // color is already set, just switch tool
+                  }
+                }}
+                className="flex-1 max-w-14 h-12 rounded-2xl font-bold text-lg transition"
+                style={{
+                  background: tool === t.id ? "linear-gradient(180deg,#ffd23f,#f5b32a)" : "#2b1a3d",
+                  color: tool === t.id ? "#3d1f0e" : "#ffe9a8",
+                  border: tool === t.id ? "2px solid #ffd23f" : "2px solid #5a3f7a",
+                  boxShadow: tool === t.id ? "0 3px 0 rgba(0,0,0,.35)" : "none",
+                  cursor: "pointer",
+                }}
                 type="button"
                 title={t.id}
               >
@@ -549,17 +558,23 @@ export const DrawingCanvas = forwardRef<
             ))}
           </div>
 
-          {/* Tools row 2: Color swatches */}
+          {/* Tools row 2: Color swatches (12 colors) */}
           <div className="flex gap-2 flex-wrap justify-center">
             {COLOR_SWATCHES.map((c) => (
               <button
                 key={c}
-                onClick={() => setColor(c)}
-                className={`h-7 w-7 rounded-full border-2 transition`}
+                onClick={() => {
+                  setColor(c);
+                  // Switch to brush if eraser was active
+                  if (tool === "eraser") setTool("brush");
+                }}
+                className="h-8 w-8 rounded-full border-2 transition"
                 style={{
                   backgroundColor: c,
                   borderColor: color === c ? "#ffe9a8" : "rgba(255,255,255,.2)",
                   borderWidth: color === c ? "3px" : "2px",
+                  cursor: "pointer",
+                  padding: 0,
                 }}
                 type="button"
                 title="Color"
@@ -568,64 +583,92 @@ export const DrawingCanvas = forwardRef<
           </div>
 
           {/* Tools row 3: Sizes, fill, undo, clear */}
-          <div className="flex gap-2 flex-wrap justify-center items-center">
-            {/* Sizes */}
-            {BRUSH_SIZES.map((s) => (
-              <button
-                key={s}
-                className={`h-8 w-8 flex items-center justify-center rounded border-2 transition ${
-                  size === s ? "border-(--accent) bg-(--accent-faint)" : "border-(--line) bg-(--panel)"
-                }`}
-                onClick={() => setSize(s)}
-                type="button"
-                title={`Size ${s}px`}
-              >
-                <span
-                  className="rounded-full"
+          <div className="flex gap-2 flex-wrap justify-between items-center">
+            <div className="flex gap-2 items-center">
+              {/* Sizes */}
+              {BRUSH_SIZES.map((s) => (
+                <button
+                  key={s}
+                  className="h-10 w-10 flex items-center justify-center rounded-2xl transition"
                   style={{
-                    width: Math.max(2, s / 3),
-                    height: Math.max(2, s / 3),
-                    backgroundColor: size === s ? "#ffe9a8" : "rgba(255,233,168,.4)",
+                    background: size === s ? "#3a2751" : "#2b1a3d",
+                    border: size === s ? "2px solid #ffe9a8" : "2px solid #5a3f7a",
+                    cursor: "pointer",
                   }}
-                />
+                  onClick={() => setSize(s)}
+                  type="button"
+                  title={`Size ${s}px`}
+                >
+                  <span
+                    className="rounded-full"
+                    style={{
+                      width: Math.max(5, s * 0.8),
+                      height: Math.max(5, s * 0.8),
+                      backgroundColor: "#ffe9a8",
+                    }}
+                  />
+                </button>
+              ))}
+
+              {/* Fill toggle */}
+              <button
+                onClick={() => setFill(!fill)}
+                className="h-10 px-3 rounded-2xl text-xs font-bold transition"
+                style={{
+                  background: fill ? "#35d4b9" : "#2b1a3d",
+                  color: fill ? "#0c3d33" : "rgba(255,233,168,.6)",
+                  border: fill ? "2px solid #35d4b9" : "2px solid #5a3f7a",
+                  cursor: "pointer",
+                  fontSize: "11px",
+                  fontFamily: "'Space Mono', monospace",
+                }}
+                type="button"
+                title="Fill toggle"
+              >
+                {fill ? "FILL: ON" : "FILL: OFF"}
               </button>
-            ))}
+            </div>
 
-            {/* Fill toggle */}
-            <button
-              onClick={() => setFill(!fill)}
-              className={`px-2 py-1 rounded text-xs font-bold transition border-2 ${
-                fill
-                  ? "bg-(--accent) text-(--dark-ink) border-(--accent)"
-                  : "bg-(--panel) text-(--ink) border-(--line)"
-              }`}
-              type="button"
-              title="Fill toggle"
-            >
-              FILL
-            </button>
+            <div className="flex gap-2">
+              {/* Undo */}
+              <button
+                onClick={undo}
+                className="h-10 px-3.5 rounded-2xl text-xs font-bold transition"
+                style={{
+                  background: "#2b1a3d",
+                  color: "#ffe9a8",
+                  border: "2px solid #5a3f7a",
+                  cursor: "pointer",
+                  boxShadow: "0 3px 0 rgba(0,0,0,.35)",
+                  fontSize: "13px",
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontWeight: "700",
+                }}
+                type="button"
+                title="Undo"
+              >
+                ↩ Undo
+              </button>
 
-            <div className="flex-1" />
-
-            {/* Undo and Clear */}
-            <button
-              onClick={undo}
-              className="px-2 py-1 rounded text-xs font-bold transition border-2 bg-(--panel) text-(--ink) border-(--line) hover:border-(--accent)"
-              type="button"
-              title="Undo"
-            >
-              ↩ Undo
-            </button>
-
-            <button
-              onClick={clear}
-              className="px-3 py-1 rounded text-xs font-bold transition border-none text-white bg-gradient-to-b from-[#ff6b85] to-[#e84863]"
-              style={{ boxShadow: "0 3px 0 #8f1f33" }}
-              type="button"
-              title="Clear"
-            >
-              Clear
-            </button>
+              {/* Clear */}
+              <button
+                onClick={clear}
+                className="h-10 px-3.5 rounded-2xl text-xs font-bold transition text-white"
+                style={{
+                  background: "linear-gradient(180deg,#ff6b85,#e84863)",
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: "0 3px 0 #8f1f33",
+                  fontSize: "13px",
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontWeight: "700",
+                }}
+                type="button"
+                title="Clear"
+              >
+                Clear
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -633,7 +676,7 @@ export const DrawingCanvas = forwardRef<
       {/* Canvas */}
       <div
         ref={containerRef}
-        className="flex items-center justify-center rounded-2xl overflow-hidden"
+        className="flex items-center justify-center rounded-3xl overflow-hidden"
         style={{
           backgroundColor: "#fff8e7",
           border: "3px solid #5a3f7a",

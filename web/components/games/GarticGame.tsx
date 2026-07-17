@@ -159,45 +159,14 @@ export function GarticGame(props: GameProps) {
               </div>
             </div>
 
-            {/* Canvas */}
-            <div style={{ borderRadius: "18px", border: "3px solid var(--hue-gartic)", boxShadow: "0 6px 0 rgba(0,0,0,.35)", marginBottom: "12px" }}>
+            {/* Canvas with built-in toolbar from DrawingCanvas */}
+            <div style={{ borderRadius: "18px", border: "3px solid var(--hue-gartic)", boxShadow: "0 6px 0 rgba(0,0,0,.35)", marginBottom: "12px", overflow: "hidden" }}>
               <DrawingCanvas
                 ref={canvasRef}
                 gameType="gartic"
                 onStrokeBatch={isDrawer ? handleCanvasSendStroke : undefined}
                 readOnly={!isDrawer}
               />
-            </div>
-
-            {/* Drawing toolbar */}
-            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-              <div style={{ display: "flex", gap: "5px" }}>
-                {["#000000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF", "#FFFFFF"].map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => {}}
-                    style={{
-                      width: "30px",
-                      height: "30px",
-                      borderRadius: "99px",
-                      background: color,
-                      border: "1px solid rgba(0,0,0,.2)",
-                      cursor: "pointer",
-                      padding: 0,
-                    }}
-                  />
-                ))}
-              </div>
-              <span style={{ flex: 1 }}></span>
-              <button style={{ height: "38px", padding: "0 14px", borderRadius: "11px", border: "2px solid #5a3f7a", background: "#2b1a3d", color: "#ffe9a8", font: "700 12px 'Space Grotesk'", cursor: "pointer" }}>
-                ◻ Eraser
-              </button>
-              <button style={{ height: "38px", padding: "0 14px", borderRadius: "11px", border: "2px solid #5a3f7a", background: "#2b1a3d", color: "#ffe9a8", font: "700 12px 'Space Grotesk'", cursor: "pointer", boxShadow: "0 3px 0 rgba(0,0,0,.35)" }}>
-                ↩ Undo
-              </button>
-              <button style={{ height: "38px", padding: "0 14px", borderRadius: "11px", border: "none", background: "linear-gradient(180deg,#ff6b85,#e84863)", color: "#fff", font: "700 12px 'Space Grotesk'", cursor: "pointer", boxShadow: "0 3px 0 #8f1f33" }}>
-                Clear
-              </button>
             </div>
           </div>
 
