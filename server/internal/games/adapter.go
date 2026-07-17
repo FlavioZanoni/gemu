@@ -22,6 +22,9 @@ type Options struct {
 	// Settings are host-chosen knobs from game.start (rounds, timers, ...).
 	// Games read what they understand via SettingInt and clamp to sane ranges.
 	Settings map[string]any
+	// Decks are the resolved CAH decks to play with (built-in + custom,
+	// already merged/defaulted by the hub). Ignored by non-CAH games.
+	Decks []Deck
 }
 
 // SettingInt reads an integer knob from host-provided settings, falling back

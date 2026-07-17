@@ -69,8 +69,11 @@ type Room struct {
 	Players    map[string]Player `json:"players"`
 	AdminChain []string          `json:"adminChain"`
 
-	Status        Status         `json:"status"`
-	Paused        bool           `json:"paused"`
+	Status Status `json:"status"`
+	Paused bool   `json:"paused"`
+	// CahDeckIDs are the deck ids selected for CAH (built-in or custom);
+	// empty means the locale's base deck.
+	CahDeckIDs    []string       `json:"cahDeckIds"`
 	Playlist      []string       `json:"playlist"`
 	NextGameType  string         `json:"nextGameType"`
 	NextGameName  string         `json:"nextGameName"`
@@ -125,6 +128,7 @@ func (r *Room) Snapshot() map[string]any {
 		"players":       players,
 		"status":        r.Status,
 		"paused":        r.Paused,
+		"cahDeckIds":    append([]string{}, r.CahDeckIDs...),
 		"playlist":      playlist,
 		"nextGameType":  r.NextGameType,
 		"nextGameName":  r.NextGameName,
@@ -300,6 +304,20 @@ func (r *Room) SetPlaylist(playlist []string) {
 			r.NextGameName = ""
 		}
 	}
+}
+
+func (r *Room) SetCahDeckIDs(ids []string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.CahDeckIDs = ids
+}
+
+func (r *Room) GetCahDeckIDs() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]string, len(r.CahDeckIDs))
+	copy(out, r.CahDeckIDs)
+	return out
 }
 
 func (r *Room) GetPlaylist() []string {

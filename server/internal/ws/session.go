@@ -1,9 +1,11 @@
 package ws
 
 import (
+	"encoding/json"
 	"log"
 	"math/rand"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,6 +31,43 @@ type gameSession struct {
 	voteOptions  []string
 	votes        map[string]string
 	voteDeadline time.Time
+
+	// customDecks are host-uploaded CAH decks for this room, selectable
+	// alongside the built-ins.
+	customDecks []games.Deck
+}
+
+// resolveCahDecks turns selected deck ids into decks (built-in ∪ custom),
+// defaulting to the locale's base deck when nothing valid is selected.
+func (s *gameSession) resolveCahDecks(ids []string, locale string) []games.Deck {
+	var decks []games.Deck
+	for _, id := range ids {
+		if d, ok := games.BuiltinDeck(id); ok {
+			decks = append(decks, d)
+			continue
+		}
+		for _, c := range s.customDecks {
+			if c.ID == id {
+				decks = append(decks, c)
+				break
+			}
+		}
+	}
+	if len(decks) == 0 {
+		if base, ok := games.BuiltinDeck(games.DefaultDeckID(locale)); ok {
+			decks = []games.Deck{base}
+		}
+	}
+	return decks
+}
+
+// deckMetas lists every deck the room can pick (built-in + custom).
+func (s *gameSession) deckMetas() []games.DeckMeta {
+	metas := games.BuiltinDeckMetas()
+	for _, c := range s.customDecks {
+		metas = append(metas, c.Meta())
+	}
+	return metas
 }
 
 func (h *Hub) session(roomID string) (*gameSession, bool) {
@@ -460,6 +499,112 @@ func (h *Hub) handleSessionResume(client *Client, env Envelope) {
 	h.broadcastRoom(roomID)
 	// Re-broadcast state (shifted deadlines) and re-arm the timer.
 	h.afterAdapterCall(roomID, s)
+}
+
+// handleDecksList returns the decks this room can pick from (built-in +
+// this room's custom uploads). Works with or without a running game.
+func (h *Hub) handleDecksList(client *Client, env Envelope) {
+	metas := games.BuiltinDeckMetas()
+	if s, ok := h.session(client.RoomID); ok {
+		s.mu.Lock()
+		metas = s.deckMetas()
+		s.mu.Unlock()
+	}
+	h.Send(client, Envelope{Type: "lobby.decks.list.ok", RequestID: env.RequestID, Payload: map[string]any{"decks": metas}})
+}
+
+// handleCahDecksSet records which decks CAH will use. Admin, lobby/results.
+func (h *Hub) handleCahDecksSet(client *Client, env Envelope) {
+	room, s, errCode := h.roomAndSession(client.RoomID)
+	if errCode != "" {
+		h.sendError(client, "session.cahdecks.set.error", env.RequestID, errCode)
+		return
+	}
+	if room.AdminID() != client.Player.ID {
+		h.sendError(client, "session.cahdecks.set.error", env.RequestID, "not_admin")
+		return
+	}
+	ids := decodeStringSlice(env.Payload, "decks")
+	// Keep only ids that resolve to a real deck (built-in or custom).
+	s.mu.Lock()
+	valid := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if _, ok := games.BuiltinDeck(id); ok {
+			valid = append(valid, id)
+			continue
+		}
+		for _, c := range s.customDecks {
+			if c.ID == id {
+				valid = append(valid, id)
+				break
+			}
+		}
+	}
+	s.mu.Unlock()
+	room.SetCahDeckIDs(valid)
+	h.Send(client, Envelope{Type: "session.cahdecks.set.ok", RequestID: env.RequestID})
+	h.broadcastRoom(client.RoomID)
+}
+
+// handleDeckAdd validates and stores a host-uploaded custom CAH deck for the
+// room, then selects it. Admin only.
+func (h *Hub) handleDeckAdd(client *Client, env Envelope) {
+	room, s, errCode := h.roomAndSession(client.RoomID)
+	if errCode != "" {
+		h.sendError(client, "session.deck.add.error", env.RequestID, errCode)
+		return
+	}
+	if room.AdminID() != client.Player.ID {
+		h.sendError(client, "session.deck.add.error", env.RequestID, "not_admin")
+		return
+	}
+	raw, err := json.Marshal(env.Payload["deck"])
+	if err != nil {
+		h.sendError(client, "session.deck.add.error", env.RequestID, "invalid_deck")
+		return
+	}
+	deck, err := games.ParseDeck(raw)
+	if err != nil {
+		h.Send(client, Envelope{Type: "session.deck.add.error", RequestID: env.RequestID, Payload: map[string]any{"code": "invalid_deck", "message": err.Error()}})
+		return
+	}
+
+	s.mu.Lock()
+	// Custom deck ids are namespaced so they can't shadow a built-in.
+	deck.ID = "custom:" + strings.ToLower(strings.ReplaceAll(deck.Name, " ", "_"))
+	if len(s.customDecks) >= 20 {
+		s.mu.Unlock()
+		h.sendError(client, "session.deck.add.error", env.RequestID, "too_many_decks")
+		return
+	}
+	replaced := false
+	for i, c := range s.customDecks {
+		if c.ID == deck.ID {
+			s.customDecks[i] = deck
+			replaced = true
+			break
+		}
+	}
+	if !replaced {
+		s.customDecks = append(s.customDecks, deck)
+	}
+	s.mu.Unlock()
+
+	// Auto-select the freshly added deck.
+	selected := room.GetCahDeckIDs()
+	found := false
+	for _, id := range selected {
+		if id == deck.ID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		room.SetCahDeckIDs(append(selected, deck.ID))
+	}
+
+	h.Send(client, Envelope{Type: "session.deck.add.ok", RequestID: env.RequestID, Payload: map[string]any{"deck": deck.Meta()}})
+	h.broadcastRoom(client.RoomID)
 }
 
 func (h *Hub) handleSessionPlaylistSet(client *Client, env Envelope) {

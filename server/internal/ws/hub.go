@@ -245,6 +245,12 @@ func (h *Hub) HandleMessage(client *Client, env Envelope) {
 		h.handleSessionVoteCast(client, env)
 	case "session.end":
 		h.handleSessionEnd(client, env)
+	case "lobby.decks.list":
+		h.handleDecksList(client, env)
+	case "session.cahdecks.set":
+		h.handleCahDecksSet(client, env)
+	case "session.deck.add":
+		h.handleDeckAdd(client, env)
 	default:
 		h.Send(client, Envelope{Type: "system.error", RequestID: env.RequestID, Payload: map[string]any{"code": "unknown_type", "message": "unknown message type"}})
 	}
@@ -760,8 +766,12 @@ func (h *Hub) handleGameStart(client *Client, env Envelope) {
 	}
 
 	settings, _ := env.Payload["settings"].(map[string]any)
+	opts := games.Options{Room: room, Locale: room.Locale, Settings: settings}
+	if factory.Type == "cah" {
+		opts.Decks = s.resolveCahDecks(room.GetCahDeckIDs(), room.Locale)
+	}
 	adapter := factory.New()
-	adapter.Start(roomID, games.Options{Room: room, Locale: room.Locale, Settings: settings})
+	adapter.Start(roomID, opts)
 	s.adapter = adapter
 	room.SetCurrentGame(factory.Type, factory.Name)
 	room.SetNextGame("", "")

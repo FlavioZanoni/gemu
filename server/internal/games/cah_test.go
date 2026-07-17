@@ -547,71 +547,77 @@ func TestCahPlayerJoinDealedNextRound(t *testing.T) {
 	}
 }
 
-func TestCahEnglishDeckLoads(t *testing.T) {
-	game := &CahGame{}
-	if err := game.loadDecks("en"); err != nil {
-		t.Fatalf("failed to load en deck: %v", err)
+func TestBuiltinDecksValid(t *testing.T) {
+	metas := BuiltinDeckMetas()
+	if len(metas) < 5 {
+		t.Fatalf("expected at least 5 built-in decks (base en/pt, party, nsfw en/pt), got %d", len(metas))
 	}
-
-	if len(game.blackDeck) < 20 {
-		t.Fatalf("en deck should have >= 20 black cards, got %d", len(game.blackDeck))
-	}
-	if len(game.whiteDeck) < 60 {
-		t.Fatalf("en deck should have >= 60 white cards, got %d", len(game.whiteDeck))
-	}
-
-	// Check black cards
-	for i, card := range game.blackDeck {
-		if card.Pick != 1 && card.Pick != 2 {
-			t.Fatalf("en black card %d has invalid pick %d", i, card.Pick)
+	// Base decks must exist for both locales.
+	for _, want := range []string{"base_en", "base_pt-BR"} {
+		d, ok := BuiltinDeck(want)
+		if !ok {
+			t.Fatalf("missing built-in deck %s", want)
 		}
-		if card.Pick == 2 {
-			count := strings.Count(card.Text, "____")
-			if count != 2 {
-				t.Fatalf("en black card %d with pick=2 should have 2 blanks, got %d", i, count)
+		if len(d.Black) < 20 || len(d.White) < 60 {
+			t.Fatalf("%s should be a full base deck, got %d black / %d white", want, len(d.Black), len(d.White))
+		}
+	}
+	// Every deck: valid pick/blank cards, non-empty whites.
+	for _, m := range metas {
+		d, _ := BuiltinDeck(m.ID)
+		for _, c := range d.Black {
+			blanks := strings.Count(c.Text, "____")
+			if c.Pick != 1 && c.Pick != 2 {
+				t.Fatalf("deck %s: bad pick %d", d.ID, c.Pick)
+			}
+			if blanks != 0 && blanks != c.Pick {
+				t.Fatalf("deck %s: card %q has %d blanks, pick %d", d.ID, c.Text, blanks, c.Pick)
 			}
 		}
-	}
-
-	// Check white cards
-	for i, card := range game.whiteDeck {
-		if card == "" {
-			t.Fatalf("en white card %d is empty", i)
+		for _, w := range d.White {
+			if w == "" {
+				t.Fatalf("deck %s has an empty white card", d.ID)
+			}
 		}
 	}
 }
 
-func TestCahPortugueseDeckLoads(t *testing.T) {
+func TestCahMergesSelectedDecks(t *testing.T) {
+	room := &fakeRoom{players: []string{"p1", "p2", "p3"}, admin: "p1"}
+	base, _ := BuiltinDeck("base_en")
+	party, _ := BuiltinDeck("party_en")
 	game := &CahGame{}
-	if err := game.loadDecks("pt-BR"); err != nil {
-		t.Fatalf("failed to load pt-BR deck: %v", err)
+	game.Start("room-1", Options{Room: room, Locale: "en", Decks: []Deck{base, party}})
+	// Round 1 already drew one black card and dealt 3 hands of CahHandSize.
+	wantBlack := len(base.Black) + len(party.Black) - 1
+	wantWhite := len(base.White) + len(party.White) - 3*CahHandSize
+	if len(game.blackDeck) != wantBlack {
+		t.Fatalf("expected merged black pile %d, got %d", wantBlack, len(game.blackDeck))
 	}
+	if len(game.whiteDeck) != wantWhite {
+		t.Fatalf("expected merged white pile %d, got %d", wantWhite, len(game.whiteDeck))
+	}
+}
 
-	if len(game.blackDeck) < 20 {
-		t.Fatalf("pt-BR deck should have >= 20 black cards, got %d", len(game.blackDeck))
+func TestParseDeckRejectsBad(t *testing.T) {
+	bad := [][]byte{
+		[]byte(`{"name":"x","black":[{"text":"a ____ b ____","pick":1}],"white":["a","b","c","d","e","f","g","h"]}`),
+		[]byte(`{"name":"x","black":[{"text":"nope","pick":3}],"white":["a","b","c","d","e","f","g","h"]}`),
+		[]byte(`{"name":"x","black":[{"text":"a","pick":1}],"white":["a"]}`),
+		[]byte(`not json`),
 	}
-	if len(game.whiteDeck) < 60 {
-		t.Fatalf("pt-BR deck should have >= 60 white cards, got %d", len(game.whiteDeck))
-	}
-
-	// Check black cards
-	for i, card := range game.blackDeck {
-		if card.Pick != 1 && card.Pick != 2 {
-			t.Fatalf("pt-BR black card %d has invalid pick %d", i, card.Pick)
-		}
-		if card.Pick == 2 {
-			count := strings.Count(card.Text, "____")
-			if count != 2 {
-				t.Fatalf("pt-BR black card %d with pick=2 should have 2 blanks, got %d", i, count)
-			}
+	for i, raw := range bad {
+		if _, err := ParseDeck(raw); err == nil {
+			t.Fatalf("bad deck %d should have been rejected", i)
 		}
 	}
-
-	// Check white cards
-	for i, card := range game.whiteDeck {
-		if card == "" {
-			t.Fatalf("pt-BR white card %d is empty", i)
-		}
+	good := []byte(`{"name":"Mine","locale":"en","black":[{"text":"Q?","pick":1},{"text":"a ____","pick":1},{"text":"____ and ____","pick":2}],"white":["a","b","c","d","e","f","g","h"]}`)
+	d, err := ParseDeck(good)
+	if err != nil {
+		t.Fatalf("good deck rejected: %v", err)
+	}
+	if len(d.Black) != 3 || len(d.White) != 8 {
+		t.Fatalf("unexpected parsed deck size")
 	}
 }
 

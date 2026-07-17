@@ -1,26 +1,89 @@
 {
+  "id": "base_pt-BR",
+  "name": "Base (PT-BR)",
   "locale": "pt-BR",
+  "nsfw": false,
   "black": [
-    {"text": "Nunca saio de casa sem ____.", "pick": 1},
-    {"text": "Qual é aquele cheiro?", "pick": 1},
-    {"text": "A vida era perfeita até ____.", "pick": 1},
-    {"text": "Eu compraria isso por ____.", "pick": 1},
-    {"text": "As regras da ANAC agora proíbem ____ em aviões.", "pick": 1},
-    {"text": "Qual é meu superpoder secreto?", "pick": 1},
-    {"text": "Em vez de carvão, Papai Noel agora deixa ____ para crianças desobedientes.", "pick": 1},
-    {"text": "Prove que você não é um robô selecionando todas as imagens com ____.", "pick": 1},
-    {"text": "Por que o hipster se queimou a língua? Comeu seu ____ antes que ficasse popular.", "pick": 1},
-    {"text": "Qual é a pior coisa da internet?", "pick": 1},
-    {"text": "No novo filme da Disney, o verdadeiro poder de Cinderela é ____.", "pick": 1},
-    {"text": "Desculpe oficial, não sabia que o limite de velocidade para ____ era tão baixo.", "pick": 1},
-    {"text": "Última notícia: ____ causa aquecimento global.", "pick": 1},
-    {"text": "A escavação arqueológica revelou que dinossauros eram na verdade ____ o tempo todo.", "pick": 1},
-    {"text": "Meu terapeuta diz que preciso falar mais sobre ____, mas acho que devemos evitar.", "pick": 1},
-    {"text": "Isso não é ____, isso é ____.", "pick": 2},
-    {"text": "Era uma noite escura e tempestuosa quando ____ e ____ se apaixonaram.", "pick": 2},
-    {"text": "O novo restaurante na moda serve uma fusão de ____ com ____ que ninguém pediu.", "pick": 2},
-    {"text": "No clube exclusivo de cavalheiros, podia-se desfrutar de ____ enquanto lia sobre ____.", "pick": 2},
-    {"text": "A pior combinação possível: ____ acompanhado de ____.", "pick": 2}
+    {
+      "text": "Nunca saio de casa sem ____.",
+      "pick": 1
+    },
+    {
+      "text": "Qual é aquele cheiro?",
+      "pick": 1
+    },
+    {
+      "text": "A vida era perfeita até ____.",
+      "pick": 1
+    },
+    {
+      "text": "Eu compraria isso por ____.",
+      "pick": 1
+    },
+    {
+      "text": "As regras da ANAC agora proíbem ____ em aviões.",
+      "pick": 1
+    },
+    {
+      "text": "Qual é meu superpoder secreto?",
+      "pick": 1
+    },
+    {
+      "text": "Em vez de carvão, Papai Noel agora deixa ____ para crianças desobedientes.",
+      "pick": 1
+    },
+    {
+      "text": "Prove que você não é um robô selecionando todas as imagens com ____.",
+      "pick": 1
+    },
+    {
+      "text": "Por que o hipster se queimou a língua? Comeu seu ____ antes que ficasse popular.",
+      "pick": 1
+    },
+    {
+      "text": "Qual é a pior coisa da internet?",
+      "pick": 1
+    },
+    {
+      "text": "No novo filme da Disney, o verdadeiro poder de Cinderela é ____.",
+      "pick": 1
+    },
+    {
+      "text": "Desculpe oficial, não sabia que o limite de velocidade para ____ era tão baixo.",
+      "pick": 1
+    },
+    {
+      "text": "Última notícia: ____ causa aquecimento global.",
+      "pick": 1
+    },
+    {
+      "text": "A escavação arqueológica revelou que dinossauros eram na verdade ____ o tempo todo.",
+      "pick": 1
+    },
+    {
+      "text": "Meu terapeuta diz que preciso falar mais sobre ____, mas acho que devemos evitar.",
+      "pick": 1
+    },
+    {
+      "text": "Isso não é ____, isso é ____.",
+      "pick": 2
+    },
+    {
+      "text": "Era uma noite escura e tempestuosa quando ____ e ____ se apaixonaram.",
+      "pick": 2
+    },
+    {
+      "text": "O novo restaurante na moda serve uma fusão de ____ com ____ que ninguém pediu.",
+      "pick": 2
+    },
+    {
+      "text": "No clube exclusivo de cavalheiros, podia-se desfrutar de ____ enquanto lia sobre ____.",
+      "pick": 2
+    },
+    {
+      "text": "A pior combinação possível: ____ acompanhado de ____.",
+      "pick": 2
+    }
   ],
   "white": [
     "uma capivara suspeitosamente amigável",

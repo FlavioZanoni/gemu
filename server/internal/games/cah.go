@@ -1,8 +1,6 @@
 package games
 
 import (
-	"embed"
-	"encoding/json"
 	"math/rand"
 	"sort"
 	"time"
@@ -15,18 +13,6 @@ const (
 	CahJudgeSeconds  = 60
 	CahResultSeconds = 8
 )
-
-//go:embed decks/cah_*.json
-var cahDecks embed.FS
-
-type cahDeckData struct {
-	Locale string `json:"locale"`
-	Black  []struct {
-		Text string `json:"text"`
-		Pick int    `json:"pick"`
-	} `json:"black"`
-	White []string `json:"white"`
-}
 
 type cahBlackCard struct {
 	Text string
@@ -83,79 +69,28 @@ func (g *CahGame) Type() string {
 	return "cah"
 }
 
-func (g *CahGame) loadDecks(locale string) error {
-	filename := "decks/cah_" + locale + ".json"
-	data, err := cahDecks.ReadFile(filename)
-	if err != nil {
-		return err
-	}
-
-	var deck cahDeckData
-	if err := json.Unmarshal(data, &deck); err != nil {
-		return err
-	}
-
-	// Validate deck
-	if len(deck.Black) < 20 {
-		panic("deck has fewer than 20 black cards")
-	}
-	if len(deck.White) < 60 {
-		panic("deck has fewer than 60 white cards")
-	}
-
-	for _, b := range deck.Black {
-		if b.Pick != 1 && b.Pick != 2 {
-			panic("black card pick must be 1 or 2")
-		}
-		if b.Pick == 2 {
-			// Count blanks - should be exactly 2
-			blankCount := 0
-			i := 0
-			for i < len(b.Text) {
-				if i+3 < len(b.Text) && b.Text[i:i+4] == "____" {
-					blankCount++
-					i += 4
-				} else {
-					i++
-				}
-			}
-			if blankCount != 2 {
-				panic("black card with pick=2 must have exactly 2 blanks")
-			}
-		}
-	}
-
-	for _, w := range deck.White {
-		if w == "" {
-			panic("white card cannot be empty")
-		}
-	}
-
-	g.blackDeck = make([]cahBlackCard, len(deck.Black))
-	for i, b := range deck.Black {
-		g.blackDeck[i] = cahBlackCard{Text: b.Text, Pick: b.Pick}
-	}
-	g.whiteDeck = make([]string, len(deck.White))
-	copy(g.whiteDeck, deck.White)
-
-	return nil
-}
-
 func (g *CahGame) Start(roomID string, opts Options) {
 	g.roomID = roomID
 	g.room = opts.Room
 	g.locale = opts.Locale
-	if g.locale == "" {
+	if g.locale != "en" && g.locale != "pt-BR" {
 		g.locale = "en"
 	}
 
-	// Try to load requested locale, fall back to en
-	if err := g.loadDecks(g.locale); err != nil {
-		if g.locale != "en" {
-			_ = g.loadDecks("en")
-			g.locale = "en"
+	// The hub resolves and merges selected decks; unit tests may pass none, so
+	// fall back to this locale's base deck.
+	decks := opts.Decks
+	if len(decks) == 0 {
+		if base, ok := BuiltinDeck(DefaultDeckID(g.locale)); ok {
+			decks = []Deck{base}
 		}
 	}
+	black, white := MergeDecks(decks)
+	g.blackDeck = make([]cahBlackCard, len(black))
+	copy(g.blackDeck, black)
+	g.whiteDeck = make([]string, len(white))
+	copy(g.whiteDeck, white)
+	// Start() shuffles both piles below via shuffleDeckCards().
 
 	g.round = 1
 	g.totalRounds = SettingInt(opts.Settings, "rounds", CahTotalRounds, 3, 20)

@@ -1,0 +1,151 @@
+{
+  "id": "base_en",
+  "name": "Base (EN)",
+  "locale": "en",
+  "nsfw": false,
+  "black": [
+    {
+      "text": "I never leave home without ____.",
+      "pick": 1
+    },
+    {
+      "text": "What's that smell?",
+      "pick": 1
+    },
+    {
+      "text": "Life was beautiful until ____.",
+      "pick": 1
+    },
+    {
+      "text": "I'd buy that for ____.",
+      "pick": 1
+    },
+    {
+      "text": "TSA guidelines now prohibit ____ on airplanes.",
+      "pick": 1
+    },
+    {
+      "text": "What's my secret superpower?",
+      "pick": 1
+    },
+    {
+      "text": "Instead of coal, Santa now leaves ____ for naughty children.",
+      "pick": 1
+    },
+    {
+      "text": "Prove you're not a robot by selecting all ____ in the image.",
+      "pick": 1
+    },
+    {
+      "text": "Why did the hipster burn his tongue? He ate his ____ before it was cool.",
+      "pick": 1
+    },
+    {
+      "text": "What's the worst thing about the internet?",
+      "pick": 1
+    },
+    {
+      "text": "In the new Disney film, Cinderella's real power is ____.",
+      "pick": 1
+    },
+    {
+      "text": "I'm sorry officer, I didn't know the speed limit for ____ was so low.",
+      "pick": 1
+    },
+    {
+      "text": "Breaking news: ____ causes global warming.",
+      "pick": 1
+    },
+    {
+      "text": "The archaeological dig revealed that dinosaurs were actually ____ the whole time.",
+      "pick": 1
+    },
+    {
+      "text": "My therapist says I need to talk more about ____, but honestly I think we should avoid it.",
+      "pick": 1
+    },
+    {
+      "text": "That's not ____, that's ____.",
+      "pick": 2
+    },
+    {
+      "text": "It was a dark and stormy night when ____ and ____ fell in love.",
+      "pick": 2
+    },
+    {
+      "text": "The new trendy restaurant serves a fusion of ____ and ____ that nobody asked for.",
+      "pick": 2
+    },
+    {
+      "text": "At the exclusive gentleman's club, one could enjoy ____ while reading about ____.",
+      "pick": 2
+    },
+    {
+      "text": "The worst possible combination: ____ with a side of ____.",
+      "pick": 2
+    }
+  ],
+  "white": [
+    "a suspiciously friendly capybara",
+    "the concept of time",
+    "my browser history",
+    "authentic disappointment",
+    "tax fraud",
+    "a haunted taco",
+    "the universe's cruelest joke",
+    "a room-temperature burrito",
+    "aggressive eye contact",
+    "the ability to taste colors",
+    "regrettable karaoke",
+    "untreated anxiety",
+    "conspiracy theories",
+    "the number 69",
+    "a sentient cloud",
+    "middle management",
+    "a really bad WiFi password",
+    "being ghosted by your dentist",
+    "the smell of wet dog",
+    "ancient curse energy",
+    "a very angry pigeon",
+    "existential dread",
+    "NFTs nobody wants",
+    "a house plant that judges you",
+    "the sound of a fork on a plate",
+    "a motivational poster in a prison",
+    "someone else's bad breath",
+    "a participation trophy",
+    "spontaneous combustion",
+    "corporate synergy",
+    "the smell of desperation",
+    "a broken confidence",
+    "getting stuck in traffic forever",
+    "a room full of people on mute",
+    "tiny, angry gremlins",
+    "a staring contest with a cat",
+    "the friend who brings potato salad",
+    "a very honest mirror",
+    "regret in solid form",
+    "the Mandela Effect",
+    "a really bad AI chatbot",
+    "being read your rights at a convenience store",
+    "the algorithm's sense of humor",
+    "a living, breathing spreadsheet",
+    "the chaos I have created",
+    "a documentary about my mistakes",
+    "the narrator from a TrueTrue crime podcast",
+    "every bad decision I've made",
+    "the collective unconscious",
+    "a sentient procrastination",
+    "an elaborate prank nobody gets",
+    "the sound of my own thoughts",
+    "my life's soundtrack",
+    "an omen of things to come",
+    "the void staring back at me",
+    "borrowed time",
+    "a countdown to disaster",
+    "the weight of expectations",
+    "a beautiful lie",
+    "the conspiracy against me",
+    "every red flag I ignored"
+  ]
+}
