@@ -388,6 +388,24 @@ func (r *Room) PlayerName(playerID string) string {
 	return r.Players[playerID].Name
 }
 
+// LastActivity reports whether every player is currently disconnected and the
+// most recent LastSeen across all players. A room with no players is reported
+// as (true, zero time) — safely swept.
+func (r *Room) LastActivity() (allDisconnected bool, latest time.Time) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	allDisconnected = true
+	for _, player := range r.Players {
+		if player.Connected {
+			allDisconnected = false
+		}
+		if player.LastSeen.After(latest) {
+			latest = player.LastSeen
+		}
+	}
+	return allDisconnected, latest
+}
+
 func (r *Room) AllConnectedReady() bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

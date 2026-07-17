@@ -23,6 +23,7 @@ func main() {
 	registry.Register(games.NewCahFactory())
 
 	hub := ws.NewHub(registry)
+	hub.StartSweeper()
 	router := ws.NewRouter(hub)
 
 	mux := http.NewServeMux()

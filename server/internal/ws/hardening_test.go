@@ -193,3 +193,77 @@ func (permissiveAdapter) Status() games.Status               { return games.Stat
 func (permissiveAdapter) Standings() []games.Standing        { return nil }
 func (permissiveAdapter) PublicState() map[string]any        { return map[string]any{} }
 func (permissiveAdapter) PrivateState(string) map[string]any { return map[string]any{} }
+
+func TestSweepAbandonedRoom(t *testing.T) {
+	hub := newSessionTestHub()
+	host := &Client{ID: "host"}
+	hub.handleRoomCreate(host, Envelope{Type: "room.create", Payload: map[string]any{
+		"name": "Ghost", "playlist": []any{"stub"}, "displayName": "Host", "sessionId": "s1",
+	}})
+	roomID := host.RoomID
+	hub.mu.Lock()
+	hub.clients[host.ID] = host
+	hub.mu.Unlock()
+
+	// Host disconnects (browser close) — room stays with a disconnected player.
+	hub.RemoveClient(host.ID)
+	if _, ok := hub.rooms.Get(roomID); !ok {
+		t.Fatalf("room should survive a disconnect (reconnect grace)")
+	}
+
+	// Not yet past grace: cutoff in the past means nothing swept.
+	hub.sweepAbandoned(time.Now().Add(-time.Hour))
+	if _, ok := hub.rooms.Get(roomID); !ok {
+		t.Fatalf("room swept too early")
+	}
+
+	// Past grace: cutoff in the future sweeps the fully-disconnected room.
+	hub.sweepAbandoned(time.Now().Add(time.Hour))
+	if _, ok := hub.rooms.Get(roomID); ok {
+		t.Fatalf("expected abandoned room swept")
+	}
+	if _, ok := hub.session(roomID); ok {
+		t.Fatalf("expected session torn down with the room")
+	}
+}
+
+func TestSweepSpareConnectedRoom(t *testing.T) {
+	hub := newSessionTestHub()
+	host := &Client{ID: "host"}
+	hub.handleRoomCreate(host, Envelope{Type: "room.create", Payload: map[string]any{
+		"name": "Live", "playlist": []any{"stub"}, "displayName": "Host", "sessionId": "s1",
+	}})
+	// Host still connected — must never be swept even with a future cutoff.
+	hub.sweepAbandoned(time.Now().Add(time.Hour))
+	if _, ok := hub.rooms.Get(host.RoomID); !ok {
+		t.Fatalf("a room with a connected player must not be swept")
+	}
+}
+
+func TestSanitizeAvatar(t *testing.T) {
+	cases := map[string]string{
+		"data:image/png;base64,abc": "data:image/png;base64,abc",
+		"https://example.com/a.gif": "https://example.com/a.gif",
+		"http://tracker.example/x":  "",
+		"javascript:alert(1)":       "",
+		"data:text/html,<script>":   "",
+		"":                          "",
+	}
+	for in, want := range cases {
+		if got := sanitizeAvatar(in); got != want {
+			t.Fatalf("sanitizeAvatar(%q)=%q want %q", in, got, want)
+		}
+	}
+}
+
+func TestAvatarSanitizedOnJoin(t *testing.T) {
+	hub := newSessionTestHub()
+	host := &Client{ID: "host"}
+	hub.handleRoomCreate(host, Envelope{Type: "room.create", Payload: map[string]any{
+		"name": "A", "playlist": []any{"stub"}, "displayName": "Host", "sessionId": "s1",
+		"avatarUrl": "http://tracker.example/pixel.gif",
+	}})
+	if host.Player.AvatarURL != "" {
+		t.Fatalf("expected disallowed avatar dropped, got %q", host.Player.AvatarURL)
+	}
+}

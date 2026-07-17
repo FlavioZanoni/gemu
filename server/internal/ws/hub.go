@@ -62,6 +62,20 @@ func (h *Hub) AddClient(conn *websocket.Conn) *Client {
 	return client
 }
 
+// bindClient sets a connection's room identity under h.mu, which is the same
+// lock the broadcast/lookup paths read those fields under.
+func (h *Hub) bindClient(client *Client, roomID string, player rooms.Player, sessionID string) {
+	h.mu.Lock()
+	client.RoomID = roomID
+	client.Player = player
+	client.SessionID = sessionID
+	h.mu.Unlock()
+}
+
+func (h *Hub) unbindClient(client *Client) {
+	h.bindClient(client, "", rooms.Player{}, "")
+}
+
 func (h *Hub) RemoveClient(clientID string) {
 	h.mu.Lock()
 	client, ok := h.clients[clientID]
@@ -253,6 +267,17 @@ const (
 	roomPlayerCap  = 16 // hard ceiling regardless of client maxPlayers
 )
 
+// sanitizeAvatar drops any avatar URL that isn't an inline image or https,
+// so a player can't point everyone's client at an attacker-controlled URL
+// (tracking pixel / IP+UA collection). Cosmetic field, so bad values become
+// empty rather than failing the join.
+func sanitizeAvatar(url string) string {
+	if strings.HasPrefix(url, "data:image/") || strings.HasPrefix(url, "https://") {
+		return url
+	}
+	return ""
+}
+
 // truncate caps a rune length so client strings can't bloat every broadcast.
 func truncate(s string, max int) string {
 	r := []rune(s)
@@ -282,7 +307,7 @@ func (h *Hub) handleRoomCreate(client *Client, env Envelope) {
 	visibility := decodeString(env.Payload, "visibility")
 	maxPlayers := clampMaxPlayers(decodeInt(env.Payload, "maxPlayers"))
 	displayName := truncate(decodeString(env.Payload, "displayName"), maxNameLen)
-	avatarURL := truncate(decodeString(env.Payload, "avatarUrl"), maxAvatarLen)
+	avatarURL := sanitizeAvatar(truncate(decodeString(env.Payload, "avatarUrl"), maxAvatarLen))
 	sessionID := decodeString(env.Payload, "sessionId")
 	password := truncate(decodeString(env.Payload, "password"), maxPasswordLen)
 	locale := decodeString(env.Payload, "locale")
@@ -354,9 +379,7 @@ func (h *Hub) handleRoomCreate(client *Client, env Envelope) {
 		return
 	}
 
-	client.RoomID = room.ID
-	client.Player = player
-	client.SessionID = sessionID
+	h.bindClient(client, room.ID, player, sessionID)
 
 	h.Send(client, Envelope{Type: "room.create.ok", RequestID: env.RequestID, RoomID: room.ID, Payload: encodeRoomSnapshot(room)})
 	h.Broadcast(room.ID, Envelope{Type: "room.updated", RoomID: room.ID, Payload: encodeRoomSnapshot(room)})
@@ -372,7 +395,7 @@ func (h *Hub) handleRoomJoin(client *Client, env Envelope) {
 	}
 	joinCode := decodeString(env.Payload, "joinCode")
 	displayName := truncate(decodeString(env.Payload, "displayName"), maxNameLen)
-	avatarURL := truncate(decodeString(env.Payload, "avatarUrl"), maxAvatarLen)
+	avatarURL := sanitizeAvatar(truncate(decodeString(env.Payload, "avatarUrl"), maxAvatarLen))
 	sessionID := decodeString(env.Payload, "sessionId")
 	isRejoin := false
 
@@ -452,9 +475,7 @@ func (h *Hub) handleRoomJoin(client *Client, env Envelope) {
 		}
 	}
 
-	client.RoomID = room.ID
-	client.Player = player
-	client.SessionID = sessionID
+	h.bindClient(client, room.ID, player, sessionID)
 
 	h.Send(client, Envelope{Type: "room.join.ok", RequestID: env.RequestID, RoomID: room.ID, Payload: room.Snapshot()})
 	if !isRejoin {
@@ -497,9 +518,7 @@ func (h *Hub) handleRoomLeave(client *Client, env Envelope) {
 	}
 
 	playerID := client.Player.ID
-	client.RoomID = ""
-	client.Player = rooms.Player{}
-	client.SessionID = ""
+	h.unbindClient(client)
 	h.notifyPlayerLeft(roomID, playerID)
 	h.Send(client, Envelope{Type: "room.leave.ok", RequestID: env.RequestID})
 	h.Broadcast(roomID, Envelope{Type: "room.playerLeft", RoomID: roomID, Payload: map[string]any{"playerId": playerID}})
@@ -525,6 +544,11 @@ func (h *Hub) cleanupIfEmpty(roomID string, room *rooms.Room) {
 	if room.PlayerCount() != 0 {
 		return
 	}
+	h.removeRoom(roomID)
+}
+
+// removeRoom deletes a room and tears down its session/timer.
+func (h *Hub) removeRoom(roomID string) {
 	h.rooms.Remove(roomID)
 	h.mu.Lock()
 	s, ok := h.sessions[roomID]
@@ -535,6 +559,28 @@ func (h *Hub) cleanupIfEmpty(roomID string, room *rooms.Room) {
 		s.adapter = nil
 		s.stopTimer()
 		s.mu.Unlock()
+	}
+}
+
+const roomAbandonGrace = 5 * time.Minute
+
+// StartSweeper reclaims rooms whose players have all disconnected and stayed
+// gone past the grace window (browser-close leaves them in memory forever
+// otherwise, since disconnect only marks players absent, never removes them).
+// The grace window lets a whole group reconnect after a wifi blip.
+func (h *Hub) StartSweeper() {
+	ticker := time.NewTicker(time.Minute)
+	go func() {
+		for range ticker.C {
+			h.sweepAbandoned(time.Now().Add(-roomAbandonGrace))
+		}
+	}()
+}
+
+// sweepAbandoned removes every room fully disconnected since before cutoff.
+func (h *Hub) sweepAbandoned(cutoff time.Time) {
+	for _, roomID := range h.rooms.AbandonedRooms(cutoff) {
+		h.removeRoom(roomID)
 	}
 }
 

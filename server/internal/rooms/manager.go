@@ -44,6 +44,21 @@ func (m *Manager) Remove(roomID string) {
 	delete(m.rooms, roomID)
 }
 
+// AbandonedRooms returns the ids of rooms whose players are all disconnected
+// and whose last activity predates cutoff.
+func (m *Manager) AbandonedRooms(cutoff time.Time) []string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	var ids []string
+	for id, room := range m.rooms {
+		allDisconnected, latest := room.LastActivity()
+		if allDisconnected && latest.Before(cutoff) {
+			ids = append(ids, id)
+		}
+	}
+	return ids
+}
+
 func (m *Manager) ListPublic() []map[string]any {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
