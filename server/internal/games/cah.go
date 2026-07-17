@@ -29,8 +29,9 @@ type CahGame struct {
 	finished     bool
 
 	// Decks and draw piles
-	blackDeck []cahBlackCard
-	whiteDeck []string
+	blackDeck    []cahBlackCard
+	blackDiscard []cahBlackCard
+	whiteDeck    []string
 	whiteDiscard []string
 
 	// Judge rotation
@@ -130,8 +131,19 @@ func (g *CahGame) shuffleDeckCards() {
 }
 
 func (g *CahGame) drawBlackCard() cahBlackCard {
+	// Recycle used prompts when the pile runs dry, so a small deck (or a high
+	// round count) can't index past the end and panic. ParseDeck guarantees at
+	// least 3 black cards, so the refilled pile is never empty.
+	if len(g.blackDeck) == 0 {
+		g.blackDeck = g.blackDiscard
+		g.blackDiscard = nil
+		rand.Shuffle(len(g.blackDeck), func(i, j int) {
+			g.blackDeck[i], g.blackDeck[j] = g.blackDeck[j], g.blackDeck[i]
+		})
+	}
 	card := g.blackDeck[0]
 	g.blackDeck = g.blackDeck[1:]
+	g.blackDiscard = append(g.blackDiscard, card)
 	return card
 }
 

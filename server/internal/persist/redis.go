@@ -40,19 +40,25 @@ func ctx() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), 3*time.Second)
 }
 
-// SaveRooms upserts each room's serialized state (roomID -> bytes). Removed
-// rooms are pruned separately via DeleteRoom, so this only writes what's live.
+// SaveRooms atomically replaces the persisted set with exactly the live rooms
+// (roomID -> bytes). A full replace (DEL+HSET in one transaction) is what makes
+// this correct under concurrency: a room removed while a snapshot was in flight
+// can't be resurrected by a late write, because each snapshot is authoritative
+// for the whole set. An empty set clears the hash.
 func (s *Store) SaveRooms(rooms map[string][]byte) error {
-	if len(rooms) == 0 {
-		return nil
-	}
-	fields := make(map[string]any, len(rooms))
-	for id, b := range rooms {
-		fields[id] = b
-	}
 	c, cancel := ctx()
 	defer cancel()
-	return s.rdb.HSet(c, roomsKey, fields).Err()
+	pipe := s.rdb.TxPipeline()
+	pipe.Del(c, roomsKey)
+	if len(rooms) > 0 {
+		fields := make(map[string]any, len(rooms))
+		for id, b := range rooms {
+			fields[id] = b
+		}
+		pipe.HSet(c, roomsKey, fields)
+	}
+	_, err := pipe.Exec(c)
+	return err
 }
 
 // LoadRooms returns every persisted room's serialized state.

@@ -84,10 +84,16 @@ func (h *Hub) RestoreFromStore() {
 			log.Printf("persist restore: %v", err)
 			continue
 		}
-		if room.Status == rooms.StatusPlaying {
+		// No live game or vote survives a restart (adapter, timers, and vote
+		// state are all in-memory). Drop both back to a clean lobby with session
+		// scores intact; results/lobby restore fine as-is (results recovers its
+		// standings from the persisted playedGames history).
+		if room.Status == rooms.StatusPlaying || room.Status == rooms.StatusVoting {
 			room.Status = rooms.StatusLobby
 			room.GameType = ""
 			room.GameName = ""
+			room.NextGameType = ""
+			room.NextGameName = ""
 		}
 		room.Paused = false
 		for id, p := range room.Players {

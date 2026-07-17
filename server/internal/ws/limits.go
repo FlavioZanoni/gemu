@@ -19,7 +19,22 @@ import (
 var (
 	maxClients = envInt("GEMU_MAX_CLIENTS", 5000) // global concurrent connections
 	maxRooms   = envInt("GEMU_MAX_ROOMS", 1000)   // global live rooms
+	// trustProxy: only read X-Forwarded-For when explicitly deployed behind a
+	// proxy that sets it. Off by default — otherwise any direct client could
+	// spoof XFF: "127.0.0.1" and bypass every per-IP limit via the loopback
+	// exemption. When off, the real TCP peer (RemoteAddr) is used.
+	trustProxy = envBool("GEMU_TRUST_PROXY", false)
 )
+
+func envBool(key string, def bool) bool {
+	switch strings.ToLower(os.Getenv(key)) {
+	case "1", "true", "yes":
+		return true
+	case "0", "false", "no":
+		return false
+	}
+	return def
+}
 
 const (
 	// Per-IP new WebSocket connections.
@@ -88,15 +103,18 @@ func isLoopback(ip string) bool {
 	return parsed != nil && parsed.IsLoopback()
 }
 
-// clientIP extracts the caller's address. X-Forwarded-For is only trustworthy
-// behind a proxy you control; direct-to-internet it is spoofable, but that only
-// lets an attacker spread their own rate budget, never bypass the global caps.
+// clientIP extracts the caller's address. X-Forwarded-For is client-controlled
+// and spoofable, so it is only honored when trustProxy is set (i.e. a proxy you
+// control sets/strips it). Otherwise the real TCP peer is used, which a client
+// cannot forge.
 func clientIP(r *http.Request) string {
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		if i := strings.IndexByte(xff, ','); i >= 0 {
-			return strings.TrimSpace(xff[:i])
+	if trustProxy {
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			if i := strings.IndexByte(xff, ','); i >= 0 {
+				return strings.TrimSpace(xff[:i])
+			}
+			return strings.TrimSpace(xff)
 		}
-		return strings.TrimSpace(xff)
 	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {

@@ -688,3 +688,18 @@ func TestCahMalformedSubmitDoesNotPanic(t *testing.T) {
 		t.Fatalf("expected malformed submission rejected")
 	}
 }
+
+// A small black deck with a high round count must recycle, not panic.
+func TestDrawBlackCardRecycles(t *testing.T) {
+	g := &CahGame{blackDeck: []cahBlackCard{
+		{Text: "a ____", Pick: 1},
+		{Text: "b ____", Pick: 1},
+		{Text: "c ____", Pick: 1},
+	}}
+	for i := 0; i < 20; i++ {
+		card := g.drawBlackCard() // must not panic past the 3-card deck
+		if card.Text == "" {
+			t.Fatalf("draw %d returned an empty black card", i)
+		}
+	}
+}
