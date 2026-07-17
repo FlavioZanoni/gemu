@@ -4,8 +4,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"gemu-server/internal/games"
+	"gemu-server/internal/persist"
 	"gemu-server/internal/ws"
 )
 
@@ -25,6 +27,21 @@ func main() {
 	registry.Register(games.NewFibberFactory())
 
 	hub := ws.NewHub(registry)
+
+	// Optional Redis durability: rooms survive restarts/deploys. Without
+	// REDIS_URL the server runs purely in-memory (the friends-mode default).
+	if url := os.Getenv("REDIS_URL"); url != "" {
+		store, err := persist.Open(url)
+		if err != nil {
+			log.Printf("redis unavailable (%v); running in-memory without durability", err)
+		} else {
+			hub.SetStore(store)
+			hub.RestoreFromStore()
+			hub.StartPersistence(10 * time.Second)
+			log.Printf("durability enabled via redis")
+		}
+	}
+
 	hub.StartSweeper()
 	router := ws.NewRouter(hub)
 

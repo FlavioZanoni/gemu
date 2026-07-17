@@ -46,6 +46,7 @@ type Hub struct {
 	sessions   map[string]*gameSession
 	connLimit  *ipLimiters // per-IP new connections
 	createLimit *ipLimiters // per-IP room creation
+	store       RoomStore   // optional durability (nil = in-memory only)
 }
 
 func NewHub(registry *games.Registry) *Hub {
@@ -625,6 +626,7 @@ func (h *Hub) cleanupIfEmpty(roomID string, room *rooms.Room) {
 // removeRoom deletes a room and tears down its session/timer.
 func (h *Hub) removeRoom(roomID string) {
 	h.rooms.Remove(roomID)
+	h.persistDelete(roomID)
 	h.mu.Lock()
 	s, ok := h.sessions[roomID]
 	delete(h.sessions, roomID)
