@@ -8,7 +8,9 @@ const WEB_PORT = 3939;
 
 export default defineConfig({
   testDir: "./e2e",
-  timeout: 30_000,
+  // Multi-context flows (3 players) plus first-time dev compilation of each
+  // game surface run long; keep headroom so slowness never reads as failure.
+  timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,
   workers: 1,

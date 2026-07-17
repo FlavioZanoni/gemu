@@ -29,7 +29,9 @@ export function TriviaGame(props: GameProps) {
   const hue = hueFor("trivia");
   const [showHow, setShowHow] = useState(false);
 
-  if (!pub) return null;
+  // publicState is briefly {} between status:playing and the first game.state,
+  // so guard the round payload, not just null.
+  if (!pub || !pub.options) return null;
   const standings = Object.entries(pub.scores ?? {})
     .map(([playerId, score]) => ({ playerId, score }))
     .sort((a, b) => b.score - a.score);
