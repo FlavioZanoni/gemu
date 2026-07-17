@@ -1,29 +1,57 @@
 @import "tailwindcss";
 
+/* Gemu · Technicolor Broadcast — design tokens from Gemu System (direction 2a).
+   Old TV game show: marquee bulbs, slab display type, hard warm-red drop
+   shadows. Platform chrome stays purple + cream; every game owns a hue. */
 :root {
-  --background: #12121a;
-  --foreground: #fef3d4;
-  --accent: #ff4f6f;
+  --bg: #1c1230;
+  --bg-deep: #140c22;
+  --panel: #2b1a3d;
+  --panel-raised: #3a2751;
+  --ink: #ffe9a8;
+  --ink-dim: rgba(255, 233, 168, 0.6);
+  --ink-faint: rgba(255, 233, 168, 0.4);
+  --drop: #c2452d;
+  --line: #5a3f7a;
+  --dark-ink: #3d1f0e;
+
+  /* game hues */
+  --hue-stop: #ffd23f;
+  --hue-gartic: #35d4b9;
+  --hue-garticphone: #b78bff;
+  --hue-cah: #ff4f6f;
+  --hue-invention: #ff9d3f;
+
+  /* semantic accents */
+  --accent: #ffd23f;
   --accent-2: #35d4b9;
-  --accent-3: #ffd23f;
-  --surface: #1c1c2c;
-  --surface-2: #26263a;
-  --border: #3a3a52;
-  --retro-ink: #131320;
-  --retro-cream: #fff2c8;
+  --danger: #ff4f6f;
+  --warn: #ff9d3f;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-bg: var(--bg);
+  --color-bg-deep: var(--bg-deep);
+  --color-panel: var(--panel);
+  --color-panel-raised: var(--panel-raised);
+  --color-ink: var(--ink);
+  --color-drop: var(--drop);
+  --color-line: var(--line);
+  --color-dark-ink: var(--dark-ink);
+  --color-hue-stop: var(--hue-stop);
+  --color-hue-gartic: var(--hue-gartic);
+  --color-hue-garticphone: var(--hue-garticphone);
+  --color-hue-cah: var(--hue-cah);
+  --color-hue-invention: var(--hue-invention);
   --font-sans: var(--font-sans);
   --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), "Trebuchet MS", sans-serif;
+  background: var(--bg-deep);
+  color: var(--ink);
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
 
 html,
@@ -32,79 +60,86 @@ body,
   min-height: 100%;
 }
 
-.glass-panel {
-  background: linear-gradient(
-    160deg,
-    rgba(255, 242, 200, 0.08),
-    rgba(255, 255, 255, 0.02)
-  );
-  border: 2px solid rgba(255, 210, 63, 0.25);
-  box-shadow:
-    0 20px 0 rgba(0, 0, 0, 0.25),
-    0 30px 80px rgba(4, 6, 15, 0.45);
-  backdrop-filter: blur(8px);
+/* ---- shared primitives ---- */
+
+/* Slab display text with the hard warm-red drop shadow */
+.slab {
+  font-family: var(--font-display);
+  color: var(--ink);
+  text-shadow: 0 4px 0 var(--drop);
 }
 
-.radial-glow {
-  background:
-    radial-gradient(
-      circle at top left,
-      rgba(255, 79, 111, 0.35),
-      transparent 55%
-    ),
-    radial-gradient(
-      circle at bottom right,
-      rgba(53, 212, 185, 0.28),
-      transparent 50%
-    ),
-    radial-gradient(
-      circle at 50% 20%,
-      rgba(255, 210, 63, 0.24),
-      transparent 45%
-    );
+.mono-caption {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  color: var(--accent-2);
+  text-transform: uppercase;
 }
 
-.grid-texture {
-  background-image:
-    linear-gradient(rgba(255, 242, 200, 0.12) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 242, 200, 0.12) 1px, transparent 1px);
-  background-size: 40px 40px;
-}
-
-.retro-card {
-  border-radius: 24px;
-  border: 2px solid var(--retro-cream);
-  background: linear-gradient(
-    140deg,
-    rgba(255, 242, 200, 0.1),
-    rgba(255, 255, 255, 0.03)
-  );
-  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.3);
-}
-
-.retro-pill {
-  border-radius: 999px;
-  border: 2px solid var(--retro-cream);
-  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
-}
-
-.retro-btn {
-  border-radius: 999px;
-  border: 2px solid var(--retro-cream);
-  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.35);
+/* Buzzer press: translate down, shadow collapses */
+.buzzer {
+  font-family: var(--font-display);
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  box-shadow: 0 5px 0 var(--buzzer-drop, var(--drop));
   transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease;
+    transform 0.08s ease,
+    box-shadow 0.08s ease;
+}
+.buzzer:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 0 var(--buzzer-drop, var(--drop));
+}
+.buzzer:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 var(--buzzer-drop, var(--drop));
+}
+.buzzer:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
-.retro-btn:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.35);
+@keyframes bulb {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
 }
 
-.retro-btn:active {
-  transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.35);
+@keyframes tick {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes pop-in {
+  0% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.pop-in {
+  animation: pop-in 0.35s cubic-bezier(0.2, 1.4, 0.4, 1) both;
 }
 
 button,

@@ -1,64 +1,109 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from "react";
+import { hueFor } from "./ui/gameHues";
 
-type DrawingCanvasProps = {
-  value?: string;
-  onChange: (dataUrl: string) => void;
+/**
+ * Serialized stroke format (wire format for client↔client relay):
+ * {
+ *   action: "stroke" | "canvas_clear" | "canvas_undo"
+ *   playerId?: string  (server adds when relaying)
+ *   points?: [[x,y], [x,y], ...]  (stroke-only; array of coordinate pairs)
+ *   color?: "#xxxxxx"  (stroke-only)
+ *   size?: number  (stroke-only)
+ * }
+ */
+
+type StrokeEvent = {
+  action: "stroke";
+  points: [number, number][];
+  color: string;
+  size: number;
 };
 
-const PRESET_COLORS = [
-  "#fff2c8",
-  "#ffffff",
-  "#ff6b6b",
-  "#ffa94d",
-  "#ffd43b",
-  "#69db7c",
-  "#4dabf7",
-  "#9775fa",
-  "#f783ac",
-  "#868e96",
-  "#212529",
-];
+type ClearAction = {
+  action: "canvas_clear";
+};
 
-const PRESET_SIZES = [3, 6, 10, 16];
+type UndoAction = {
+  action: "canvas_undo";
+};
 
-const BG_COLOR = "#1c1c2c";
+type CanvasAction = StrokeEvent | ClearAction | UndoAction;
 
-export function DrawingCanvas({ value, onChange }: DrawingCanvasProps) {
+type DrawingCanvasProps = {
+  /** Game type for hue (e.g. "gartic") */
+  gameType?: string;
+  /** For drawer mode: callback to send stroke batches to other players */
+  onStrokeBatch?: (action: CanvasAction) => void;
+  /** For submit mode: optional initial image data */
+  value?: string;
+  /** For submit mode: called when canvas changes (drawEnd, clear, undo) */
+  onChange?: (dataUrl: string) => void;
+  /** Read-only mode: don't capture input, just display */
+  readOnly?: boolean;
+};
+
+export const DrawingCanvas = forwardRef<
+  {
+    applyRemoteStroke: (action: CanvasAction) => void;
+    toDataURL: (type?: string, quality?: number) => string;
+    clear: () => void;
+    undo: () => void;
+  },
+  DrawingCanvasProps
+>(function DrawingCanvasComponent(
+  {
+    gameType = "gartic",
+    onStrokeBatch,
+    value,
+    onChange,
+    readOnly = false,
+  },
+  ref
+) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef(false);
-  const [color, setColor] = useState(PRESET_COLORS[0]);
-  const [size, setSize] = useState(PRESET_SIZES[1]);
+  const strokeBufferRef = useRef<[number, number][]>([]);
+  const undoStackRef = useRef<ImageData[]>([]);
+
+  const hue = hueFor(gameType);
+  const [color, setColor] = useState(hue.base);
+  const [size, setSize] = useState(6);
   const [eraser, setEraser] = useState(false);
 
-  const activeColor = eraser ? BG_COLOR : color;
+  const activeColor = eraser ? "#1c1230" : color;
 
+  // Initialize canvas
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-  const resize = () => {
-    const parent = canvas.parentElement;
-    if (!parent) return;
-    const { width, height } = parent.getBoundingClientRect();
-    if (width === 0 || height === 0) return;
-    const dpr = window.devicePixelRatio || 1;
-    const saved = canvas.toDataURL();
-    canvas.width = Math.floor(width * dpr);
-    canvas.height = Math.floor(height * dpr);
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.scale(dpr, dpr);
-    ctx.fillStyle = BG_COLOR;
-    ctx.fillRect(0, 0, width, height);
-    const img = new Image();
-    img.onload = () => {
-      ctx.drawImage(img, 0, 0, width, height);
+    const resize = () => {
+      const parent = canvas.parentElement;
+      if (!parent) return;
+      const { width, height } = parent.getBoundingClientRect();
+      if (width === 0 || height === 0) return;
+      const dpr = window.devicePixelRatio || 1;
+
+      // Save current canvas content
+      const saved = canvas.toDataURL();
+
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      ctx.scale(dpr, dpr);
+      ctx.fillStyle = "#1c1230";
+      ctx.fillRect(0, 0, width, height);
+
+      // Restore content
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, width, height);
+      };
+      img.src = saved;
     };
-    img.src = saved;
-  };
 
     resize();
     const observer = new ResizeObserver(() => resize());
@@ -66,6 +111,7 @@ export function DrawingCanvas({ value, onChange }: DrawingCanvasProps) {
     return () => observer.disconnect();
   }, []);
 
+  // Load initial value
   useEffect(() => {
     if (!value) return;
     const canvas = canvasRef.current;
@@ -79,52 +125,149 @@ export function DrawingCanvas({ value, onChange }: DrawingCanvasProps) {
     image.src = value;
   }, [value]);
 
-  const start = (x: number, y: number) => {
+  const drawStroke = useCallback(
+    (points: [number, number][], strokeColor: string, strokeSize: number) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = strokeSize;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+
+      if (points.length === 0) return;
+      ctx.moveTo(points[0][0], points[0][1]);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i][0], points[i][1]);
+      }
+      ctx.stroke();
+    },
+    []
+  );
+
+  const saveToUndoStack = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    ctx.strokeStyle = activeColor;
-    ctx.lineWidth = eraser ? size * 3 : size;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(x, y);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    undoStackRef.current.push(imageData);
+  }, []);
+
+  const start = (x: number, y: number) => {
+    if (readOnly) return;
+    saveToUndoStack();
     drawingRef.current = true;
+    strokeBufferRef.current = [[x, y]];
   };
 
   const draw = (x: number, y: number) => {
-    if (!drawingRef.current) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.lineTo(x, y);
-    ctx.stroke();
+    if (!drawingRef.current || readOnly) return;
+    strokeBufferRef.current.push([x, y]);
+    const points = strokeBufferRef.current;
+    if (points.length >= 2) {
+      const lastIdx = points.length - 1;
+      drawStroke([points[lastIdx - 1], points[lastIdx]], activeColor, eraser ? size * 3 : size);
+    }
   };
 
   const end = () => {
     if (!drawingRef.current) return;
     drawingRef.current = false;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    onChange(canvas.toDataURL("image/png"));
+
+    // Batch and send stroke
+    if (strokeBufferRef.current.length > 0 && onStrokeBatch) {
+      const stroke: StrokeEvent = {
+        action: "stroke",
+        points: strokeBufferRef.current,
+        color: activeColor,
+        size: eraser ? size * 3 : size,
+      };
+      onStrokeBatch(stroke);
+    }
+    strokeBufferRef.current = [];
+
+    // Notify change
+    if (onChange) {
+      const canvas = canvasRef.current;
+      if (canvas) onChange(canvas.toDataURL("image/png"));
+    }
   };
 
-  const clear = () => {
+  const clear = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    saveToUndoStack();
     const dpr = window.devicePixelRatio || 1;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
-    ctx.fillStyle = BG_COLOR;
+    ctx.fillStyle = "#1c1230";
     ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
-    onChange(canvas.toDataURL("image/png"));
-  };
+
+    if (onChange) onChange(canvas.toDataURL("image/png"));
+    if (onStrokeBatch) onStrokeBatch({ action: "canvas_clear" });
+  }, [onChange, onStrokeBatch, saveToUndoStack]);
+
+  const undo = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    if (undoStackRef.current.length === 0) return;
+    const previousState = undoStackRef.current.pop();
+    if (!previousState) return;
+
+    ctx.putImageData(previousState, 0, 0);
+    if (onChange) onChange(canvas.toDataURL("image/png"));
+    if (onStrokeBatch) onStrokeBatch({ action: "canvas_undo" });
+  }, [onChange, onStrokeBatch]);
+
+  const applyRemoteStroke = useCallback((action: CanvasAction) => {
+    if (action.action === "stroke") {
+      const stroke = action as StrokeEvent;
+      drawStroke(stroke.points, stroke.color, stroke.size);
+    } else if (action.action === "canvas_clear") {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const dpr = window.devicePixelRatio || 1;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+      ctx.fillStyle = "#1c1230";
+      ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+    } else if (action.action === "canvas_undo") {
+      if (undoStackRef.current.length > 0) {
+        const previousState = undoStackRef.current.pop();
+        if (previousState) {
+          const ctx = canvasRef.current?.getContext("2d");
+          if (ctx) ctx.putImageData(previousState, 0, 0);
+        }
+      }
+    }
+  }, [drawStroke]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      applyRemoteStroke,
+      toDataURL: (type = "image/png", quality = 1) =>
+        canvasRef.current?.toDataURL(type, quality) ?? "",
+      clear,
+      undo,
+    }),
+    [applyRemoteStroke, clear, undo]
+  );
 
   const getEventPos = (
-    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
   ) => {
     const rect = (e.currentTarget as HTMLCanvasElement).getBoundingClientRect();
     if ("touches" in e) {
@@ -134,77 +277,138 @@ export function DrawingCanvas({ value, onChange }: DrawingCanvasProps) {
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
 
+  const colorPalette = [
+    hue.base,
+    "#ffffff",
+    "#ff6b6b",
+    "#ffa94d",
+    "#69db7c",
+    "#4dabf7",
+    "#9775fa",
+    "#f783ac",
+    "#868e96",
+    "#212529",
+  ];
+
   return (
     <div className="flex gap-3">
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-col gap-1.5">
-          {PRESET_COLORS.map((c) => (
-            <button
-              key={c}
-              className={`h-7 w-7 rounded-full border-2 transition ${
-                color === c && !eraser
-                  ? "border-(--retro-cream) scale-110"
-                  : "border-transparent"
-              }`}
-              style={{ backgroundColor: c }}
-              onClick={() => {
-                setColor(c);
-                setEraser(false);
-              }}
-              type="button"
-            />
-          ))}
-        </div>
-        <div className="mt-1 flex flex-col gap-1.5">
-          {PRESET_SIZES.map((s) => (
-            <button
-              key={s}
-              className={`flex h-7 w-7 items-center justify-center rounded-full border-2 transition ${
-                size === s
-                  ? "border-(--retro-cream) bg-(--retro-cream)/20"
-                  : "border-transparent bg-(--surface)"
-              }`}
-              onClick={() => setSize(s)}
-              type="button"
-            >
-              <span
-                className="rounded-full bg-(--retro-cream)"
-                style={{ width: s, height: s }}
+      {!readOnly && (
+        <div className="flex flex-col gap-2">
+          {/* Color palette */}
+          <div className="flex flex-col gap-1.5">
+            {colorPalette.map((c) => (
+              <button
+                key={c}
+                className={`h-7 w-7 rounded-full border-2 transition ${
+                  color === c && !eraser ? "scale-110" : ""
+                }`}
+                style={{
+                  backgroundColor: c,
+                  borderColor: color === c && !eraser ? hue.base : "transparent",
+                }}
+                onClick={() => {
+                  setColor(c);
+                  setEraser(false);
+                }}
+                type="button"
+                title="Color"
               />
-            </button>
-          ))}
+            ))}
+          </div>
+
+          {/* Brush sizes */}
+          <div className="mt-1 flex flex-col gap-1.5">
+            {[3, 6, 10, 16].map((s) => (
+              <button
+                key={s}
+                className={`flex h-7 w-7 items-center justify-center rounded-full border-2 transition ${
+                  size === s ? "border-current bg-(--accent-2)/20" : "border-transparent bg-(--panel)"
+                }`}
+                onClick={() => setSize(s)}
+                type="button"
+                title="Brush size"
+              >
+                <span
+                  className="rounded-full"
+                  style={{
+                    width: s,
+                    height: s,
+                    backgroundColor: size === s ? hue.base : "var(--ink-faint)",
+                  }}
+                />
+              </button>
+            ))}
+          </div>
+
+          {/* Eraser */}
+          <button
+            className={`mt-1 flex h-7 w-7 items-center justify-center rounded-full border-2 transition ${
+              eraser ? `border-current` : "border-transparent bg-(--panel)"
+            }`}
+            onClick={() => setEraser(!eraser)}
+            type="button"
+            title="Eraser"
+            style={{
+              borderColor: eraser ? hue.base : "transparent",
+              backgroundColor: eraser ? `${hue.base}20` : "var(--panel)",
+            }}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path d="M20 20H7L3 16a1 1 0 010-1.4l9.6-9.6a1 1 0 011.4 0l7 7a1 1 0 010 1.4L15 20" />
+              <path d="M6 12l6 6" />
+            </svg>
+          </button>
+
+          {/* Undo */}
+          <button
+            className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-transparent bg-(--panel) transition hover:border-current"
+            onClick={undo}
+            type="button"
+            title="Undo"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path d="M3 7v6h6M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13" />
+            </svg>
+          </button>
+
+          {/* Clear */}
+          <button
+            className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-transparent bg-(--panel) transition hover:border-current"
+            onClick={clear}
+            type="button"
+            title="Clear"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
         </div>
-        <button
-          className={`mt-1 flex h-7 w-7 items-center justify-center rounded-full border-2 text-xs transition ${
-            eraser
-              ? "border-(--accent-2) bg-(--accent-2) text-(--retro-ink)"
-              : "border-transparent bg-(--surface) text-(--retro-cream)"
-          }`}
-          onClick={() => setEraser(!eraser)}
-          type="button"
-          title="Eraser"
-        >
-          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path d="M20 20H7L3 16a1 1 0 010-1.4l9.6-9.6a1 1 0 011.4 0l7 7a1 1 0 010 1.4L15 20" />
-            <path d="M6 12l6 6" />
-          </svg>
-        </button>
-        <button
-          className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-transparent bg-(--surface) text-xs text-(--retro-cream) transition hover:border-(--retro-cream)"
-          onClick={clear}
-          type="button"
-          title="Clear"
-        >
-          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-    <div className="flex-1 rounded-2xl border-2 border-(--retro-cream) bg-(--surface) p-1">
-      <canvas
-        ref={canvasRef}
-        className="block h-full w-full rounded-xl"
-          style={{ cursor: eraser ? "cell" : "crosshair" }}
+      )}
+
+      {/* Canvas */}
+      <div className="flex-1 rounded-2xl border-2 p-1" style={{ borderColor: hue.base, backgroundColor: "var(--panel)" }}>
+        <canvas
+          ref={canvasRef}
+          className="block h-full w-full rounded-xl"
+          style={{ cursor: readOnly ? "default" : eraser ? "cell" : "crosshair" }}
           onMouseDown={(e) => {
             const { x, y } = getEventPos(e);
             start(x, y);
@@ -224,8 +428,11 @@ export function DrawingCanvas({ value, onChange }: DrawingCanvasProps) {
             draw(x, y);
           }}
           onTouchEnd={end}
+          onTouchCancel={end}
         />
       </div>
     </div>
   );
-}
+});
+
+DrawingCanvas.displayName = "DrawingCanvas";

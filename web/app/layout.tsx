@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { Bungee, Space_Grotesk } from "next/font/google";
+import { Alfa_Slab_One, Space_Grotesk, Space_Mono } from "next/font/google";
 import "./globals.css";
+import { I18nProvider } from "@/lib/i18n";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-sans",
@@ -8,11 +9,18 @@ const spaceGrotesk = Space_Grotesk({
   display: "swap",
 });
 
-const bungee = Bungee({
+const alfaSlabOne = Alfa_Slab_One({
   variable: "--font-display",
   subsets: ["latin"],
   display: "swap",
   weight: ["400"],
+});
+
+const spaceMono = Space_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "700"],
 });
 
 export const metadata: Metadata = {
@@ -28,10 +36,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${spaceGrotesk.variable} ${bungee.variable} h-full antialiased`}
+      className={`${spaceGrotesk.variable} ${alfaSlabOne.variable} ${spaceMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-slate-950 text-slate-100">
-        {children}
+      <body className="min-h-full flex flex-col">
+        <I18nProvider>{children}</I18nProvider>
       </body>
     </html>
   );

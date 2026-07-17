@@ -59,6 +59,9 @@ export const useLobbyStore = () => {
           visibility: "public" | "private";
           maxPlayers: number;
           players?: { id: string }[];
+          hasPassword?: boolean;
+          status?: PublicRoom["status"];
+          playlist?: string[];
         };
         if (!snapshot || snapshot.visibility !== "public") {
           setState((prev) => ({
@@ -85,6 +88,9 @@ export const useLobbyStore = () => {
           visibility: snapshot.visibility,
           maxPlayers: snapshot.maxPlayers,
           playerCount,
+          hasPassword: snapshot.hasPassword ?? false,
+          status: snapshot.status ?? "lobby",
+          playlist: snapshot.playlist ?? [],
         });
           return { ...prev, rooms: nextRooms };
         });

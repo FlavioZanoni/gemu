@@ -1,15 +1,16 @@
-import { InventionGame } from "./games/InventionGame";
+"use client";
 
-type GameSurfaceProps = {
+import type { Player } from "@/lib/protocol";
+import { InventionGame } from "./games/InventionGame";
+import { StopGame } from "./games/StopGame";
+import { GarticGame } from "./games/GarticGame";
+import { GarticPhoneGame } from "./games/GarticPhoneGame";
+import { CahGame } from "./games/CahGame";
+import type { GameProps } from "./games/types";
+
+type GameSurfaceProps = GameProps & {
   gameType: string;
-  roomId: string;
-  playerId: string;
-  players: { id: string; name: string }[];
-  publicState: Record<string, unknown> | null;
-  privateState: Record<string, unknown> | null;
-  sendAction: (payload: Record<string, unknown>) => void;
   onFullscreenToggle?: () => void;
-  isAdmin?: boolean;
   onLeave?: () => void;
 };
 
@@ -21,37 +22,50 @@ export function GameSurface({
   publicState,
   privateState,
   sendAction,
-  onFullscreenToggle,
+  sendStream,
   isAdmin,
+  onFullscreenToggle,
   onLeave,
 }: GameSurfaceProps) {
-  if (gameType === "invention") {
-    return (
-      <InventionGame
-        roomId={roomId}
-        playerId={playerId}
-        players={players}
-        publicState={publicState}
-        privateState={privateState}
-        sendAction={sendAction}
-        onFullscreenToggle={onFullscreenToggle}
-        isAdmin={isAdmin}
-        onLeave={onLeave}
-      />
-    );
-  }
+  const gameProps: GameProps = {
+    roomId,
+    playerId,
+    players,
+    publicState,
+    privateState,
+    sendAction,
+    sendStream,
+    isAdmin,
+  };
 
-  return (
-    <section className="glass-panel retro-card min-h-[80vh] p-6">
-      <h2 className="font-display text-lg text-(--retro-cream)">
-        Game surface
-      </h2>
-      <p className="mt-2 text-sm text-(--retro-cream)/75">
-        The shared room shell is ready. Drop the {gameType} UI here.
-      </p>
-      <div className="mt-6 rounded-2xl border-2 border-dashed border-(--retro-cream) bg-(--surface) p-8 text-center text-sm text-(--retro-cream)/70">
-        Waiting for game adapter UI…
-      </div>
-    </section>
-  );
+  switch (gameType) {
+    case "invention":
+      return (
+        <InventionGame
+          roomId={roomId}
+          playerId={playerId}
+          players={players as Player[]}
+          publicState={publicState}
+          privateState={privateState}
+          sendAction={sendAction}
+          onFullscreenToggle={onFullscreenToggle}
+          isAdmin={isAdmin}
+          onLeave={onLeave}
+        />
+      );
+    case "stop":
+      return <StopGame {...gameProps} />;
+    case "gartic":
+      return <GarticGame {...gameProps} />;
+    case "garticphone":
+      return <GarticPhoneGame {...gameProps} />;
+    case "cah":
+      return <CahGame {...gameProps} />;
+    default:
+      return (
+        <div className="rounded-2xl border-2 border-dashed border-(--line) bg-(--panel) p-8 text-center text-sm text-(--ink)/60">
+          Unknown game: {gameType}
+        </div>
+      );
+  }
 }
