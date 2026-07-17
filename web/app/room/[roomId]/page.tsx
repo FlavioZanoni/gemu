@@ -15,6 +15,22 @@ import { IntroScreen } from "@/components/screens/IntroScreen";
 import { DrumrollOverlay } from "@/components/screens/DrumrollOverlay";
 import { Banner, CodePill } from "@/components/ui";
 
+// Friendly text for server error codes surfaced as toasts; unknown codes fall
+// back to a generic message rather than showing a raw key.
+function actionErrorText(code: string, t: (k: string) => string): string {
+  const map: Record<string, string> = {
+    not_admin: "err.notAdmin",
+    not_enough_players: "err.notEnoughPlayers",
+    empty_playlist: "err.emptyPlaylist",
+    wrong_status: "err.wrongStatus",
+    game_in_progress: "err.gameInProgress",
+    paused: "err.paused",
+    invalid_game: "err.invalidGame",
+    not_ready: "err.notReady",
+  };
+  return map[code] ? t(map[code]) : t("err.generic");
+}
+
 export default function RoomPage() {
   const { t } = useI18n();
   const params = useParams();
@@ -209,15 +225,15 @@ export default function RoomPage() {
 
             {/* Action error banner */}
             {room.actionError && (
-              <div className="flex items-center justify-between rounded-2xl border-2 border-(--line) bg-(--panel) p-4 bg-red-400/10">
-                <p className="text-sm text-red-400">
-                  {t(`edge.error${room.actionError.code.charAt(0).toUpperCase() + room.actionError.code.slice(1)}`) || room.actionError.message}
+              <div className="flex items-center justify-between gap-3 rounded-2xl border-2 border-(--danger) bg-[#3d1420] px-4 py-3">
+                <p className="text-sm font-semibold text-[#ffb3c1]">
+                  {actionErrorText(room.actionError.code, t)}
                 </p>
                 <button
                   onClick={() => room.clearActionError()}
-                  className="text-xs text-red-400 hover:opacity-75 font-bold"
+                  className="flex-none text-xs font-bold text-[#ffb3c1] hover:opacity-75"
                 >
-                  Dismiss
+                  {t("common.dismiss")}
                 </button>
               </div>
             )}

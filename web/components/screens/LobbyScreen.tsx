@@ -91,20 +91,24 @@ export function LobbyScreen({
               <div className="grid gap-3 grid-cols-3 mb-6">
                 {gamesCatalog.map((game) => {
                   const selected = snapshot.playlist.includes(game.type);
-                  const disabled =
-                    connectedPlayers.length < game.minPlayers && !selected;
+                  // The night's playlist can hold any games — the per-game
+                  // minimum is enforced at start / vote time, not here. The
+                  // only guard: never let the last game be removed.
+                  const isLast = selected && snapshot.playlist.length <= 1;
                   const hue = hueFor(game.type);
                   return (
                     <div
                       key={game.type}
                       onClick={() => {
-                        if (disabled) return;
+                        if (isLast) return;
                         const newPlaylist = selected
                           ? snapshot.playlist.filter((t) => t !== game.type)
                           : [...snapshot.playlist, game.type];
                         onSetPlaylist(newPlaylist);
                       }}
-                      className={`rounded-2xl p-4 cursor-pointer transition ${
+                      className={`rounded-2xl p-4 transition ${
+                        isLast ? "cursor-default" : "cursor-pointer"
+                      } ${
                         selected
                           ? "border-2 border-(--line) shadow-lg"
                           : "border-2 border-(--line) opacity-60"
