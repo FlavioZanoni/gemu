@@ -32,7 +32,7 @@ export function TimerBadge({
   const urgent = seconds < 10;
   return (
     <span
-      className={`inline-block rounded-[10px] px-4 py-0.5 font-display text-2xl ${className}`}
+      className={`inline-block rounded-[10px] px-4 py-0.5 font-display text-3xl ${className}`}
       style={
         urgent
           ? {

@@ -26,10 +26,10 @@ export const gameHues: Record<string, GameHue> = {
   },
   garticphone: {
     base: "#b78bff",
-    gradFrom: "#c9a6ff",
-    gradTo: "#a06ef2",
-    ink: "#2a1547",
-    drop: "#6a3fb8",
+    gradFrom: "#c9a4ff",
+    gradTo: "#a678f2",
+    ink: "#2d1650",
+    drop: "#5f3d99",
   },
   cah: {
     base: "#ff4f6f",
