@@ -57,7 +57,7 @@ export const metadata: Metadata = {
     alternateLocale: "pt_BR",
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Gemu — party games with friends",
     description,
   },
