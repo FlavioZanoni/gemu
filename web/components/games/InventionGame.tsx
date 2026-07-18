@@ -287,7 +287,9 @@ export function InventionGame(props: GameProps & { onLeave?: () => void }) {
                       draw: canvasData,
                     })
                   }
-                  disabled={!canvasData}
+                  // The server rejects a submit without a title — mirror that
+                  // here so the button can't silently no-op.
+                  disabled={!canvasData || !title.trim()}
                   className="flex-1"
                 >
                   {t("invention.submitInvention")}

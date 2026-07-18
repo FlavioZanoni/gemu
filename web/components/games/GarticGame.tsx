@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useMemo } from "react";
-import { Check, Cloud } from "lucide-react";
+import { Check, Cloud, Pencil } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Button, TimerBadge, Banner, HowToPlayModal } from "../ui";
 import { DrawingCanvas } from "../DrawingCanvas";
@@ -119,22 +119,39 @@ export function GarticGame(props: GameProps) {
               SCOREBOARD · RD {round}/{totalRounds}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              {standings.map((s) => (
-                <div key={s.playerId} style={{ display: "flex", alignItems: "center", gap: "9px", background: "#2b1a3d", border: "2px solid " + (s.playerId === props.playerId ? "var(--hue-gartic)" : "#5a3f7a"), borderRadius: "99px", padding: "5px 12px 5px 5px" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: "99px", background: "#fff8e7", border: "2px solid " + (s.playerId === props.playerId ? "var(--hue-gartic)" : "#5a3f7a"), display: "flex", alignItems: "center", justifyContent: "center", font: "400 6px 'Space Mono',monospace", color: "#8a7f60" }}>
-                    {playerNames.get(s.playerId)?.slice(0, 2).toUpperCase() || "?"}
+              {standings.map((s) => {
+                const isPlayerDrawing = s.playerId === drawer;
+                const playerGuessed = guessed.includes(s.playerId);
+                const stateText = isPlayerDrawing
+                  ? "DRAWING"
+                  : playerGuessed
+                    ? "GOT IT"
+                    : "GUESSING…";
+                const stateColor = isPlayerDrawing
+                  ? "#35d4b9"
+                  : playerGuessed
+                    ? "#35d4b9"
+                    : "rgba(255,233,168,.4)";
+
+                return (
+                  <div key={s.playerId} style={{ display: "flex", alignItems: "center", gap: "9px", background: "#2b1a3d", border: "2px solid " + (s.playerId === props.playerId ? "var(--hue-gartic)" : "#5a3f7a"), borderRadius: "99px", padding: "5px 12px 5px 5px" }}>
+                    <div style={{ width: "28px", height: "28px", borderRadius: "99px", background: "#fff8e7", border: "2px solid " + (s.playerId === props.playerId ? "var(--hue-gartic)" : "#5a3f7a"), display: "flex", alignItems: "center", justifyContent: "center", font: "400 6px 'Space Mono',monospace", color: "#8a7f60" }}>
+                      {playerNames.get(s.playerId)?.slice(0, 2).toUpperCase() || "?"}
+                    </div>
+                    <div style={{ flex: 1, font: "700 12px 'Space Grotesk'", color: "#ffe9a8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {playerNames.get(s.playerId)}
+                    </div>
+                    <span style={{ display: "flex", alignItems: "center", gap: "4px", font: "600 8px 'Space Mono',monospace", color: stateColor }}>
+                      {stateText}
+                      {isPlayerDrawing && <Pencil size={12} strokeWidth={2.5} style={{ flexShrink: 0 }} />}
+                      {playerGuessed && <Check size={12} strokeWidth={2.5} style={{ flexShrink: 0 }} />}
+                    </span>
+                    <span style={{ fontFamily: "'Alfa Slab One'", fontSize: "14px", color: "#ffe9a8" }}>
+                      {s.score}
+                    </span>
                   </div>
-                  <div style={{ flex: 1, font: "700 12px 'Space Grotesk'", color: "#ffe9a8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {playerNames.get(s.playerId)}
-                  </div>
-                  <span style={{ font: "600 8px 'Space Mono',monospace", color: s.playerId === props.playerId ? "var(--hue-gartic)" : "rgba(255,233,168,.5)" }}>
-                    {s.playerId === drawer ? "DRAW" : "GUESS"}
-                  </span>
-                  <span style={{ fontFamily: "'Alfa Slab One'", fontSize: "14px", color: "#ffe9a8" }}>
-                    {s.score}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div style={{ font: "400 8px 'Space Mono',monospace", color: "rgba(255,233,168,.3)", marginTop: "9px", textAlign: "center" }}>
               GAME POINTS · SESSION AT END
@@ -145,12 +162,29 @@ export function GarticGame(props: GameProps) {
           <div style={{ flex: "1.6", display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
               <div>
-                <div style={{ font: "700 10px 'Space Mono',monospace", letterSpacing: ".35em", color: "var(--hue-gartic)" }}>
-                  {isDrawer ? "YOUR SECRET WORD" : `${drawerName.toUpperCase()} IS DRAWING`}
-                </div>
-                {isDrawer && (
-                  <div style={{ fontFamily: "'Alfa Slab One'", fontSize: "26px", color: "#ffe9a8", textShadow: "0 3px 0 #c2452d" }}>
-                    {word || "?"}
+                {isDrawer ? (
+                  <>
+                    <div style={{ font: "700 10px 'Space Mono',monospace", letterSpacing: ".35em", color: "var(--hue-gartic)" }}>
+                      YOUR SECRET WORD
+                    </div>
+                    <div style={{ fontFamily: "'Alfa Slab One'", fontSize: "26px", color: "#ffe9a8", textShadow: "0 3px 0 #c2452d" }}>
+                      {word || "?"}
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ font: "700 16px 'Space Mono',monospace", letterSpacing: ".4em", color: "#ffe9a8", marginBottom: "3px" }}>
+                      {publicState?.wordLength
+                        ? Array(publicState.wordLength)
+                            .fill("_")
+                            .join(" ")
+                        : "_ ".repeat(5).trim()}
+                    </div>
+                    <div style={{ font: "400 9px 'Space Mono',monospace", color: "rgba(255,233,168,.4)" }}>
+                      {publicState?.wordLength
+                        ? `${publicState.wordLength} LETTER${publicState.wordLength !== 1 ? "S" : ""} · HINT UNLOCKS AT 0:30`
+                        : "HINT UNLOCKS AT 0:30"}
+                    </div>
                   </div>
                 )}
               </div>
@@ -160,7 +194,7 @@ export function GarticGame(props: GameProps) {
             </div>
 
             {/* Canvas with built-in toolbar from DrawingCanvas */}
-            <div style={{ borderRadius: "18px", border: "3px solid var(--hue-gartic)", boxShadow: "0 6px 0 rgba(0,0,0,.35)", marginBottom: "12px", overflow: "hidden" }}>
+            <div style={{ borderRadius: "18px", boxShadow: "0 6px 0 rgba(0,0,0,.35)", marginBottom: "12px", overflow: "hidden" }}>
               <DrawingCanvas
                 ref={canvasRef}
                 onStrokeBatch={isDrawer ? handleCanvasSendStroke : undefined}

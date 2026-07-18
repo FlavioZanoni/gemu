@@ -42,7 +42,11 @@ func (r *Router) HandleWS(w http.ResponseWriter, req *http.Request) {
 		log.Println("upgrade error:", err)
 		return
 	}
-	conn.SetReadLimit(64 * 1024)
+	// 1 MiB: envelopes legitimately carry canvas data-URLs (doodle avatars,
+	// invention/gartic-phone drawings). gorilla kills the connection on an
+	// oversized message, so a low cap makes big submits silently drop the
+	// socket mid-game. Game-level caps (maxDrawingBytes etc.) bound each field.
+	conn.SetReadLimit(1 << 20)
 	_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 	conn.SetPongHandler(func(string) error {
 		_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))

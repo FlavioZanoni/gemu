@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import { Check, X, Hand } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Card, Button, TimerBadge, Banner, HowToPlayModal } from "../ui";
+import { playerColorFor } from "../ui/gameHues";
 import type { GameProps } from "./types";
 
 type StopPublicState = {
@@ -115,43 +116,56 @@ export function StopGame(props: GameProps) {
     const timeRemaining = deadline ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000)) : 0;
     const showStopMoment = stopped && stoppedBy && deadline;
 
+    // Build game board from totalScores
+    const gameBoard = props.players.map((player, idx) => {
+      const playerColor = playerColorFor(idx);
+      return {
+        name: player.name,
+        hue: playerColor,
+        border: playerColor,
+        stateColor: stopped && stoppedBy === player.id ? "#ff8a9b" : "#35d4b9",
+        state: stopped && stoppedBy === player.id ? "SLAMMED" : answers[player.id] ? "answered" : "…",
+        pts: totalScores[player.id] ?? 0,
+      };
+    });
+
     return (
       <>
         {showStopMoment && (
           <div
             className="fixed inset-0 flex items-center justify-center z-50"
             style={{
-              background: "radial-gradient(circle at 50% 40%, rgba(232,72,99,.35), transparent 70%)",
+              background: "rgba(18,9,24,.9)",
             }}
           >
             <div className="flex flex-col items-center justify-center gap-4 text-center">
               <div
                 className="rounded-full bg-[#fff8e7] flex items-center justify-center"
-                style={{ width: "52px", height: "52px", border: "3px solid #ff4f6f" }}
+                style={{ width: "64px", height: "64px", border: "3px solid #ff4f6f" }}
               >
                 <span style={{ fontSize: "8px", fontFamily: "'Space Mono', monospace", color: "#8a7f60" }}>doodle</span>
               </div>
-              <div style={{ fontSize: "12px", fontFamily: "'Space Mono', monospace", fontWeight: "700", color: "#ff8a9b", letterSpacing: ".25em", textTransform: "uppercase" }}>
+              <div style={{ fontSize: "14px", fontFamily: "'Space Mono', monospace", fontWeight: "700", color: "#ff8a9b", letterSpacing: ".3em", textTransform: "uppercase" }}>
                 {playerNames.get(stoppedBy)} SLAMMED
               </div>
               <div
-                className="font-display text-7xl text-white"
-                style={{ textShadow: "0 6px 0 #8f1f33", animation: "slam .5s ease-out", transform: "rotate(-2deg)", fontFamily: "'Alfa Slab One', sans-serif" }}
+                className="font-display text-white"
+                style={{ fontSize: "100px", textShadow: "0 8px 0 #8f1f33", animation: "slam .5s ease-out", transform: "rotate(-2deg)", fontFamily: "'Alfa Slab One', sans-serif", lineHeight: "1" }}
               >
                 STOP!
               </div>
-              <div style={{ fontSize: "13px", fontFamily: "'Space Grotesk', sans-serif", fontWeight: "600", color: "rgba(255,233,168,.7)" }}>
+              <div style={{ fontSize: "16px", fontFamily: "'Space Grotesk', sans-serif", fontWeight: "600", color: "rgba(255,233,168,.7)" }}>
                 finish what you can…
               </div>
               <div
                 style={{
                   fontFamily: "'Alfa Slab One', sans-serif",
-                  fontSize: "44px",
+                  fontSize: "56px",
                   color: "#fff",
                   background: "linear-gradient(180deg,#ff6b85,#e84863)",
-                  borderRadius: "16px",
-                  padding: "2px 24px",
-                  boxShadow: "0 5px 0 #8f1f33",
+                  borderRadius: "20px",
+                  padding: "2px 30px",
+                  boxShadow: "0 6px 0 #8f1f33",
                   animation: "tick 1s infinite",
                 }}
               >
@@ -167,114 +181,179 @@ export function StopGame(props: GameProps) {
           stepCount={4}
           onClose={() => setShowHowTo(false)}
         />
-        <div className="space-y-4">
-          {/* Header with big letter tile and progress */}
-          <div className="flex items-start gap-4">
-            {/* Big letter tile */}
-            <div className="w-16 h-16 rounded-2xl bg-[linear-gradient(180deg,#ffd23f,#f5b32a)] shadow-lg flex items-center justify-center flex-shrink-0">
-              <div className="font-display text-4xl text-(--dark-ink)">
+        <div style={{ display: "flex", gap: "34px", paddingTop: "30px", paddingBottom: "40px" }}>
+          {/* Left column: letter tile, categories, and button */}
+          <div style={{ flex: "1.5" }}>
+            {/* Header with big letter tile and progress */}
+            <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "20px" }}>
+              {/* Big letter tile - 78px box, 46px glyph */}
+              <div
+                style={{
+                  width: "78px",
+                  height: "78px",
+                  borderRadius: "20px",
+                  background: "linear-gradient(180deg,#ffd23f,#f5b32a)",
+                  boxShadow: "0 6px 0 #c2452d",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: "'Alfa Slab One', sans-serif",
+                  fontSize: "46px",
+                  color: "#3d1f0e",
+                }}
+              >
                 {letter}
               </div>
+
+              <div>
+                <div style={{ fontSize: "11px", fontFamily: "'Space Mono', monospace", fontWeight: "700", letterSpacing: ".3em", color: "rgba(255,233,168,.5)", textTransform: "uppercase" }}>
+                  EVERYTHING STARTS WITH
+                </div>
+                <div style={{ fontSize: "16px", fontFamily: "'Space Grotesk', sans-serif", fontWeight: "600", color: "#ffe9a8" }}>
+                  {filledCount} of {categories.length} filled — {allAnswered ? "ready!" : "keep going!"}
+                </div>
+              </div>
             </div>
 
-            <div className="flex-1">
-              <div className="text-xs font-mono text-(--ink)/50 uppercase tracking-wider mb-1">
-                EVERYTHING STARTS WITH
-              </div>
-              <div className="text-lg font-sans font-(--ink) font-semibold">
-                {filledCount} of {categories.length} filled — {allAnswered ? "ready!" : "keep going!"}
-              </div>
+            {stopped && stoppedBy && (
+              <Banner variant="waiting">
+                {playerNames.get(stoppedBy)} called STOP! • {t("game.waiting")}
+              </Banner>
+            )}
+
+            {/* Category rows */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "11px", marginBottom: "20px" }}>
+              {categories.map((category, idx) => {
+                const hasAnswer = answers[category]?.trim() ?? false;
+                const isActive = idx === 0 && !hasAnswer;
+                return (
+                  <div
+                    key={category}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "14px",
+                      background: "#2b1a3d",
+                      border: `2px solid ${isActive ? "#ffd23f" : hasAnswer ? "#35d4b9" : "#5a3f7a"}`,
+                      borderRadius: "14px",
+                      padding: "6px 18px",
+                    }}
+                  >
+                    <label style={{ width: "110px", fontSize: "11px", fontFamily: "'Space Mono', monospace", fontWeight: "700", color: "rgba(255,233,168,.5)", textTransform: "uppercase", flexShrink: 0 }}>
+                      {category}
+                    </label>
+                    <input
+                      type="text"
+                      value={answers[category] ?? ""}
+                      onChange={(e) => handleAnswerChange(category, e.target.value)}
+                      disabled={stopped}
+                      placeholder={letter + "..."}
+                      style={{
+                        flex: 1,
+                        background: "transparent",
+                        border: "none",
+                        color: "#ffe9a8",
+                        fontSize: "17px",
+                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontWeight: "600",
+                        outline: "none",
+                        padding: "13px 0",
+                        opacity: stopped ? 0.5 : 1,
+                      }}
+                    />
+                    {hasAnswer && (
+                      <span style={{ color: "#35d4b9", fontSize: "15px", flexShrink: 0 }}>✓</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
-            <TimerBadge deadline={deadline} />
+            {/* STOP button - 26px font, 20px padding, 0 7px 0 shadow */}
+            <button
+              onClick={handleStop}
+              disabled={!allAnswered || stopped}
+              style={{
+                width: "100%",
+                fontFamily: "'Alfa Slab One', sans-serif",
+                fontSize: "26px",
+                color: "#fff",
+                background: "linear-gradient(180deg,#ff6b85,#e84863)",
+                borderRadius: "20px",
+                padding: "20px",
+                border: "none",
+                boxShadow: !allAnswered || stopped ? "none" : "0 7px 0 #8f1f33",
+                textAlign: "center",
+                letterSpacing: ".05em",
+                cursor: !allAnswered || stopped ? "not-allowed" : "pointer",
+                opacity: !allAnswered || stopped ? 0.5 : 1,
+                transition: "all 0.2s ease",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+              }}
+              data-testid="stop-button"
+            >
+              <Hand size={24} strokeWidth={2.5} /> STOP!
+            </button>
+            <div style={{ textAlign: "center", fontSize: "10px", fontFamily: "'Space Mono', monospace", color: "rgba(255,233,168,.35)", marginTop: "9px" }}>
+              SLAMMING GIVES EVERYONE ELSE 5 SECONDS
+            </div>
           </div>
 
-          {stopped && stoppedBy && (
-            <Banner variant="waiting">
-              {playerNames.get(stoppedBy)} called STOP! • {t("game.waiting")}
-            </Banner>
-          )}
-
-          {/* Category rows */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {categories.map((category, idx) => {
-              const hasAnswer = answers[category]?.trim() ?? false;
-              const isActive = idx === 0 && !hasAnswer;
-              return (
+          {/* Right column: Game Scoreboard */}
+          <div style={{ flex: "1", maxWidth: "320px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "10px" }}>
+              <span style={{ fontSize: "11px", fontFamily: "'Space Mono', monospace", fontWeight: "700", letterSpacing: ".25em", color: "rgba(255,233,168,.45)", textTransform: "uppercase" }}>GAME SCOREBOARD</span>
+              <span style={{ fontSize: "10px", fontFamily: "'Space Mono', monospace", fontWeight: "700", color: "#ffd23f", textTransform: "uppercase" }}>RD {round}/{totalRounds}</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
+              {gameBoard.map((player) => (
                 <div
-                  key={category}
+                  key={player.name}
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "10px",
-                    background: isActive ? "#1c1230" : "#2b1a3d",
-                    border: `2px solid ${isActive ? "#ffd23f" : hasAnswer ? "#35d4b9" : "#5a3f7a"}`,
-                    borderRadius: "12px",
-                    padding: "9px 12px",
-                    boxShadow: isActive ? "0 0 0 4px rgba(255,210,63,.12)" : "none",
-                    opacity: !hasAnswer && !isActive ? 0.75 : 1,
+                    gap: "12px",
+                    background: "#2b1a3d",
+                    border: `2px solid ${player.border}`,
+                    borderRadius: "99px",
+                    padding: "7px 16px 7px 7px",
                   }}
                 >
-                  <label style={{ width: "86px", fontSize: "10px", fontFamily: "'Space Mono', monospace", fontWeight: "700", color: isActive ? "#ffd23f" : "rgba(255,233,168,.5)", textTransform: "uppercase", flexShrink: 0 }}>
-                    {category}
-                  </label>
-                  <input
-                    type="text"
-                    value={answers[category] ?? ""}
-                    onChange={(e) => handleAnswerChange(category, e.target.value)}
-                    disabled={stopped}
-                    placeholder={letter + "..."}
+                  <div
                     style={{
-                      flex: 1,
-                      background: "transparent",
-                      border: "none",
-                      color: "#ffe9a8",
-                      fontSize: "14px",
-                      fontFamily: "'Space Grotesk', sans-serif",
-                      fontWeight: "600",
-                      outline: "none",
-                      opacity: stopped ? 0.5 : 1,
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "99px",
+                      background: "#fff8e7",
+                      border: `2px solid ${player.hue}`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "7px",
+                      fontFamily: "'Space Mono', monospace",
+                      color: "#8a7f60",
                     }}
-                  />
-                  {hasAnswer && (
-                    <Check size={16} strokeWidth={2.5} style={{ color: "#35d4b9", flexShrink: 0 }} />
-                  )}
+                  >
+                    doodle
+                  </div>
+                  <div style={{ flex: 1, fontSize: "14px", fontFamily: "'Space Grotesk', sans-serif", fontWeight: "700", color: "#ffe9a8" }}>
+                    {player.name}
+                  </div>
+                  <span style={{ fontSize: "10px", fontFamily: "'Space Mono', monospace", fontWeight: "700", color: player.stateColor, textTransform: "uppercase" }}>
+                    {player.state}
+                  </span>
+                  <span style={{ fontFamily: "'Alfa Slab One', sans-serif", fontSize: "16px", color: "#ffe9a8", minWidth: "30px", textAlign: "right" }}>
+                    {player.pts}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-
-          {/* STOP button */}
-          <button
-            onClick={handleStop}
-            disabled={!allAnswered || stopped}
-            style={{
-              width: "100%",
-              fontFamily: "'Alfa Slab One', sans-serif",
-              fontSize: "22px",
-              color: "#fff",
-              background: "linear-gradient(180deg,#ff6b85,#e84863)",
-              borderRadius: "16px",
-              padding: "16px",
-              border: "none",
-              boxShadow: !allAnswered || stopped ? "none" : "0 6px 0 #8f1f33",
-              textAlign: "center",
-              letterSpacing: ".05em",
-              cursor: !allAnswered || stopped ? "not-allowed" : "pointer",
-              opacity: !allAnswered || stopped ? 0.5 : 1,
-              transition: "all 0.2s ease",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-            }}
-            data-testid="stop-button"
-          >
-            <Hand size={24} strokeWidth={2.5} />
-            STOP!
-          </button>
-          <div className="text-center text-xs font-mono text-(--ink)/35">
-            SLAMMING STOP GIVES EVERYONE ELSE 5 SECONDS
+              ))}
+            </div>
+            <div style={{ fontSize: "9px", fontFamily: "'Space Mono', monospace", color: "rgba(255,233,168,.3)", marginTop: "10px", textAlign: "center" }}>
+              GAME POINTS SO FAR · SESSION POINTS AWARDED AT THE END
+            </div>
           </div>
         </div>
       </>
@@ -331,12 +410,9 @@ export function StopGame(props: GameProps) {
     const tallyPct = totalToJudge > 0 ? ((tallyValid / totalToJudge) * 100).toFixed(0) : "0";
 
     return (
-      <div className="space-y-4">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", textAlign: "center" }}>
-          <div style={{ fontSize: "10px", fontFamily: "'Space Mono', monospace", fontWeight: "600", color: "rgba(255,233,168,.5)", letterSpacing: ".25em", textTransform: "uppercase" }}>
-            JUDGING · {judgedCount + 1}/{totalToJudge}
-          </div>
-          <TimerBadge deadline={deadline} />
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "30px 0 50px" }}>
+        <div style={{ fontSize: "10px", fontFamily: "'Space Mono', monospace", fontWeight: "600", color: "rgba(255,233,168,.5)", letterSpacing: ".25em", textTransform: "uppercase", marginBottom: "18px" }}>
+          JUDGING · {judgedCount + 1}/{totalToJudge}
         </div>
 
         <div style={{ textAlign: "center" }}>
@@ -344,22 +420,22 @@ export function StopGame(props: GameProps) {
             CATEGORY · {category} · LETTER {letter}
           </div>
 
-          {/* Cream card with answer */}
-          <div style={{ background: "#fff8e7", borderRadius: "18px", padding: "22px 18px", boxShadow: "0 6px 0 rgba(0,0,0,.35)", marginBottom: "6px" }}>
-            <div style={{ fontSize: "10px", fontFamily: "'Space Mono', monospace", fontWeight: "700", color: "#8a7f60", letterSpacing: ".2em", marginBottom: "6px", textTransform: "uppercase" }}>
+          {/* Cream card with answer - 34px 26px padding, 22px radius, 0 8px 0 shadow, slam .4s animation */}
+          <div style={{ width: "460px", background: "#fff8e7", borderRadius: "22px", padding: "34px 26px", textAlign: "center", boxShadow: "0 8px 0 rgba(0,0,0,.35)", marginBottom: "12px", animation: "slam .4s ease-out" }}>
+            <div style={{ fontSize: "11px", fontFamily: "'Space Mono', monospace", fontWeight: "700", color: "#8a7f60", letterSpacing: ".2em", marginBottom: "8px", textTransform: "uppercase" }}>
               {playerNames.get(item.playerId)} WROTE
             </div>
-            <div style={{ fontFamily: "'Alfa Slab One', sans-serif", fontSize: "30px", color: "#1c1230" }}>
+            <div style={{ fontFamily: "'Alfa Slab One', sans-serif", fontSize: "40px", color: "#1c1230" }}>
               &ldquo;{item.answer}&rdquo;
             </div>
           </div>
 
-          <div style={{ fontSize: "10px", fontFamily: "'Space Mono', monospace", color: "rgba(255,233,168,.4)", marginBottom: "14px", textTransform: "uppercase" }}>
-            IS THIS A REAL CITY?!
+          <div style={{ fontSize: "11px", fontFamily: "'Space Mono', monospace", color: "rgba(255,233,168,.4)", marginBottom: "20px", textTransform: "uppercase" }}>
+            IS THIS REAL?!
           </div>
 
           {/* VALID and NONSENSE buttons */}
-          <div style={{ display: "flex", gap: "10px", marginBottom: "14px" }}>
+          <div style={{ display: "flex", gap: "14px", width: "460px", marginBottom: "20px" }}>
             <button
               onClick={() => {
                 // Mark as VALID - add to judged
@@ -372,13 +448,13 @@ export function StopGame(props: GameProps) {
               style={{
                 flex: 1,
                 fontFamily: "'Alfa Slab One', sans-serif",
-                fontSize: "15px",
+                fontSize: "17px",
                 color: "#0c3d33",
                 background: "linear-gradient(180deg,#41e0c4,#28b89e)",
-                borderRadius: "14px",
-                padding: "14px",
+                borderRadius: "16px",
+                padding: "18px",
                 border: "none",
-                boxShadow: "0 5px 0 #0f6e5c",
+                boxShadow: "0 6px 0 #0f6e5c",
                 cursor: "pointer",
                 transition: "all 0.2s ease",
                 display: "flex",
@@ -407,13 +483,13 @@ export function StopGame(props: GameProps) {
               style={{
                 flex: 1,
                 fontFamily: "'Alfa Slab One', sans-serif",
-                fontSize: "15px",
+                fontSize: "17px",
                 color: "#fff",
                 background: "linear-gradient(180deg,#ff6b85,#e84863)",
-                borderRadius: "14px",
-                padding: "14px",
+                borderRadius: "16px",
+                padding: "18px",
                 border: "none",
-                boxShadow: "0 5px 0 #8f1f33",
+                boxShadow: "0 6px 0 #8f1f33",
                 cursor: "pointer",
                 transition: "all 0.2s ease",
                 display: "flex",
@@ -427,17 +503,17 @@ export function StopGame(props: GameProps) {
             </button>
           </div>
 
-          {/* Tally bar */}
-          <div style={{ display: "flex", justifyContent: "center", gap: "14px", marginBottom: "12px", alignItems: "center" }}>
-            <span style={{ fontSize: "12px", fontFamily: "'Space Mono', monospace", fontWeight: "700", color: "#35d4b9" }}>VALID {tallyValid}</span>
-            <div style={{ width: "140px", height: "10px", borderRadius: "99px", background: "#2b1a3d", border: "1px solid #5a3f7a", overflow: "hidden", display: "flex" }}>
+          {/* Tally bar - 180×12, only when judgeTallyVisible, rise entrance animation */}
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px", justifyContent: "center", animation: "rise .3s ease-out" }}>
+            <span style={{ fontSize: "13px", fontFamily: "'Space Mono', monospace", fontWeight: "700", color: "#35d4b9", textTransform: "uppercase" }}>VALID {tallyValid}</span>
+            <div style={{ width: "180px", height: "12px", borderRadius: "99px", background: "#2b1a3d", border: "1px solid #5a3f7a", overflow: "hidden", display: "flex" }}>
               <div style={{ width: tallyPct + "%", height: "100%", background: "#35d4b9" }}></div>
               <div style={{ flex: 1, height: "100%", background: "#e84863" }}></div>
             </div>
-            <span style={{ fontSize: "12px", fontFamily: "'Space Mono', monospace", fontWeight: "700", color: "#ff8a9b" }}>{tallyNope} NOPE</span>
+            <span style={{ fontSize: "13px", fontFamily: "'Space Mono', monospace", fontWeight: "700", color: "#ff8a9b", textTransform: "uppercase" }}>{tallyNope} NOPE</span>
           </div>
 
-          <div style={{ fontSize: "9px", fontFamily: "'Space Mono', monospace", color: "rgba(255,233,168,.35)", marginTop: "10px" }}>
+          <div style={{ fontSize: "10px", fontFamily: "'Space Mono', monospace", color: "rgba(255,233,168,.3)", marginTop: "22px" }}>
             UNIQUE VALID = 10 · DUPLICATE = 5 · NONSENSE = 0
           </div>
         </div>

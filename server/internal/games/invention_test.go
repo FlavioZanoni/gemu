@@ -247,3 +247,30 @@ func TestInventionStatusAndStandings(t *testing.T) {
 		t.Fatalf("expected p1 second with score 300, got %+v", standings[1])
 	}
 }
+
+// Nobody should be dealt a problem they wrote themselves (when avoidable).
+func TestInventionAssignAvoidsOwnProblems(t *testing.T) {
+	players := []string{"p1", "p2", "p3", "p4"}
+	for iter := 0; iter < 100; iter++ {
+		game := &InventionGame{}
+		game.Start("room-1", Options{Room: fakeRoom{players: players}})
+		authors := map[string]string{}
+		for _, id := range players {
+			a, b := id+"-problem-A", id+"-problem-B"
+			_ = game.OnAction(id, map[string]any{"problems": []any{a, b}})
+			authors[a], authors[b] = id, id
+		}
+		if game.phase != "drawing" {
+			t.Fatalf("iter %d: expected drawing after all submitted, got %s", iter, game.phase)
+		}
+		for _, id := range players {
+			assigned := game.assignments[id]
+			if assigned == "" {
+				t.Fatalf("iter %d: %s got no assignment", iter, id)
+			}
+			if authors[assigned] == id {
+				t.Fatalf("iter %d: %s was dealt their own problem %q", iter, id, assigned)
+			}
+		}
+	}
+}

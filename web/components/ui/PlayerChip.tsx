@@ -66,11 +66,14 @@ export function PlayerChip({
         ? "var(--danger)"
         : "var(--ink-faint)";
 
+  const borderColor = player.ready && player.connected ? "#35d4b9" : "var(--line)";
+
   return (
     <div
-      className={`flex items-center gap-2.5 rounded-full border-2 border-(--line) bg-(--panel) py-1.5 pl-1.5 pr-4 ${
+      className={`flex items-center gap-2.5 rounded-full border-2 bg-(--panel) py-1.5 pl-1.5 pr-4 ${
         player.connected ? "" : "opacity-45"
       }`}
+      style={{ borderColor }}
     >
       <Avatar player={player} color={color} />
       <div className="min-w-0">

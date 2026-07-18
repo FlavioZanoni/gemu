@@ -54,7 +54,7 @@ export function TriviaGame(props: GameProps) {
 
       <div
         className="rounded-2xl p-6 text-center"
-        style={{ background: `linear-gradient(180deg,${hue.gradFrom},${hue.gradTo})`, color: hue.ink }}
+        style={{ background: `linear-gradient(180deg,${hue.gradFrom},${hue.gradTo})`, color: hue.ink, boxShadow: `0 5px 0 ${hue.drop}` }}
       >
         <div className="slab text-xl leading-snug">{pub.question}</div>
       </div>

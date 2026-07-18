@@ -37,33 +37,69 @@ export function ResultsScreen({
 
       {/* Standings */}
       <div className="flex flex-col gap-3 w-full max-w-2xl mb-8">
-        {gameResult.standings.map((standing, idx) => (
-          <div
-            key={standing.playerId}
-            className="animate-rise rounded-2xl border-2 border-(--line) bg-(--panel) p-3 flex items-center justify-between flex-wrap gap-3"
-            style={{ animationDelay: `${idx * 0.1}s` }}
-          >
-            <div className="flex items-center gap-4">
-              <div className="slab text-2xl w-8 text-center text-(--accent)">
-                {standing.place}
-              </div>
-              <div className="flex-1 w-12 h-12 rounded-full bg-(--panel-raised) border-2 border-(--line) flex items-center justify-center text-xs text-(--ink)/60">
-                doodle
-              </div>
-              <div>
-                <div className="font-bold text-(--ink)">
-                  {standing.name}
+        {gameResult.standings.map((standing, idx) => {
+          const isWinner = idx === 0;
+          return (
+            <div
+              key={standing.playerId}
+              className={`animate-rise rounded-2xl p-3 flex items-center justify-between flex-wrap gap-3 ${
+                isWinner
+                  ? "border-2 border-[#ffd23f]"
+                  : "border-2 border-(--line) bg-(--panel)"
+              }`}
+              style={{
+                animationDelay: `${idx * 0.1}s`,
+                ...(isWinner
+                  ? {
+                      background: "linear-gradient(180deg,#ffd23f,#f5b32a)",
+                      boxShadow: "0 5px 0 #c2452d",
+                      color: "#3d1f0e",
+                    }
+                  : {}),
+              }}
+            >
+              <div className="flex items-center gap-4">
+                <div
+                  className="slab text-2xl w-8 text-center"
+                  style={{ color: isWinner ? "#3d1f0e" : "var(--accent)" }}
+                >
+                  {standing.place}
                 </div>
-                <div className="text-xs text-(--ink)/60">
-                  {standing.score} pts in game
+                <div className="flex-1 w-12 h-12 rounded-full bg-(--panel-raised) border-2 border-(--line) flex items-center justify-center text-xs text-(--ink)/60">
+                  doodle
                 </div>
+                <div>
+                  <div
+                    className="font-bold"
+                    style={{ color: isWinner ? "#3d1f0e" : "var(--ink)" }}
+                  >
+                    {standing.name}
+                  </div>
+                  <div
+                    className="text-xs"
+                    style={
+                      isWinner
+                        ? { color: "rgba(61, 31, 14, 0.7)" }
+                        : { color: "var(--ink-60)" }
+                    }
+                  >
+                    {standing.score} pts in game
+                  </div>
+                </div>
+              </div>
+              <div
+                className="slab text-2xl"
+                style={
+                  isWinner
+                    ? { color: "#3d1f0e" }
+                    : { color: "var(--accent-2)" }
+                }
+              >
+                +{standing.points}
               </div>
             </div>
-            <div className="slab text-2xl text-(--accent-2)">
-              +{standing.points}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Admin actions */}

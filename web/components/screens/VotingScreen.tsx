@@ -69,11 +69,13 @@ export function VotingScreen({
 
       {/* Vote cards */}
       <div className="flex gap-6 flex-wrap justify-center max-w-5xl">
-        {vote.options.map((option) => {
+        {vote.options.map((option, optIdx) => {
           const game = gamesCatalog.find((g) => g.type === option.type);
           const hue = hueFor(option.type);
           const isSelected = selectedGameType === option.type;
           const voteCount = votes[option.type] || 0;
+          const letterBadges = ["A", "B", "C", "D", "E"];
+          const letter = letterBadges[optIdx] || String.fromCharCode(65 + optIdx);
 
           return (
             <div
@@ -83,18 +85,18 @@ export function VotingScreen({
                 onCastVote(option.type);
               }}
               className={`w-56 rounded-2xl p-6 text-center cursor-pointer transition ${
-                isSelected ? "scale-105 shadow-xl" : "hover:-translate-y-1"
+                isSelected ? "scale-105" : "hover:-translate-y-1"
               }`}
               style={{
                 background: `linear-gradient(180deg, ${hue.gradFrom}, ${hue.gradTo})`,
                 border: `2px solid ${isSelected ? "rgba(255,255,255,0.4)" : "transparent"}`,
-                boxShadow: `0 5px 0 ${hue.drop}`,
+                boxShadow: isSelected ? `0 4px 0 rgba(0,0,0,.4)` : `0 5px 0 ${hue.drop}`,
                 color: hue.ink,
               }}
               data-testid={`vote-option-${option.type}`}
             >
               <div className="text-xs font-bold opacity-75 mb-2 uppercase tracking-widest">
-                {option.type}
+                {letter}
               </div>
               <h3 className="slab text-2xl mb-2">{game?.name || option.name}</h3>
               <div className="text-xs mb-1 opacity-80 font-semibold">{game?.players}</div>

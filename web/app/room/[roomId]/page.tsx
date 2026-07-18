@@ -14,6 +14,7 @@ import { PauseOverlay } from "@/components/screens/PauseOverlay";
 import { IntroScreen } from "@/components/screens/IntroScreen";
 import { DrumrollOverlay } from "@/components/screens/DrumrollOverlay";
 import { Banner, CodePill } from "@/components/ui";
+import { Footprints } from "lucide-react";
 
 // Friendly text for server error codes surfaced as toasts; unknown codes fall
 // back to a generic message rather than showing a raw key.
@@ -126,14 +127,31 @@ export default function RoomPage() {
   if (room.kicked) {
     return (
       <div className="min-h-screen bg-(--bg) flex items-center justify-center px-6">
-        <div className="w-full max-w-2xl rounded-2xl border-2 border-(--line) bg-(--panel) p-8 text-center">
-          <h1 className="slab text-4xl mb-3">{t("edge.kicked")}</h1>
-          <p className="text-(--ink)/70 text-sm mb-6">
+        <div
+          className="rounded-2xl bg-(--bg) p-7 text-center"
+          style={{
+            width: "300px",
+            border: "1px solid rgba(255,255,255,.12)",
+          }}
+        >
+          <div style={{ marginBottom: "8px", display: "flex", justifyContent: "center" }}>
+            <Footprints size={30} strokeWidth={2.5} style={{ color: "#ff4f6f" }} />
+          </div>
+          <h1 className="slab text-2xl mb-3" style={{ color: "#ff4f6f" }}>
+            {t("edge.kicked")}
+          </h1>
+          <p className="text-(--ink)/55 text-sm mb-4">
             {t("edge.kickedDesc")}
           </p>
           <button
             onClick={() => router.push("/")}
-            className="px-6 py-3 rounded-xl bg-(--accent) text-(--dark-ink) font-bold hover:opacity-90 transition"
+            className="w-full slab text-sm px-4 py-3 rounded-xl font-bold transition"
+            style={{
+              background: "#2b1a3d",
+              border: "2px solid #ffe9a8",
+              color: "#ffe9a8",
+              boxShadow: "0 4px 0 rgba(0,0,0,.4)",
+            }}
           >
             {t("edge.returnToLobby")}
           </button>
@@ -317,8 +335,6 @@ export default function RoomPage() {
               />
             )}
 
-            {drumrollFor && <DrumrollOverlay gameType={drumrollFor} />}
-
             {status === "results" && effectiveGameResult && (
               <ResultsScreen
                 gameResult={effectiveGameResult}
@@ -331,11 +347,19 @@ export default function RoomPage() {
             )}
 
             {status === "voting" && (
-              <VotingScreen
-                vote={room.vote}
-                voteResult={room.voteResult}
-                onCastVote={(gameType) => room.castVote(gameType)}
-              />
+              <>
+                {drumrollFor ? (
+                  <div className="min-h-screen flex items-center justify-center">
+                    <DrumrollOverlay gameType={drumrollFor} />
+                  </div>
+                ) : (
+                  <VotingScreen
+                    vote={room.vote}
+                    voteResult={room.voteResult}
+                    onCastVote={(gameType) => room.castVote(gameType)}
+                  />
+                )}
+              </>
             )}
               </>
             )}

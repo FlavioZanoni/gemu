@@ -8,6 +8,7 @@ import type { Player, RoomSnapshot, Standing } from "@/lib/protocol";
 import { GameSurface } from "@/components/GameSurface";
 import { Button, ScoreStrip, TimerBadge, HowToPlayModal } from "@/components/ui";
 import { gamesCatalog } from "@/lib/games";
+import { hueFor } from "@/components/ui/gameHues";
 
 export function PlayingScreen({
   snapshot,
@@ -46,51 +47,128 @@ export function PlayingScreen({
   const deadline =
     (gamePublicState?.deadline as number | undefined) || null;
 
-  return (
-    <div className="flex flex-col gap-4">
-      {/* Header bar */}
-      <div className="rounded-2xl border-2 border-(--line) bg-(--panel) p-4 flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex-1 min-w-0">
-          <h1 className="slab text-2xl truncate">
-            {game?.name || snapshot.gameName}
-          </h1>
-          <p className="text-xs text-(--ink)/60">
-            {snapshot.name} · {players.length} players
-          </p>
-        </div>
+  // Extract round/phase info from gamePublicState for sublabel
+  const round = (gamePublicState?.round as number | undefined) || null;
+  const totalRounds = (gamePublicState?.totalRounds as number | undefined) || null;
+  const phase = (gamePublicState?.phase as string | undefined) || null;
 
-        {/* Timer and actions */}
-        <div className="flex items-center gap-3">
-          {deadline && <TimerBadge deadline={deadline} />}
-          {isAdmin && onPause && (
-            <button
-              onClick={onPause}
-              className="text-xs px-3 py-2 rounded border border-(--line) text-(--ink)/70 hover:bg-(--panel-raised) transition flex items-center gap-2"
-              title={t("pause.caption")}
-            >
-              <Pause size={16} strokeWidth={2.5} /> {t("pause.pause")}
-            </button>
-          )}
-          <Button variant="ghost" onClick={() => setHowToOpen(true)}>
-            {t("playing.howToPlay")}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onLeave}
+  // Build sublabel: "RD x/y · <phase>" with graceful fallback
+  const sublabel = (() => {
+    if (round !== null && totalRounds !== null) {
+      const phaseStr = phase ? ` · ${phase}` : "";
+      return `RD ${round}/${totalRounds}${phaseStr}`;
+    }
+    if (phase) {
+      return phase;
+    }
+    return null;
+  })();
+
+  const hue = hueFor(snapshot.gameType);
+
+  return (
+    <div className="flex flex-col">
+      {/* Flat edge-to-edge header bar */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          padding: "12px 28px",
+          background: "#2b1a3d",
+          borderBottom: "2px solid #5a3f7a",
+        }}
+      >
+        {/* Game pill */}
+        <span
+          style={{
+            fontFamily: "'Alfa Slab One', serif",
+            fontSize: "14px",
+            color: hue.ink,
+            background: hue.base,
+            borderRadius: "9px",
+            padding: "5px 14px",
+          }}
+        >
+          {game?.name || snapshot.gameName}
+        </span>
+
+        {/* Sublabel */}
+        {sublabel && (
+          <span
+            style={{
+              font: "600 11px 'Space Mono', monospace",
+              color: "rgba(255,233,168,.5)",
+            }}
           >
-            {t("common.leave")}
-          </Button>
-        </div>
+            {sublabel}
+          </span>
+        )}
+
+        {/* Flex spacer */}
+        <span style={{ flex: 1 }} />
+
+        {/* Timer badge */}
+        {deadline && <TimerBadge deadline={deadline} />}
+
+        {/* Pause button (admin only) */}
+        {isAdmin && onPause && (
+          <button
+            onClick={onPause}
+            title={t("pause.caption")}
+            style={{
+              font: "700 13px 'Space Grotesk', system-ui, sans-serif",
+              color: "#ffd23f",
+              border: "2px solid #ffd23f",
+              background: "transparent",
+              borderRadius: "99px",
+              padding: "6px 14px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(255,210,63,.12)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+            }}
+          >
+            <Pause size={18} strokeWidth={2.5} />
+          </button>
+        )}
+
+        {/* How to play button */}
+        <Button variant="ghost" onClick={() => setHowToOpen(true)}>
+          {t("playing.howToPlay")}
+        </Button>
+
+        {/* Leave button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onLeave}
+        >
+          {t("common.leave")}
+        </Button>
       </div>
 
       {/* Score strip */}
       {standings.length > 0 && (
-        <ScoreStrip standings={standings} players={players} playerId={playerId} />
+        <div data-testid="score-strip" className="mt-4">
+          <ScoreStrip
+            standings={standings}
+            players={players}
+            playerId={playerId}
+            sessionScores={snapshot.sessionScores}
+            playedGames={snapshot.playedGames}
+          />
+        </div>
       )}
 
       {/* Game surface */}
-      <div data-testid="game-surface" className="rounded-2xl border-2 border-(--line) bg-(--panel) p-4">
+      <div data-testid="game-surface" className="rounded-2xl border-2 border-(--line) bg-(--panel) p-4 mt-4">
         <GameSurface
           gameType={snapshot.gameType}
           playerId={playerId ?? ""}

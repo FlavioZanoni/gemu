@@ -39,11 +39,11 @@ export const gameHues: Record<string, GameHue> = {
     drop: "#8f1f33",
   },
   invention: {
-    base: "#ff9d3f",
-    gradFrom: "#ffb05c",
-    gradTo: "#f28a2a",
+    base: "#ffb56b",
+    gradFrom: "#ffb56b",
+    gradTo: "#f28e35",
     ink: "#3d1f0e",
-    drop: "#a04f14",
+    drop: "#9c5413",
   },
   trivia: {
     base: "#4f9dff",

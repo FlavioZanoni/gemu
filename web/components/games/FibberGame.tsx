@@ -60,7 +60,7 @@ export function FibberGame(props: GameProps) {
 
       <div
         className="rounded-2xl p-5 text-center"
-        style={{ background: `linear-gradient(180deg,${hue.gradFrom},${hue.gradTo})`, color: hue.ink }}
+        style={{ background: `linear-gradient(180deg,${hue.gradFrom},${hue.gradTo})`, color: hue.ink, boxShadow: `0 5px 0 ${hue.drop}` }}
       >
         <div className="mono-caption mb-1" style={{ color: hue.ink }}>
           {t("fibber.prompt")}

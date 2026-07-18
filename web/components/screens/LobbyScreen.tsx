@@ -80,7 +80,7 @@ export function LobbyScreen({
       <div className="flex items-center gap-5 justify-between flex-wrap">
         <div>
           <h1 className="slab text-4xl">{snapshot.name}</h1>
-          <p className="text-xs text-(--ink)/60 mt-2 uppercase tracking-widest">
+          <p className="text-xs text-(--ink)/60 mt-2 uppercase tracking-widest font-mono">
             Green room · Waiting to start
           </p>
         </div>
@@ -233,11 +233,9 @@ export function LobbyScreen({
             )}
           </div>
 
-          {isAdmin && (
-            <p className="text-center text-xs text-(--ink)/60 mt-3 uppercase tracking-widest">
-              First game is drawn at random from the playlist
-            </p>
-          )}
+          <p className="text-center text-xs text-(--ink)/60 mt-3 uppercase tracking-widest font-mono">
+            First game is drawn at random from the playlist
+          </p>
         </div>
 
         {/* Right: Players list */}

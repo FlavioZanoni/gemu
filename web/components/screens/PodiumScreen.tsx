@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { Volume2, Trophy, Medal } from "lucide-react";
+import { Volume2, Crown } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { SessionFinal } from "@/lib/protocol";
 import { Button } from "@/components/ui";
@@ -67,28 +67,32 @@ export function PodiumScreen({
 
       {/* Top 3 Podium */}
       <div className="w-full max-w-4xl relative z-10">
-        <div className="flex items-flex-end justify-center gap-4 h-80 mb-8">
-          {top3.map((standing, idx) => {
-            const positions = [
-              { flex: 0.8, h: "h-56", rank: 2 },
-              { flex: 1, h: "h-64", rank: 1 },
-              { flex: 0.8, h: "h-40", rank: 3 },
-            ];
-            const pos = positions[idx] || positions[0];
+        <div className="flex items-end justify-center gap-4 h-80 mb-8">
+          {/* Reorder standings: design uses pod = [totals[1], totals[0], totals[2]]
+              So top3[1] (2nd) goes left, top3[0] (1st) goes center, top3[2] (3rd) goes right */}
+          {[
+            // Design order: 2nd left, champion center, 3rd right — but a
+            // 2-player night has no 3rd, so pair each slot with its position
+            // and drop empty ones instead of crashing on undefined.
+            { standing: top3[1], flex: 1, h: "h-56", rank: 2, delay: 0.3 },
+            { standing: top3[0], flex: 1.15, h: "h-64", rank: 1, delay: 0.6 },
+            { standing: top3[2], flex: 1, h: "h-40", rank: 3, delay: 0 },
+          ]
+            .filter((slot) => slot.standing)
+            .map(({ standing, ...pos }, idx) => {
+            const isChampion = pos.rank === 1;
             return (
               <div
                 key={standing.playerId}
                 className="animate-rise flex flex-col items-center justify-end gap-2"
                 style={{
                   flex: pos.flex,
-                  animationDelay: `${idx * 0.15}s`,
+                  animationDelay: `${pos.delay}s`,
                 }}
               >
-                <div className="text-4xl flex justify-center">
-                  {idx === 0 && <Trophy size={40} strokeWidth={2.5} style={{ color: "#ffd23f" }} />}
-                  {idx === 1 && <Medal size={40} strokeWidth={2.5} style={{ color: "#c7cdd6" }} />}
-                  {idx === 2 && <Medal size={40} strokeWidth={2.5} style={{ color: "#cd7f32" }} />}
-                </div>
+                {isChampion && (
+                  <Crown size={40} strokeWidth={2.5} style={{ color: "#ffd23f" }} />
+                )}
                 <div className="w-14 h-14 rounded-full bg-(--panel-raised) border-3 border-(--line) flex items-center justify-center text-xs text-(--ink)/60">
                   doodle
                 </div>
@@ -101,19 +105,18 @@ export function PodiumScreen({
                   </div>
                 </div>
                 <div
-                  className={`w-full ${pos.h} rounded-t-2xl flex items-center justify-center border-t-2 border-x-2 border-(--line) text-4xl slab`}
+                  className={`w-full ${pos.h} rounded-t-2xl flex items-center justify-center text-4xl slab`}
                   style={{
-                    background:
-                      idx === 0
-                        ? "linear-gradient(180deg, #ffd23f, #f5b32a)"
-                        : idx === 1
-                          ? "linear-gradient(180deg, #8ceedd, #35d4b9)"
-                          : "linear-gradient(180deg, #ffb56b, #f28e35)",
-                    color: idx === 0 ? "#3d1f0e" : idx === 1 ? "#0c3d33" : "#3d1f0e",
+                    background: isChampion
+                      ? "linear-gradient(180deg, #ffd23f, #f5b32a)"
+                      : "#2b1a3d",
+                    border: isChampion ? "none" : "2px solid #5a3f7a",
+                    color: isChampion ? "#3d1f0e" : "rgba(255,233,168,.7)",
+                    boxShadow: isChampion ? "0 0 30px rgba(255,210,63,.35)" : "none",
                   }}
-                  data-testid={idx === 0 ? "podium-winner" : undefined}
+                  data-testid={isChampion ? "podium-winner" : undefined}
                 >
-                  {idx + 1}
+                  {pos.rank}
                 </div>
               </div>
             );

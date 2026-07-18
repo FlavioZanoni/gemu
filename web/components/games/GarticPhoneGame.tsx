@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { useI18n } from "@/lib/i18n";
 import { Card, Button, TimerBadge, Banner, HowToPlayModal } from "../ui";
 import { DrawingCanvas } from "../DrawingCanvas";
+import { playerColorFor } from "../ui/gameHues";
 import type { GameProps } from "./types";
 
 type GarticPhoneEntry = {
@@ -208,7 +209,7 @@ export function GarticPhoneGame(props: GameProps) {
               </Card>
             )}
 
-            <div className="rounded-xl border-2 overflow-hidden" style={{ borderColor: "var(--hue-garticphone)", height: "300px" }}>
+            <div className="rounded-xl border-2 overflow-hidden" style={{ borderColor: "var(--hue-garticphone)", height: "300px", boxShadow: "0 5px 0 #5f3d99" }}>
               <DrawingCanvas
                 ref={canvasRef}
                 onChange={handleCanvasDrawing}
@@ -253,7 +254,7 @@ export function GarticPhoneGame(props: GameProps) {
           <div className="space-y-4">
             {prevEntry && (
               <>
-                <div style={{ textAlign: "center", fontSize: "10px", fontWeight: 700, letterSpacing: "0.25em", color: "#b78bff", marginBottom: "12px", textTransform: "uppercase" }}>
+                <div style={{ textAlign: "center", fontSize: "10px", fontWeight: 700, letterSpacing: "0.25em", color: "#b78bff", marginBottom: "12px", textTransform: "uppercase", fontFamily: "'Space Mono'" }}>
                   RAFA DREW THIS… WHAT IS IT?!
                 </div>
                 <div style={{ height: "290px", backgroundColor: "#fff8e7", borderRadius: "16px", border: "3px solid #b78bff", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
@@ -336,16 +337,21 @@ export function GarticPhoneGame(props: GameProps) {
                 const entryReactions = reactions[key] ?? {};
                 const isLatest = idx === revealPos;
                 const authorName = playerNames.get(entry.author) ?? "Someone";
+                const authorIndex = props.players.findIndex((p) => p.id === entry.author);
+                const authorColor = playerColorFor(authorIndex >= 0 ? authorIndex : 0);
+
+                // Graduated opacity: latest 1, previous 0.75, older 0.55
+                const entryOpacity = isLatest ? 1 : idx === revealPos - 1 ? 0.75 : 0.55;
 
                 if (entry.kind === "text") {
                   return (
-                    <div key={idx} style={{ display: "flex", gap: "10px", alignItems: "flex-start", opacity: isLatest ? 1 : 0.75 }}>
-                      <div style={{ flex: "none", width: "30px", height: "30px", borderRadius: "99px", backgroundColor: "#fff8e7", border: "2px solid #ff4f6f" }} />
+                    <div key={idx} style={{ display: "flex", gap: "10px", alignItems: "flex-start", opacity: entryOpacity }}>
+                      <div style={{ flex: "none", width: "30px", height: "30px", borderRadius: "99px", backgroundColor: "#fff8e7", border: `2px solid ${authorColor}` }} />
                       <div style={{ flex: 1, background: isLatest ? "linear-gradient(180deg, #c9a4ff, #a678f2)" : "#2b1a3d", border: `2px solid ${isLatest ? "transparent" : "#5a3f7a"}`, borderRadius: "4px 14px 14px 14px", padding: "9px 12px", boxShadow: isLatest ? "0 5px 0 #5f3d99" : "none", animation: isLatest ? "slam .45s ease-out" : "none" }}>
-                        <div style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.2em", color: isLatest ? "rgba(45,22,80,.6)" : "rgba(255,233,168,.4)", marginBottom: "4px", textTransform: "uppercase" }}>
+                        <div style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.2em", color: isLatest ? "rgba(45,22,80,.6)" : "rgba(255,233,168,.4)", marginBottom: "4px", textTransform: "uppercase", fontFamily: "'Space Mono'" }}>
                           {authorName} WROTE
                         </div>
-                        <div style={{ fontSize: "13px", fontWeight: 600, color: isLatest ? "#2d1650" : "#ffe9a8" }}>
+                        <div style={{ fontSize: isLatest ? "15px" : "13px", fontWeight: isLatest ? 700 : 600, color: isLatest ? "#2d1650" : "#ffe9a8" }}>
                           "{entry.text}"
                         </div>
                       </div>
@@ -353,10 +359,10 @@ export function GarticPhoneGame(props: GameProps) {
                   );
                 } else {
                   return (
-                    <div key={idx} style={{ display: "flex", gap: "10px", alignItems: "flex-start", opacity: isLatest ? 1 : 0.75 }}>
-                      <div style={{ flex: "none", width: "30px", height: "30px", borderRadius: "99px", backgroundColor: "#fff8e7", border: "2px solid #b78bff" }} />
+                    <div key={idx} style={{ display: "flex", gap: "10px", alignItems: "flex-start", opacity: entryOpacity }}>
+                      <div style={{ flex: "none", width: "30px", height: "30px", borderRadius: "99px", backgroundColor: "#fff8e7", border: `2px solid ${authorColor}` }} />
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.2em", color: "rgba(255,233,168,.4)", marginBottom: "4px", textTransform: "uppercase" }}>
+                        <div style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.2em", color: "rgba(255,233,168,.4)", marginBottom: "4px", textTransform: "uppercase", fontFamily: "'Space Mono'" }}>
                           {authorName} DREW IT
                         </div>
                         <div style={{ height: "120px", backgroundColor: "#fff8e7", border: "2px solid #5a3f7a", borderRadius: "4px 14px 14px 14px", overflow: "hidden" }}>

@@ -75,6 +75,13 @@ body {
   text-shadow: 0 4px 0 var(--drop);
 }
 
+/* Large slab with 8px drop shadow (for home GEMU wordmark) */
+.slab-xl {
+  font-family: var(--font-display);
+  color: var(--ink);
+  text-shadow: 0 8px 0 var(--drop);
+}
+
 .mono-caption {
   font-family: var(--font-mono);
   font-weight: 700;
@@ -123,7 +130,7 @@ body {
     transform: scale(1);
   }
   50% {
-    transform: scale(1.08);
+    transform: scale(1.06);
   }
   100% {
     transform: scale(1);

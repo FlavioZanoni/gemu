@@ -103,7 +103,7 @@ function HomeContent() {
               >
                 <Bulbs count={4} size={12} className="absolute -top-2 left-6 right-6" />
                 <Bulbs count={4} size={12} className="absolute -bottom-2 left-6 right-6" />
-                <div className="slab text-7xl leading-none sm:text-8xl">GEMU</div>
+                <div className="slab-xl text-7xl leading-none sm:text-8xl">GEMU</div>
               </div>
               <p className="mt-5 max-w-md text-lg font-semibold leading-relaxed text-(--ink)/85">
                 {t("home.tagline1")}

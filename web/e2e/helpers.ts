@@ -115,6 +115,12 @@ export async function startGame(room: Room, game: GameType): Promise<Room> {
   if (await gotit.isVisible()) await gotit.click();
   for (const page of room.pages) {
     await expect(page.getByTestId("game-surface")).toBeVisible();
+    // Games auto-open their own how-to modal on round 1 for every player; it
+    // overlays the surface, so dismiss it wherever it appeared.
+    const inGameGotit = page.getByTestId("howto-gotit");
+    if (await inGameGotit.isVisible().catch(() => false)) {
+      await inGameGotit.click();
+    }
   }
   return room;
 }

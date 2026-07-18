@@ -55,7 +55,7 @@ export function JoinGateScreen({
               <button
                 type="button"
                 onClick={() => setDrawOpen(true)}
-                className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-(--accent) bg-[#fff8e7] transition hover:brightness-95"
+                className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-lg border-2 border-(--accent) bg-[#fff8e7] transition hover:brightness-95"
               >
                 {avatarUrl.trim() ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -93,14 +93,14 @@ export function JoinGateScreen({
             />
 
             <input
-              type="password"
+              type="text"
               placeholder={t("home.joinCode")}
               value={joinCode}
               onChange={(e) => {
                 setJoinCode(e.target.value);
                 setLocalError(null);
               }}
-              className="w-full px-4 py-3 rounded-xl border-2 border-(--line) bg-(--panel-raised) text-(--ink) placeholder:text-(--ink)/50 focus:outline-none focus:border-(--accent-2)"
+              className="w-full px-4 py-3 rounded-xl border-2 border-(--line) bg-(--panel-raised) text-(--ink) placeholder:text-(--ink)/50 focus:outline-none focus:border-(--accent-2) font-mono uppercase tracking-widest"
             />
 
             <input
@@ -116,12 +116,12 @@ export function JoinGateScreen({
 
             {/* Error messages */}
             {localError && (
-              <p className="text-sm text-red-400 bg-red-400/10 px-3 py-2 rounded">
+              <p className="text-sm px-3 py-2 rounded" style={{ color: "var(--danger)", backgroundColor: "rgba(255, 79, 111, 0.1)" }}>
                 {localError}
               </p>
             )}
             {joinError && (
-              <p className="text-sm text-red-400 bg-red-400/10 px-3 py-2 rounded">
+              <p className="text-sm px-3 py-2 rounded" style={{ color: "var(--danger)", backgroundColor: "rgba(255, 79, 111, 0.1)" }}>
                 {joinErrorText(joinError, t)}
               </p>
             )}

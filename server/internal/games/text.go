@@ -4,7 +4,9 @@ import "strings"
 
 // maxDrawingBytes caps an embedded canvas data: URL, independent of the WS
 // frame ceiling — these get stored and rebroadcast in full game state.
-const maxDrawingBytes = 48 * 1024
+// 512 KiB fits a full-canvas PNG doodle comfortably while staying under the
+// hub's 1 MiB per-message read limit.
+const maxDrawingBytes = 512 * 1024
 
 // TruncateText caps a string to max runes.
 func TruncateText(s string, max int) string {

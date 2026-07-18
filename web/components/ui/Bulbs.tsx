@@ -13,6 +13,7 @@ export function Bulbs({
   color,
   className = "",
   style,
+  speed = 1,
 }: {
   count?: number;
   size?: number;
@@ -20,6 +21,8 @@ export function Bulbs({
   color?: string;
   className?: string;
   style?: CSSProperties;
+  /** Animation cadence in seconds (default 1s). */
+  speed?: number;
 }) {
   return (
     <div className={`flex justify-between ${className}`} style={style} aria-hidden>
@@ -36,7 +39,7 @@ export function Bulbs({
               borderRadius: 99,
               background: c.fill,
               boxShadow: `0 0 ${size}px ${c.glow}`,
-              animation: `bulb 1s ${(i * 0.25) % 1}s infinite`,
+              animation: `bulb ${speed}s ${(i * 0.25 * speed) % (speed)}s infinite`,
             }}
           />
         );

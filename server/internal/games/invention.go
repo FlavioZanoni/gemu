@@ -321,29 +321,67 @@ func (g *InventionGame) startAssign(players []string) {
 	if len(players) < 2 {
 		return
 	}
-	pool := make([]string, 0)
-	for _, problems := range g.problems {
+	// Pool keeps each problem's author so nobody is handed their own problem.
+	type authored struct{ problem, author string }
+	pool := make([]authored, 0)
+	for author, problems := range g.problems {
 		for _, problem := range problems {
-			pool = append(pool, problem)
+			pool = append(pool, authored{problem, author})
 		}
 	}
 	if len(pool) == 0 {
 		shuffled := make([]string, len(fallbackProblems))
 		copy(shuffled, fallbackProblems)
 		rand.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
-		needed := len(players)
-		for len(shuffled) < needed {
+		for len(shuffled) < len(players) {
 			shuffled = append(shuffled, shuffled...)
 		}
-		pool = shuffled[:needed]
+		for _, p := range shuffled[:len(players)] {
+			pool = append(pool, authored{p, ""}) // no author: assignable to anyone
+		}
 	}
 	rand.Shuffle(len(pool), func(i, j int) { pool[i], pool[j] = pool[j], pool[i] })
 	g.assignments = make(map[string]string)
+	assignedAuthor := make(map[string]string)
 	for _, playerID := range players {
-		if len(pool) > 0 {
-			g.assignments[playerID] = pool[0]
-			pool = pool[1:]
-		} else {
+		// Take the first pooled problem not authored by this player.
+		pick := -1
+		for i, p := range pool {
+			if p.author != playerID {
+				pick = i
+				break
+			}
+		}
+		if pick == -1 && len(pool) > 0 {
+			// Only own problems remain: swap with an earlier player whose
+			// assigned problem we can take (they authored neither ours nor
+			// theirs being ours is fine — they just can't get their own back).
+			pick = 0
+			for _, other := range players {
+				prev, done := g.assignments[other]
+				if !done || other == playerID {
+					continue
+				}
+				if assignedAuthor[other] != playerID && pool[0].author != other {
+					g.assignments[playerID] = prev
+					prevAuthor := assignedAuthor[other]
+					g.assignments[other] = pool[0].problem
+					assignedAuthor[playerID] = prevAuthor
+					assignedAuthor[other] = pool[0].author
+					pool = pool[1:]
+					pick = -2 // handled via swap
+					break
+				}
+			}
+			if pick == -2 {
+				continue
+			}
+		}
+		if pick >= 0 {
+			g.assignments[playerID] = pool[pick].problem
+			assignedAuthor[playerID] = pool[pick].author
+			pool = append(pool[:pick], pool[pick+1:]...)
+		} else if _, ok := g.assignments[playerID]; !ok {
 			g.assignments[playerID] = fallbackProblems[0]
 		}
 	}

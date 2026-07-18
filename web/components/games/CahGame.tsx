@@ -152,7 +152,7 @@ export function CahGame(props: GameProps) {
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "40px" }}>
               {/* Black card */}
               <div style={{ width: "200px", height: "225px", flex: "none", background: "#131320", border: "2px solid #ff4f6f", borderRadius: "16px", padding: "18px", boxSizing: "border-box", transform: "rotate(-3deg)", boxShadow: "0 6px 0 rgba(0,0,0,.45)", display: "flex", flexDirection: "column" }}>
-                <div style={{ font: "700 9px 'Space Mono',monospace", letterSpacing: ".25em", color: "#ff4f6f", marginBottom: "10px" }}>
+                <div style={{ font: "700 9px 'Space Mono',monospace", letterSpacing: ".25em", color: "#ff8a9b", marginBottom: "10px" }}>
                   THE BLACK CARD
                 </div>
                 <div style={{ font: "700 18px/1.35 'Space Grotesk'", color: "#fff", flex: 1 }}>
@@ -317,7 +317,7 @@ export function CahGame(props: GameProps) {
   if (phase === "judging") {
     return (
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "26px 0 40px" }}>
-        <div style={{ font: "700 12px 'Space Mono',monospace", letterSpacing: ".3em", color: "var(--hue-cah)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "6px" }}>
+        <div style={{ font: "700 12px 'Space Mono',monospace", letterSpacing: ".3em", color: "#ff8a9b", marginBottom: "16px", display: "flex", alignItems: "center", gap: "6px" }}>
           ROUND {round} · YOU&apos;RE THE JUDGE
           <Crown size={16} strokeWidth={2.5} style={{ color: "#ffd23f" }} />
           · READ THEM OUT LOUD
@@ -343,8 +343,8 @@ export function CahGame(props: GameProps) {
                 style={{
                   width: "190px",
                   height: "240px",
-                  background: "linear-gradient(160deg,#fff8e7,#f2e6c4)",
-                  border: "2px solid #3a2751",
+                  background: "#fff8e7",
+                  border: "none",
                   borderRadius: "16px",
                   padding: "18px",
                   boxSizing: "border-box",
@@ -388,7 +388,7 @@ export function CahGame(props: GameProps) {
   // Round results phase
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "20px 0" }}>
-      <div style={{ font: "700 28px 'Space Grotesk'", color: "#fff", textAlign: "center", marginBottom: "24px" }}>
+      <div style={{ font: "700 28px 'Alfa Slab One'", color: "#fff", textAlign: "center", marginBottom: "24px" }}>
         ROUND {round} RESULTS
       </div>
 
@@ -415,7 +415,7 @@ export function CahGame(props: GameProps) {
             style={{
               width: "100%",
               maxWidth: "480px",
-              background: item.winner ? "linear-gradient(180deg,#fff8e7,#f4e9c8)" : "linear-gradient(160deg,#221530,#131320)",
+              background: item.winner ? "linear-gradient(180deg,#fff8e7,#f4e9c8)" : "#131320",
               border: item.winner ? "3px solid #ff4f6f" : "2px solid #3a2751",
               borderRadius: "14px",
               padding: "14px",
@@ -466,17 +466,6 @@ export function CahGame(props: GameProps) {
         </div>
       </div>
 
-      <style>{`
-        @keyframes throwIn {
-          0% { transform: translate(-100px, -150px) rotate(-45deg); opacity: 0; }
-          100% { transform: translate(0, 0) rotate(var(--rot-angle)); opacity: 1; }
-        }
-        @keyframes slam {
-          0% { transform: scale(0) rotate(0deg); opacity: 0; }
-          50% { transform: scale(1.15) rotate(-2deg); }
-          100% { transform: scale(1) rotate(-1deg); opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 }

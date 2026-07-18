@@ -497,15 +497,15 @@ export const DrawingCanvas = forwardRef<
     e: React.PointerEvent<HTMLCanvasElement>
   ): [number, number] => {
     const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !container) return [0, 0];
+    if (!canvas) return [0, 0];
 
+    // Map from the canvas's own displayed box, per axis. Scaling off the
+    // container's width breaks the pointer the moment the canvas letterboxes
+    // (maxWidth/maxHeight) inside it — the cursor drifts more the farther you
+    // draw from the top-left.
     const rect = canvas.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-    const scale = CANVAS_WIDTH / containerRect.width;
-
-    const x = (e.clientX - rect.left) * scale;
-    const y = (e.clientY - rect.top) * scale;
+    const x = (e.clientX - rect.left) * (CANVAS_WIDTH / rect.width);
+    const y = (e.clientY - rect.top) * (CANVAS_HEIGHT / rect.height);
     return [Math.max(0, Math.min(CANVAS_WIDTH, x)), Math.max(0, Math.min(CANVAS_HEIGHT, y))];
   };
 
@@ -692,6 +692,9 @@ export const DrawingCanvas = forwardRef<
           onPointerUp={end}
           onPointerLeave={end}
           onPointerCancel={end}
+          // Pointer events ONLY — browsers also fire compatibility mouse
+          // events after pointer events, so duplicating handlers would run
+          // every stroke twice (double undo pushes, doubled stroke relay).
         />
       </div>
     </div>
