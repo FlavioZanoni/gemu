@@ -1,8 +1,9 @@
 "use client";
 
-import { Star } from "lucide-react";
+import { Star, Check } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { gamesCatalog } from "@/lib/games";
+import type { Player } from "@/lib/protocol";
 import { hueFor } from "@/components/ui/gameHues";
 import { Button, Bulbs } from "@/components/ui";
 
@@ -11,6 +12,8 @@ export function IntroScreen({
   roundCount,
   roundTimer,
   isAdmin,
+  players,
+  playerId,
   onSetRounds,
   onSetTimer,
   onReady,
@@ -19,6 +22,8 @@ export function IntroScreen({
   roundCount: number;
   roundTimer: number;
   isAdmin: boolean;
+  players: Player[];
+  playerId: string | null;
   onSetRounds: (count: number) => void;
   onSetTimer: (seconds: number) => void;
   onReady: () => void;
@@ -27,6 +32,9 @@ export function IntroScreen({
   const game = gamesCatalog.find((g) => g.type === gameType);
   const hue = hueFor(gameType);
   const stepCount = game?.howToSteps ?? 0;
+  const connected = players.filter((p) => p.connected);
+  const readyCount = connected.filter((p) => p.ready).length;
+  const meReady = Boolean(players.find((p) => p.id === playerId)?.ready);
 
   // Round / timer choices per game (literal — no interpolation needed).
   const gameOptions: Record<string, { rounds: number[]; timer: number[] }> = {
@@ -48,7 +56,7 @@ export function IntroScreen({
           {game?.name.toUpperCase() || gameType}
         </h1>
         <p className="text-sm text-(--ink)/60 mt-4">
-          Everyone else is ready · Waiting on you
+          {readyCount}/{connected.length} ready · the host starts the game
         </p>
       </div>
 
@@ -163,13 +171,24 @@ export function IntroScreen({
             </div>
           )}
 
-          {/* Ready button */}
-          <Button
-            className="w-full py-4 text-lg font-bold"
-            onClick={onReady}
-          >
-            Got it — I&apos;m ready
-          </Button>
+          {/* Ready button: pressed state + waiting hint so clicking visibly
+              registers — only the host actually starts the game. */}
+          {meReady ? (
+            <div className="text-center">
+              <Button className="w-full py-4 text-lg font-bold" variant="secondary" disabled>
+                <span className="inline-flex items-center gap-2">
+                  <Check size={18} strokeWidth={2.5} /> Ready
+                </span>
+              </Button>
+              <p className="mono-caption mt-3 animate-pulse">
+                waiting for the host to start…
+              </p>
+            </div>
+          ) : (
+            <Button className="w-full py-4 text-lg font-bold" onClick={onReady}>
+              Got it — I&apos;m ready
+            </Button>
+          )}
         </div>
       )}
     </div>

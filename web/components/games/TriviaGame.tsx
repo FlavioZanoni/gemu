@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { TimerBadge, Banner, HowToPlayModal } from "../ui";
+import { TimerBadge, Banner, Button, HowToPlayModal } from "../ui";
 import { hueFor } from "../ui/gameHues";
 import { playSfx } from "@/lib/sfx";
 import type { GameProps } from "./types";
@@ -113,12 +113,9 @@ export function TriviaGame(props: GameProps) {
       ) : null}
 
       <div className="mt-2 flex items-center justify-between">
-        <button
-          onClick={() => setShowHow(true)}
-          className="rounded-full border-2 border-(--accent-2) px-3 py-1.5 text-xs font-semibold text-(--accent-2)"
-        >
+        <Button variant="ghost" onClick={() => setShowHow(true)}>
           {t("common.howToPlay")}
-        </button>
+        </Button>
       </div>
     </div>
   );

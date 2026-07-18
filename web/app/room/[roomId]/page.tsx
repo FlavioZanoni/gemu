@@ -255,6 +255,8 @@ export default function RoomPage() {
                   roundCount={introSettings.rounds ?? 3}
                   roundTimer={introSettings.timer ?? 90}
                   isAdmin={room.isAdmin}
+                  players={players}
+                  playerId={room.playerId}
                   onSetRounds={(rounds) =>
                     setIntroSettings((prev) => ({ ...prev, rounds }))
                   }

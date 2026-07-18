@@ -162,12 +162,9 @@ export function FibberGame(props: GameProps) {
       )}
 
       <div className="mt-1">
-        <button
-          onClick={() => setShowHow(true)}
-          className="rounded-full border-2 border-(--accent-2) px-3 py-1.5 text-xs font-semibold text-(--accent-2)"
-        >
+        <Button variant="ghost" onClick={() => setShowHow(true)}>
           {t("common.howToPlay")}
-        </button>
+        </Button>
       </div>
     </div>
   );

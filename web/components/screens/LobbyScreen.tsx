@@ -97,14 +97,17 @@ export function LobbyScreen({
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         {/* Left: Playlist and controls */}
         <div>
-          {/* Playlist section */}
-          {isAdmin && (
+          {/* Playlist section — everyone sees tonight's lineup; only the host
+              can edit it. */}
+          {(
             <div className="mb-6">
               <div className="flex items-baseline gap-2 mb-3">
                 <span className="mono-caption">Tonight&apos;s playlist</span>
-                <span className="text-xs text-(--accent-2) cursor-pointer hover:opacity-75">
-                  · Edit ›
-                </span>
+                {isAdmin && (
+                  <span className="text-xs text-(--accent-2) cursor-pointer hover:opacity-75">
+                    · Edit ›
+                  </span>
+                )}
               </div>
               <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 mb-6">
                 {gamesCatalog.map((game) => {
@@ -120,14 +123,14 @@ export function LobbyScreen({
                       data-testid={`game-card-${game.type}`}
                       data-selected={selected}
                       onClick={() => {
-                        if (isLast) return;
+                        if (!isAdmin || isLast) return;
                         const newPlaylist = selected
                           ? snapshot.playlist.filter((t) => t !== game.type)
                           : [...snapshot.playlist, game.type];
                         onSetPlaylist(newPlaylist);
                       }}
                       className={`rounded-2xl p-4 transition ${
-                        isLast ? "cursor-default" : "cursor-pointer"
+                        isAdmin && !isLast ? "cursor-pointer" : "cursor-default"
                       } ${
                         selected
                           ? "border-2 border-(--line) shadow-lg"

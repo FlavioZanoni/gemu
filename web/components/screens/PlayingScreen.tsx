@@ -71,12 +71,9 @@ export function PlayingScreen({
               <Pause size={16} strokeWidth={2.5} /> {t("pause.pause")}
             </button>
           )}
-          <button
-            onClick={() => setHowToOpen(true)}
-            className="text-xs px-3 py-2 rounded border border-(--line) text-(--accent-2) hover:bg-(--panel-raised) transition"
-          >
+          <Button variant="ghost" onClick={() => setHowToOpen(true)}>
             {t("playing.howToPlay")}
-          </button>
+          </Button>
           <Button
             variant="ghost"
             size="sm"

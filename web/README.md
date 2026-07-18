@@ -7,8 +7,8 @@ Broadcast" design system and a module-level room store over a WebSocket connecti
 ## Develop
 
 ```bash
-npm install
-npm run dev        # http://localhost:3000
+pnpm install
+pnpm dev        # http://localhost:3000
 ```
 
 Create `.env.local`:
@@ -28,7 +28,7 @@ NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
 ## Tests
 
 ```bash
-npm run test:e2e   # Playwright — boots a dedicated Go server (:8099) + Next (:3939)
+pnpm test:e2e   # Playwright — boots a dedicated Go server (:8099) + Next (:3939)
 ```
 
 The E2E suite drives real multi-player flows in separate browser contexts and fails any

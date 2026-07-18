@@ -42,7 +42,7 @@ export function GarticGame(props: GameProps) {
   const scores = publicState?.scores ?? {};
   const guessed = publicState?.guessed ?? [];
   const guesses = publicState?.guesses ?? [];
-  const word = publicState?.word ?? "";
+  const word = privateState?.word ?? publicState?.word ?? "";
   const closeGuess = privateState?.closeGuess ?? "";
   const isDrawer = drawer === props.playerId;
 
@@ -169,55 +169,56 @@ export function GarticGame(props: GameProps) {
             </div>
           </div>
 
-          {/* Right: Guess chat (only if not drawer) */}
-          {!isDrawer && (
-            <div style={{ flex: 1, maxWidth: "340px", display: "flex", flexDirection: "column" }}>
-              <div style={{ font: "700 11px 'Space Mono',monospace", letterSpacing: ".25em", color: "rgba(255,233,168,.45)", marginBottom: "10px" }}>
-                GUESS CHAT
-              </div>
-              <div style={{ flex: 1, background: "#2b1a3d", border: "2px solid #5a3f7a", borderRadius: "16px", padding: "14px", display: "flex", flexDirection: "column", gap: "8px", overflow: "hidden", justifyContent: "flex-end", marginBottom: "10px" }}>
-                {guesses.length === 0 && (
-                  <div style={{ font: "400 11px 'Space Mono',monospace", color: "rgba(255,233,168,.35)", textAlign: "center" }}>
-                    no guesses yet
-                  </div>
-                )}
-                {guesses.map((g, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      font: "600 13px 'Space Grotesk'",
-                      color: g.correct ? "var(--hue-gartic)" : "#ffe9a8",
-                      animation: "rise 0.3s ease-out",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                    }}
-                  >
-                    {g.correct && <Check size={16} strokeWidth={2.5} />}
-                    {g.correct ? `${playerNames.get(g.playerId)} guessed!` : g.text}
-                  </div>
-                ))}
-                {closeGuess && (
-                  <div
-                    style={{
-                      font: "600 13px 'Space Grotesk'",
-                      color: "var(--hue-gartic)",
-                      animation: "rise 0.3s ease-out",
-                      borderLeft: "3px solid var(--hue-gartic)",
-                      paddingLeft: "8px",
-                      opacity: 0.7,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                    }}
-                  >
-                    <Cloud size={16} strokeWidth={2.5} />
-                    {closeGuess}
-                  </div>
-                )}
-                <div ref={guessesEndRef} />
-              </div>
+          {/* Right: Guess chat (visible to drawer and guessers) */}
+          <div style={{ flex: 1, maxWidth: "340px", display: "flex", flexDirection: "column" }}>
+            <div style={{ font: "700 11px 'Space Mono',monospace", letterSpacing: ".25em", color: "rgba(255,233,168,.45)", marginBottom: "10px" }}>
+              GUESS CHAT
+            </div>
+            <div style={{ flex: 1, background: "#2b1a3d", border: "2px solid #5a3f7a", borderRadius: "16px", padding: "14px", display: "flex", flexDirection: "column", gap: "8px", overflow: "hidden", justifyContent: "flex-end", marginBottom: "10px" }}>
+              {guesses.length === 0 && (
+                <div style={{ font: "400 11px 'Space Mono',monospace", color: "rgba(255,233,168,.35)", textAlign: "center" }}>
+                  no guesses yet
+                </div>
+              )}
+              {guesses.map((g, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    font: "600 13px 'Space Grotesk'",
+                    color: g.correct ? "var(--hue-gartic)" : "#ffe9a8",
+                    animation: "rise 0.3s ease-out",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  {g.correct && <Check size={16} strokeWidth={2.5} />}
+                  {g.correct ? `${playerNames.get(g.playerId)} guessed!` : g.text}
+                </div>
+              ))}
+              {closeGuess && (
+                <div
+                  style={{
+                    font: "600 13px 'Space Grotesk'",
+                    color: "var(--hue-gartic)",
+                    animation: "rise 0.3s ease-out",
+                    borderLeft: "3px solid var(--hue-gartic)",
+                    paddingLeft: "8px",
+                    opacity: 0.7,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <Cloud size={16} strokeWidth={2.5} />
+                  {closeGuess}
+                </div>
+              )}
+              <div ref={guessesEndRef} />
+            </div>
 
+            {/* Input form (hidden for drawer) */}
+            {!isDrawer && (
               <div style={{ display: "flex", gap: "8px" }}>
                 <input
                   type="text"
@@ -246,43 +247,42 @@ export function GarticGame(props: GameProps) {
                   Send
                 </Button>
               </div>
+            )}
 
-              {guessed.length > 0 && (
-                <div style={{ marginTop: "10px", borderRadius: "8px", border: "1px solid #5a3f7a", background: "#2b1a3d", padding: "8px", fontSize: "11px" }}>
-                  <div style={{ font: "700 9px 'Space Mono',monospace", color: "rgba(255,233,168,.5)", marginBottom: "6px" }}>
-                    GUESSED CORRECTLY
-                  </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                    {guessed.map((playerId) => (
-                      <span
-                        key={playerId}
-                        style={{
-                          display: "inline-block",
-                          borderRadius: "4px",
-                          background: "var(--hue-gartic)",
-                          color: "#1c1230",
-                          padding: "2px 8px",
-                          fontSize: "10px",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {playerNames.get(playerId)}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Right: Info message if drawer */}
-          {isDrawer && (
-            <div style={{ flex: 1, maxWidth: "340px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
-              <div style={{ font: "400 13px 'Space Mono',monospace", color: "rgba(255,233,168,.5)" }}>
-                Players are guessing your drawing…
+            {/* Message for drawer */}
+            {isDrawer && (
+              <div style={{ background: "#1c1230", border: "2px dashed #5a3f7a", borderRadius: "12px", padding: "11px 14px", font: "400 11px 'Space Mono',monospace", color: "rgba(255,233,168,.35)", textAlign: "center" }}>
+                YOU'RE DRAWING — NO GUESSING
               </div>
-            </div>
-          )}
+            )}
+
+            {/* Guessed players list (for guessers) */}
+            {!isDrawer && guessed.length > 0 && (
+              <div style={{ marginTop: "10px", borderRadius: "8px", border: "1px solid #5a3f7a", background: "#2b1a3d", padding: "8px", fontSize: "11px" }}>
+                <div style={{ font: "700 9px 'Space Mono',monospace", color: "rgba(255,233,168,.5)", marginBottom: "6px" }}>
+                  GUESSED CORRECTLY
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                  {guessed.map((playerId) => (
+                    <span
+                      key={playerId}
+                      style={{
+                        display: "inline-block",
+                        borderRadius: "4px",
+                        background: "var(--hue-gartic)",
+                        color: "#1c1230",
+                        padding: "2px 8px",
+                        fontSize: "10px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {playerNames.get(playerId)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </>
     );

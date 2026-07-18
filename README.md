@@ -29,7 +29,7 @@ docker compose -f docker-compose.dev.yml up --build    # dev: HMR + Air live rel
 
 ```bash
 cd server && go run ./cmd/server     # backend on :8080
-cd web && npm install && npm run dev  # frontend on :3000 (separate shell)
+cd web && pnpm install && pnpm dev  # frontend on :3000 (separate shell)
 ```
 
 The frontend needs `web/.env.local`:
@@ -52,7 +52,7 @@ NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
 
 ```bash
 cd server && go test ./... -race     # backend unit + full-night integration
-cd web && npm run test:e2e           # Playwright E2E (boots its own server + web on isolated ports)
+cd web && pnpm test:e2e           # Playwright E2E (boots its own server + web on isolated ports)
 ```
 
 ## Docs
