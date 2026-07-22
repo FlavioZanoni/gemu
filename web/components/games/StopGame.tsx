@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import { Check, X, Hand } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Card, Button, TimerBadge, Banner, HowToPlayModal } from "../ui";
+import { Avatar } from "../ui/PlayerChip";
 import { playerColorFor } from "../ui/gameHues";
 import type { GameProps } from "./types";
 
@@ -120,6 +121,7 @@ export function StopGame(props: GameProps) {
     const gameBoard = props.players.map((player, idx) => {
       const playerColor = playerColorFor(idx);
       return {
+        player,
         name: player.name,
         hue: playerColor,
         border: playerColor,
@@ -139,12 +141,14 @@ export function StopGame(props: GameProps) {
             }}
           >
             <div className="flex flex-col items-center justify-center gap-4 text-center">
-              <div
-                className="rounded-full bg-[#fff8e7] flex items-center justify-center"
-                style={{ width: "64px", height: "64px", border: "3px solid #ff4f6f" }}
-              >
-                <span style={{ fontSize: "8px", fontFamily: "'Space Mono', monospace", color: "#8a7f60" }}>doodle</span>
-              </div>
+              {(() => {
+                const stoppedByIdx = props.players.findIndex((p) => p.id === stoppedBy);
+                const stoppedByPlayer = stoppedByIdx >= 0 ? props.players[stoppedByIdx] : null;
+                if (!stoppedByPlayer) return null;
+                return (
+                  <Avatar player={stoppedByPlayer} color={playerColorFor(stoppedByIdx)} size={64} />
+                );
+              })()}
               <div style={{ fontSize: "14px", fontFamily: "'Space Mono', monospace", fontWeight: "700", color: "#ff8a9b", letterSpacing: ".3em", textTransform: "uppercase" }}>
                 {playerNames.get(stoppedBy)} SLAMMED
               </div>
@@ -185,34 +189,38 @@ export function StopGame(props: GameProps) {
           {/* Left column: letter tile, categories, and button */}
           <div style={{ flex: "1.5" }}>
             {/* Header with big letter tile and progress */}
-            <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "20px" }}>
-              {/* Big letter tile - 78px box, 46px glyph */}
-              <div
-                style={{
-                  width: "78px",
-                  height: "78px",
-                  borderRadius: "20px",
-                  background: "linear-gradient(180deg,#ffd23f,#f5b32a)",
-                  boxShadow: "0 6px 0 #c2452d",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontFamily: "'Alfa Slab One', sans-serif",
-                  fontSize: "46px",
-                  color: "#3d1f0e",
-                }}
-              >
-                {letter}
-              </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", marginBottom: "20px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                {/* Big letter tile - 78px box, 46px glyph */}
+                <div
+                  style={{
+                    width: "78px",
+                    height: "78px",
+                    borderRadius: "20px",
+                    background: "linear-gradient(180deg,#ffd23f,#f5b32a)",
+                    boxShadow: "0 6px 0 #c2452d",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontFamily: "'Alfa Slab One', sans-serif",
+                    fontSize: "46px",
+                    color: "#3d1f0e",
+                  }}
+                  data-testid="stop-letter"
+                >
+                  {letter}
+                </div>
 
-              <div>
-                <div style={{ fontSize: "11px", fontFamily: "'Space Mono', monospace", fontWeight: "700", letterSpacing: ".3em", color: "rgba(255,233,168,.5)", textTransform: "uppercase" }}>
-                  EVERYTHING STARTS WITH
-                </div>
-                <div style={{ fontSize: "16px", fontFamily: "'Space Grotesk', sans-serif", fontWeight: "600", color: "#ffe9a8" }}>
-                  {filledCount} of {categories.length} filled — {allAnswered ? "ready!" : "keep going!"}
+                <div>
+                  <div style={{ fontSize: "11px", fontFamily: "'Space Mono', monospace", fontWeight: "700", letterSpacing: ".3em", color: "rgba(255,233,168,.5)", textTransform: "uppercase" }}>
+                    EVERYTHING STARTS WITH
+                  </div>
+                  <div style={{ fontSize: "16px", fontFamily: "'Space Grotesk', sans-serif", fontWeight: "600", color: "#ffe9a8" }}>
+                    {filledCount} of {categories.length} filled — {allAnswered ? "ready!" : "keep going!"}
+                  </div>
                 </div>
               </div>
+              <TimerBadge deadline={deadline} />
             </div>
 
             {stopped && stoppedBy && (
@@ -248,6 +256,7 @@ export function StopGame(props: GameProps) {
                       onChange={(e) => handleAnswerChange(category, e.target.value)}
                       disabled={stopped}
                       placeholder={letter + "..."}
+                      data-testid={`stop-answer-${idx}`}
                       style={{
                         flex: 1,
                         background: "transparent",
@@ -311,7 +320,7 @@ export function StopGame(props: GameProps) {
             <div style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
               {gameBoard.map((player) => (
                 <div
-                  key={player.name}
+                  key={player.player.id}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -322,23 +331,7 @@ export function StopGame(props: GameProps) {
                     padding: "7px 16px 7px 7px",
                   }}
                 >
-                  <div
-                    style={{
-                      width: "36px",
-                      height: "36px",
-                      borderRadius: "99px",
-                      background: "#fff8e7",
-                      border: `2px solid ${player.hue}`,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "7px",
-                      fontFamily: "'Space Mono', monospace",
-                      color: "#8a7f60",
-                    }}
-                  >
-                    doodle
-                  </div>
+                  <Avatar player={player.player} color={player.hue} size={32} />
                   <div style={{ flex: 1, fontSize: "14px", fontFamily: "'Space Grotesk', sans-serif", fontWeight: "700", color: "#ffe9a8" }}>
                     {player.name}
                   </div>
@@ -393,6 +386,7 @@ export function StopGame(props: GameProps) {
               gameType="stop"
               onClick={handleValidate}
               className="w-full"
+              data-testid="stop-validate-submit"
             >
               {t("stop.validate")}
             </Button>
@@ -445,6 +439,7 @@ export function StopGame(props: GameProps) {
                   return next;
                 });
               }}
+              data-testid="stop-valid"
               style={{
                 flex: 1,
                 fontFamily: "'Alfa Slab One', sans-serif",
@@ -480,6 +475,7 @@ export function StopGame(props: GameProps) {
                   return next;
                 });
               }}
+              data-testid="stop-nonsense"
               style={{
                 flex: 1,
                 fontFamily: "'Alfa Slab One', sans-serif",
@@ -592,6 +588,7 @@ export function StopGame(props: GameProps) {
             gameType="stop"
             onClick={handleNextRound}
             className="w-full"
+            data-testid="stop-next-round"
           >
             {t("stop.nextRound")}
           </Button>

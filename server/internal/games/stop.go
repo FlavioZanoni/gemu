@@ -145,11 +145,12 @@ func (g *StopGame) OnPlayerJoin(playerID string) {
 }
 
 func (g *StopGame) OnPlayerLeave(playerID string) {
-	// Delete player's answers and validation
+	// Delete player's current-round answers and validation, but keep their
+	// cumulative totalScores entry so a disconnect mid-round doesn't wipe
+	// points earned in earlier rounds.
 	delete(g.answers, playerID)
 	delete(g.validations, playerID)
 	delete(g.validatedPlayers, playerID)
-	delete(g.totalScores, playerID)
 
 	// Re-check if everyone has validated
 	if g.phase == "validating" {

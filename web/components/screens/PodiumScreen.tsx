@@ -3,15 +3,22 @@
 import { useEffect, useMemo } from "react";
 import { Volume2, Crown } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import type { SessionFinal } from "@/lib/protocol";
+import type { Player, SessionFinal } from "@/lib/protocol";
 import { Button } from "@/components/ui";
+import { Avatar } from "@/components/ui/PlayerChip";
+import { playerColorFor } from "@/components/ui/gameHues";
 import { playSfx } from "@/lib/sfx";
 
 export function PodiumScreen({
   sessionFinal,
+  players,
   onBackToLobby,
 }: {
   sessionFinal: SessionFinal;
+  // Optional: SessionFinal's standings carry only playerId/name/score, not
+  // avatarUrl, so real doodle avatars need the room's full player list. Not
+  // currently wired in by the caller — falls back to a letter avatar.
+  players?: Player[];
   onBackToLobby: () => void;
 }) {
   const { t } = useI18n();
@@ -24,6 +31,26 @@ export function PodiumScreen({
   // Get top 3
   const top3 = sessionFinal.standings.slice(0, 3);
   const others = sessionFinal.standings.slice(3);
+
+  // Resolve a full Player for the avatar ring. Falls back to a synthesized
+  // stub (letter avatar) when the caller hasn't wired in the room's player
+  // list, and to the standing's placement for the color index.
+  const resolvePlayer = (standing: (typeof sessionFinal.standings)[number]) => {
+    const idx = players?.findIndex((p) => p.id === standing.playerId) ?? -1;
+    const player: Player =
+      idx >= 0 && players
+        ? players[idx]
+        : {
+            id: standing.playerId,
+            name: standing.name,
+            avatarUrl: "",
+            connected: true,
+            ready: true,
+            lastSeen: "",
+          };
+    const colorIndex = idx >= 0 ? idx : standing.place - 1;
+    return { player, color: playerColorFor(colorIndex) };
+  };
 
   // Generate confetti pieces
   const confetti = useMemo(() => {
@@ -81,6 +108,7 @@ export function PodiumScreen({
             .filter((slot) => slot.standing)
             .map(({ standing, ...pos }, idx) => {
             const isChampion = pos.rank === 1;
+            const { player, color } = resolvePlayer(standing);
             return (
               <div
                 key={standing.playerId}
@@ -93,9 +121,7 @@ export function PodiumScreen({
                 {isChampion && (
                   <Crown size={40} strokeWidth={2.5} style={{ color: "#ffd23f" }} />
                 )}
-                <div className="w-14 h-14 rounded-full bg-(--panel-raised) border-3 border-(--line) flex items-center justify-center text-xs text-(--ink)/60">
-                  doodle
-                </div>
+                <Avatar player={player} color={color} size={56} />
                 <div className="text-center text-sm">
                   <div className="font-bold text-(--ink) break-words">
                     {standing.name}

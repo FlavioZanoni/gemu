@@ -243,6 +243,7 @@ export default function RoomPage() {
             {showPodium ? (
               <PodiumScreen
                 sessionFinal={room.sessionFinal!}
+                players={players}
                 onBackToLobby={() => setPodiumDismissed(true)}
               />
             ) : (

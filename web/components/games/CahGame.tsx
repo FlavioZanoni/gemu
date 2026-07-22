@@ -4,6 +4,8 @@ import { useState, useMemo } from "react";
 import { Crown, Sparkles } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Button, TimerBadge, Banner, HowToPlayModal } from "../ui";
+import { Avatar } from "../ui/PlayerChip";
+import { playerColorFor } from "../ui/gameHues";
 import type { GameProps } from "./types";
 
 type CahPublicState = {
@@ -53,10 +55,10 @@ export function CahGame(props: GameProps) {
 
   const standings = useMemo(
     () =>
-      Object.entries(wins)
-        .map(([playerId, score]) => ({ playerId, score }))
+      props.players
+        .map((player, idx) => ({ playerId: player.id, player, colorIndex: idx, score: wins[player.id] ?? 0 }))
         .sort((a, b) => b.score - a.score),
-    [wins]
+    [props.players, wins]
   );
 
   const playerNames = useMemo(() => {
@@ -68,6 +70,8 @@ export function CahGame(props: GameProps) {
   }, [props.players]);
 
   const judgeeName = useMemo(() => playerNames.get(judge), [judge, playerNames]);
+  const judgeIndex = useMemo(() => props.players.findIndex((p) => p.id === judge), [judge, props.players]);
+  const judgePlayer = judgeIndex >= 0 ? props.players[judgeIndex] : null;
 
   const toggleCard = (index: number) => {
     if (hasSubmitted) return;
@@ -110,9 +114,7 @@ export function CahGame(props: GameProps) {
           {/* Header */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <div style={{ width: "34px", height: "34px", borderRadius: "99px", background: "#fff8e7", border: "2px solid var(--hue-cah)", display: "flex", alignItems: "center", justifyContent: "center", font: "400 6px 'Space Mono',monospace", color: "#8a7f60" }}>
-                {judgeeName?.slice(0, 2).toUpperCase() || "?"}
-              </div>
+              {judgePlayer && <Avatar player={judgePlayer} color={playerColorFor(judgeIndex)} size={34} />}
               <span style={{ font: "700 12px 'Space Mono',monospace", color: "var(--hue-cah)", display: "flex", alignItems: "center", gap: "6px" }}>
                 {judgeeName?.toUpperCase()} JUDGES THIS ROUND
                 <Crown size={16} strokeWidth={2.5} style={{ color: "#ffd23f" }} />
@@ -131,9 +133,7 @@ export function CahGame(props: GameProps) {
               <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
                 {standings.map((s) => (
                   <div key={s.playerId} style={{ display: "flex", alignItems: "center", gap: "9px", background: "#2b1a3d", border: "2px solid " + (s.playerId === props.playerId ? "var(--hue-cah)" : "#5a3f7a"), borderRadius: "99px", padding: "4px 12px 4px 4px" }}>
-                    <div style={{ width: "28px", height: "28px", borderRadius: "99px", background: "#fff8e7", border: "2px solid " + (s.playerId === props.playerId ? "var(--hue-cah)" : "#5a3f7a"), display: "flex", alignItems: "center", justifyContent: "center", font: "400 6px 'Space Mono',monospace", color: "#8a7f60" }}>
-                      {playerNames.get(s.playerId)?.slice(0, 2).toUpperCase() || "?"}
-                    </div>
+                    <Avatar player={s.player} color={playerColorFor(s.colorIndex)} size={28} />
                     <div style={{ flex: 1, font: "700 12px 'Space Grotesk'", color: "#ffe9a8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       {playerNames.get(s.playerId)}
                     </div>
@@ -223,6 +223,7 @@ export function CahGame(props: GameProps) {
                   key={idx}
                   onClick={() => toggleCard(idx)}
                   disabled={hasSubmitted}
+                  data-testid={`cah-card-${idx}`}
                   style={{
                     position: "absolute",
                     left: "50%",
@@ -262,14 +263,16 @@ export function CahGame(props: GameProps) {
             })}
           </div>
 
-          {/* Submit button */}
+          {/* Submit button — sits above the fanned cards, which hang ~36px
+              below their container and would otherwise swallow clicks. */}
           {!hasSubmitted && hand.length > 0 && (
-            <div style={{ marginTop: "8px", display: "flex", justifyContent: "center" }}>
+            <div style={{ marginTop: "8px", display: "flex", justifyContent: "center", position: "relative", zIndex: 20 }}>
               <Button
                 variant="hue"
                 gameType="cah"
                 onClick={handleSubmit}
                 disabled={selectedCards.length !== blackCard.pick}
+                data-testid="cah-submit"
               >
                 {selectedCards.length === blackCard.pick
                   ? "PLAY YOUR CARDS"
@@ -340,6 +343,7 @@ export function CahGame(props: GameProps) {
               <button
                 key={idx}
                 onClick={() => handlePickWinner(idx)}
+                data-testid={`cah-pick-${idx}`}
                 style={{
                   width: "190px",
                   height: "240px",
@@ -412,6 +416,7 @@ export function CahGame(props: GameProps) {
         {reveal.map((item, idx) => (
           <div
             key={idx}
+            data-testid={item.winner ? "cah-winner" : undefined}
             style={{
               width: "100%",
               maxWidth: "480px",
@@ -452,9 +457,7 @@ export function CahGame(props: GameProps) {
         <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
           {standings.map((s) => (
             <div key={s.playerId} style={{ display: "flex", alignItems: "center", gap: "9px", background: "#2b1a3d", border: "2px solid " + (s.playerId === props.playerId ? "var(--hue-cah)" : "#5a3f7a"), borderRadius: "99px", padding: "4px 12px 4px 4px" }}>
-              <div style={{ width: "28px", height: "28px", borderRadius: "99px", background: "#fff8e7", border: "2px solid " + (s.playerId === props.playerId ? "var(--hue-cah)" : "#5a3f7a"), display: "flex", alignItems: "center", justifyContent: "center", font: "400 6px 'Space Mono',monospace", color: "#8a7f60" }}>
-                {playerNames.get(s.playerId)?.slice(0, 2).toUpperCase() || "?"}
-              </div>
+              <Avatar player={s.player} color={playerColorFor(s.colorIndex)} size={28} />
               <div style={{ flex: 1, font: "700 12px 'Space Grotesk'", color: "#ffe9a8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {playerNames.get(s.playerId)}
               </div>

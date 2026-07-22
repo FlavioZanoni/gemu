@@ -166,6 +166,15 @@ export function InventionGame(props: GameProps & { onLeave?: () => void }) {
                 })}
               </Banner>
             )}
+            {isAdmin && (phase === "collecting" || phase === "drawing" || phase === "voting") && (
+              <Button
+                variant="secondary"
+                onClick={() => sendAction({ action: "advance" })}
+                data-testid="invention-host-advance"
+              >
+                {t("invention.hostAdvance")}
+              </Button>
+            )}
           </div>
         </div>
 
@@ -184,6 +193,7 @@ export function InventionGame(props: GameProps & { onLeave?: () => void }) {
                   value={problemOne}
                   onChange={(event) => setProblemOne(event.target.value)}
                   className="w-full rounded-lg border-2 border-(--line) bg-(--panel) px-3 py-2 text-(--ink) placeholder-text-(--ink)/40 font-sans"
+                  data-testid="invention-problem-1"
                 />
                 <input
                   type="text"
@@ -191,6 +201,7 @@ export function InventionGame(props: GameProps & { onLeave?: () => void }) {
                   value={problemTwo}
                   onChange={(event) => setProblemTwo(event.target.value)}
                   className="w-full rounded-lg border-2 border-(--line) bg-(--panel) px-3 py-2 text-(--ink) placeholder-text-(--ink)/40 font-sans"
+                  data-testid="invention-problem-2"
                 />
               </div>
               <Button
@@ -204,6 +215,7 @@ export function InventionGame(props: GameProps & { onLeave?: () => void }) {
                 }}
                 disabled={!problemOne.trim() || !problemTwo.trim()}
                 className="w-full"
+                data-testid="invention-submit-problems"
               >
                 SUBMIT PROBLEMS
               </Button>
@@ -237,6 +249,7 @@ export function InventionGame(props: GameProps & { onLeave?: () => void }) {
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
                   className="w-full rounded-lg border-2 border-(--line) bg-(--panel) px-3 py-2 text-(--ink) placeholder-text-(--ink)/40 font-sans"
+                  data-testid="invention-title-input"
                 />
                 <input
                   type="text"
@@ -291,6 +304,7 @@ export function InventionGame(props: GameProps & { onLeave?: () => void }) {
                   // here so the button can't silently no-op.
                   disabled={!canvasData || !title.trim()}
                   className="flex-1"
+                  data-testid="invention-submit-invention"
                 >
                   {t("invention.submitInvention")}
                 </Button>
@@ -321,7 +335,7 @@ export function InventionGame(props: GameProps & { onLeave?: () => void }) {
 
               {/* Invention number */}
               <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: ".2em", color: "#8a7f60", marginBottom: "6px", textTransform: "uppercase", fontFamily: "'Space Mono',monospace" }}>
-                INVENTION Nº {Math.floor(Math.random() * 999) + 1}
+                INVENTION Nº {presentIndex + 1}
               </div>
 
               {/* Title */}
@@ -354,15 +368,12 @@ export function InventionGame(props: GameProps & { onLeave?: () => void }) {
             <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "12px" }}>
               <span style={{ fontSize: "16px", background: "#2b1a3d", border: "2px solid #5a3f7a", borderRadius: "99px", padding: "6px 14px", display: "flex", alignItems: "center", gap: "4px" }}>
                 <Coins size={16} strokeWidth={2.5} style={{ color: "#ffe9a8" }} />
-                <b style={{ fontFamily: "'Space Mono'", fontSize: "11px", fontWeight: 700, color: "#ffe9a8" }}>3</b>
               </span>
               <span style={{ fontSize: "16px", background: "#2b1a3d", border: "2px solid #5a3f7a", borderRadius: "99px", padding: "6px 14px", display: "flex", alignItems: "center", gap: "4px" }}>
                 <Trash2 size={16} strokeWidth={2.5} style={{ color: "#ffe9a8" }} />
-                <b style={{ fontFamily: "'Space Mono'", fontSize: "11px", fontWeight: 700, color: "#ffe9a8" }}>1</b>
               </span>
               <span style={{ fontSize: "16px", background: "#2b1a3d", border: "2px solid #ff9d3f", borderRadius: "99px", padding: "6px 14px", boxShadow: "0 0 12px rgba(255,157,63,.3)", display: "flex", alignItems: "center", gap: "4px" }}>
                 <Rocket size={16} strokeWidth={2.5} style={{ color: "#ff9d3f" }} />
-                <b style={{ fontFamily: "'Space Mono'", fontSize: "11px", fontWeight: 700, color: "#ff9d3f" }}>4</b>
               </span>
             </div>
           )}
@@ -405,7 +416,7 @@ export function InventionGame(props: GameProps & { onLeave?: () => void }) {
           <div className="space-y-2">
             {voteOptions
               .filter((id) => Boolean(submissions[id]))
-              .map((id) => {
+              .map((id, idx) => {
                 const sub = submissions[id];
                 const currentAmount = fundAllocations[id] ?? 0;
                 return (
@@ -448,6 +459,7 @@ export function InventionGame(props: GameProps & { onLeave?: () => void }) {
                         }}
                         className="w-full"
                         style={{ accentColor: "var(--hue-invention)" }}
+                        data-testid={`invention-vote-${idx}`}
                       />
                     </div>
                   </Card>
@@ -468,6 +480,7 @@ export function InventionGame(props: GameProps & { onLeave?: () => void }) {
               sendAction({ funding: finalAllocations });
             }}
             className="w-full"
+            data-testid="invention-vote-submit"
           >
             {t("invention.submitFunding")}
           </Button>

@@ -809,6 +809,65 @@ func TestStopNextDeadlineInRoundResultsPhase(t *testing.T) {
 	}
 }
 
+// A player who disconnects after scoring in round 1 must not lose their
+// cumulative total, even if they stay disconnected through round 2's scoring.
+func TestStopOnPlayerLeavePreservesTotalScoreAcrossRounds(t *testing.T) {
+	room := &fakeRoom{players: []string{"p1", "p2", "p3"}, admin: "p1"}
+	game := &StopGame{}
+	game.Start("room-1", Options{Room: room})
+
+	completeRound := func(players []string) {
+		for _, playerID := range players {
+			answers := make(map[string]any)
+			for _, cat := range game.categories {
+				answers[cat] = game.letter + "answer"
+			}
+			_ = game.OnAction(playerID, map[string]any{
+				"action":  "set_answers",
+				"answers": answers,
+			})
+		}
+		game.OnTimer("answers")
+		for _, playerID := range players {
+			_ = game.OnAction(playerID, map[string]any{
+				"action":   "validate",
+				"rejected": []any{},
+			})
+		}
+	}
+
+	// Round 1: everyone plays and validates.
+	completeRound([]string{"p1", "p2", "p3"})
+	if game.phase != "roundResults" {
+		t.Fatalf("expected phase roundResults after round 1, got %s", game.phase)
+	}
+
+	p3ScoreAfterRound1 := game.totalScores["p3"]
+	if p3ScoreAfterRound1 == 0 {
+		t.Fatalf("expected p3 to have earned points in round 1")
+	}
+
+	// p3 disconnects before round 2 starts.
+	room.players = []string{"p1", "p2"}
+	game.OnPlayerLeave("p3")
+
+	if got, ok := game.totalScores["p3"]; !ok || got != p3ScoreAfterRound1 {
+		t.Fatalf("expected p3's total score to survive disconnect, got %d (present=%v), want %d", got, ok, p3ScoreAfterRound1)
+	}
+
+	// Admin advances to round 2, played only by the still-connected players.
+	_ = game.OnAction("p1", map[string]any{"action": "next_round"})
+	if game.round != 2 {
+		t.Fatalf("expected round 2, got %d", game.round)
+	}
+
+	completeRound([]string{"p1", "p2"})
+
+	if got := game.totalScores["p3"]; got != p3ScoreAfterRound1 {
+		t.Fatalf("expected p3's cumulative total to remain %d after round 2 scoring, got %d", p3ScoreAfterRound1, got)
+	}
+}
+
 func TestStopUnknownLocaleDefaultsToEnglish(t *testing.T) {
 	game := &StopGame{}
 	game.Start("room-1", Options{Locale: "unknown"})

@@ -199,12 +199,7 @@ func (g *GarticPhoneGame) Status() Status {
 }
 
 func (g *GarticPhoneGame) Standings() []Standing {
-	standings := make([]Standing, 0, len(g.scores))
-	for id, score := range g.scores {
-		standings = append(standings, Standing{PlayerID: id, Score: score})
-	}
-	sort.SliceStable(standings, func(i, j int) bool { return standings[i].Score > standings[j].Score })
-	return standings
+	return standings(g.scores, g.room)
 }
 
 func (g *GarticPhoneGame) OnAction(playerID string, payload map[string]any) error {

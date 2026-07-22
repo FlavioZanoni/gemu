@@ -2,7 +2,8 @@
 
 import { X } from "lucide-react";
 import type { Player, PlayedGame } from "@/lib/protocol";
-import { hueFor } from "@/components/ui/gameHues";
+import { hueFor, playerColorFor } from "@/components/ui/gameHues";
+import { Avatar } from "@/components/ui/PlayerChip";
 
 export function SessionScoreboard({
   open,
@@ -82,9 +83,11 @@ export function SessionScoreboard({
                   <div className="slab text-2xl w-8 text-center text-(--accent)">
                     {idx + 1}
                   </div>
-                  <div className="flex-1 w-12 h-12 rounded-full bg-(--panel-raised) border-2 border-(--line) flex items-center justify-center text-xs text-(--ink)/60 flex-shrink-0">
-                    doodle
-                  </div>
+                  <Avatar
+                    player={player}
+                    color={playerColorFor(players.findIndex((p) => p.id === player.id))}
+                    size={48}
+                  />
                   <div className="min-w-0">
                     <div className="font-bold text-(--ink) truncate">
                       {player.name}

@@ -36,6 +36,14 @@ export function FibberGame(props: GameProps) {
     setLie("");
   }, [pub?.round]);
 
+  // Auto-open the how-to-play modal on the first writing phase of round 1,
+  // once the round payload actually arrives.
+  useEffect(() => {
+    if (pub?.round === 1 && pub?.phase === "writing") {
+      setShowHow(true);
+    }
+  }, [pub?.round, pub?.phase]);
+
   if (!pub) return null;
   const nameOf = (id: string) =>
     props.players.find((p) => p.id === id)?.name ?? "?";
@@ -81,12 +89,14 @@ export function FibberGame(props: GameProps) {
               maxLength={80}
               placeholder={t("fibber.liePlaceholder")}
               className="w-full rounded-xl border-2 border-(--line) bg-(--panel) px-4 py-3 text-(--ink) focus:border-(--accent-2) focus:outline-none"
+              data-testid="fibber-lie-input"
             />
             <Button
               variant="hue"
               gameType="fibber"
               disabled={!lie.trim()}
               onClick={() => props.sendAction({ action: "lie", lie: lie.trim() })}
+              data-testid="fibber-lie-submit"
             >
               {t("fibber.submitLie")}
             </Button>
@@ -111,6 +121,7 @@ export function FibberGame(props: GameProps) {
                   background: picked ? `${hue.base}22` : "var(--panel)",
                   opacity: own ? 0.4 : 1,
                 }}
+                data-testid={`fibber-choice-${i}`}
               >
                 {text}
                 {own ? (

@@ -103,6 +103,11 @@ func (g *TriviaGame) Start(roomID string, opts Options) {
 	g.totalRounds = SettingInt(opts.Settings, "rounds", TriviaDefaultRounds, 1, maxRounds)
 	g.answerSecs = SettingInt(opts.Settings, "answerSeconds", TriviaAnswerSeconds, 10, 60)
 	g.scores = make(map[string]int)
+	if g.room != nil {
+		for _, id := range g.room.ConnectedPlayerIDs() {
+			g.scores[id] = 0
+		}
+	}
 	g.round = 0
 	g.startQuestion()
 }

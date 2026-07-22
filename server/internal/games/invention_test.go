@@ -248,6 +248,38 @@ func TestInventionStatusAndStandings(t *testing.T) {
 	}
 }
 
+// The admin "advance" action must be able to force collecting -> drawing
+// even when some connected players never submitted problems; missing
+// submissions are treated as absent, same as elsewhere.
+func TestInventionAdminAdvanceCollecting(t *testing.T) {
+	room := fakeRoom{players: []string{"p1", "p2", "p3"}, admin: "p1"}
+	game := &InventionGame{}
+	game.Start("room-1", Options{Room: room})
+
+	// Only p1 submits; p2 and p3 never do.
+	_ = game.OnAction("p1", map[string]any{"problems": []any{"Problem A", "Problem B"}})
+	if game.phase != "collecting" {
+		t.Fatalf("expected phase to remain collecting, got %s", game.phase)
+	}
+
+	// Non-admin cannot force the advance.
+	_ = game.OnAction("p2", map[string]any{"action": "advance"})
+	if game.phase != "collecting" {
+		t.Fatalf("expected non-admin advance to be ignored, got %s", game.phase)
+	}
+
+	// Admin forces the advance despite missing submissions.
+	_ = game.OnAction("p1", map[string]any{"action": "advance"})
+	if game.phase != "drawing" {
+		t.Fatalf("expected admin advance to force collecting -> drawing, got %s", game.phase)
+	}
+	for _, id := range []string{"p1", "p2", "p3"} {
+		if game.assignments[id] == "" {
+			t.Fatalf("expected %s to receive an assignment after forced advance", id)
+		}
+	}
+}
+
 // Nobody should be dealt a problem they wrote themselves (when avoidable).
 func TestInventionAssignAvoidsOwnProblems(t *testing.T) {
 	players := []string{"p1", "p2", "p3", "p4"}
@@ -272,5 +304,25 @@ func TestInventionAssignAvoidsOwnProblems(t *testing.T) {
 				t.Fatalf("iter %d: %s was dealt their own problem %q", iter, id, assigned)
 			}
 		}
+	}
+}
+
+// Admin advance in the drawing phase with zero drawings skips the round
+// entirely (nothing to present or fund) instead of silently no-oping.
+func TestInventionAdminAdvanceDrawingZeroDrawingsSkipsRound(t *testing.T) {
+	room := fakeRoom{players: []string{"p1", "p2", "p3"}, admin: "p1"}
+	game := &InventionGame{}
+	game.Start("room-1", Options{Room: room})
+
+	_ = game.OnAction("p1", map[string]any{"problems": []any{"Problem A", "Problem B"}})
+	_ = game.OnAction("p1", map[string]any{"action": "advance"}) // collecting -> drawing
+	if game.phase != "drawing" {
+		t.Fatalf("expected drawing, got %s", game.phase)
+	}
+
+	// Nobody draws; admin skips again.
+	_ = game.OnAction("p1", map[string]any{"action": "advance"})
+	if game.phase != "results" && game.phase != "finalResults" {
+		t.Fatalf("expected zero-drawing skip to land on results/finalResults, got %s", game.phase)
 	}
 }

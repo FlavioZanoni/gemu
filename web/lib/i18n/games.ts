@@ -3,13 +3,13 @@
 export const games = {
   en: {
     // Stop! — How to play steps
-    "howto.stop.1": "Everyone has {n} seconds to write an answer for each category that starts with the given letter.",
+    "howto.stop.1": "Race the clock to write an answer for each category that starts with the given letter.",
     "howto.stop.2": "Press STOP when you're done, or wait for the timer to run out.",
     "howto.stop.3": "In the validation round, vote on which answers are valid (answers that don't start with the letter or are blank are auto-invalid).",
     "howto.stop.4": "Unique answers earn 10 points, duplicates earn 5, invalid answers earn 0. Highest score wins!",
 
     // Gartic — How to play steps
-    "howto.gartic.1": "One player draws a word while others guess. You have {n} seconds to guess — don't be shy!",
+    "howto.gartic.1": "One player draws a word while others guess before the timer runs out — don't be shy!",
     "howto.gartic.2": "The first correct guesser scores 100 points (−10 for each guess after), and the drawer gets 25 points per correct guess.",
     "howto.gartic.3": "After everyone has drawn once per round, the scores reset and the next drawer is up.",
 
@@ -26,9 +26,9 @@ export const games = {
 
     // Invention (Patently Silly) — How to play steps
     "howto.invention.1": "Write down a silly problem. Other players will draw an invention to solve it.",
-    "howto.invention.2": "When it's your turn, draw an invention for an assigned silly problem. You have {n} seconds.",
+    "howto.invention.2": "When it's your turn, draw an invention for an assigned silly problem before the timer ends.",
     "howto.invention.3": "Present your invention and explain how it solves the problem. Be as ridiculous as you want!",
-    "howto.invention.4": "Vote by allocating your {n} funding points to inventions. Higher scores = funnier inventions.",
+    "howto.invention.4": "Vote by allocating your funding points to inventions. Higher scores = funnier inventions.",
 
     // Invention game UI
     "invention.collecting": "Collecting Problems",
@@ -53,6 +53,7 @@ export const games = {
     "invention.submitInvention": "Submit invention",
     "invention.nextInvention": "Next invention",
     "invention.skipVoting": "Skip to voting",
+    "invention.hostAdvance": "Host: skip the wait ▶",
     "invention.fundingBudget": "Allocate your {budget} across these inventions",
     "invention.submitFunding": "Submit funding",
     "invention.finalWinner": "{name} wins with {amount}!",
@@ -106,13 +107,13 @@ export const games = {
   },
   "pt-BR": {
     // Stop! — How to play steps
-    "howto.stop.1": "Todos têm {n} segundos para escrever uma resposta para cada categoria que começa com a letra dada.",
+    "howto.stop.1": "Corra contra o relógio para escrever uma resposta para cada categoria que começa com a letra dada.",
     "howto.stop.2": "Pressione STOP quando terminar, ou aguarde a contagem regressiva acabar.",
     "howto.stop.3": "Na rodada de validação, vote em quais respostas são válidas (respostas que não começam com a letra ou em branco são automaticamente inválidas).",
     "howto.stop.4": "Respostas únicas valem 10 pontos, duplicadas 5, inválidas 0. Maior pontuação vence!",
 
     // Gartic — How to play steps
-    "howto.gartic.1": "Um jogador desenha uma palavra enquanto outros adivinham. Você tem {n} segundos para adivinhar — não seja tímido!",
+    "howto.gartic.1": "Um jogador desenha uma palavra enquanto os outros adivinham antes do tempo acabar — não seja tímido!",
     "howto.gartic.2": "O primeiro a adivinhar corretamente ganha 100 pontos (−10 para cada palpite depois), e o desenhista ganha 25 pontos por acerto.",
     "howto.gartic.3": "Depois que todos desenharem uma vez por rodada, os pontos são zerados e o próximo desenhista começa.",
 
@@ -129,9 +130,9 @@ export const games = {
 
     // Invention (Patentemente Bobo) — How to play steps
     "howto.invention.1": "Escreva um problema bobo. Outros jogadores desenharão uma invenção para resolvê-lo.",
-    "howto.invention.2": "Quando for sua vez, desenhe uma invenção para um problema bobo atribuído. Você tem {n} segundos.",
+    "howto.invention.2": "Quando for sua vez, desenhe uma invenção para um problema bobo atribuído antes do tempo acabar.",
     "howto.invention.3": "Apresente sua invenção e explique como ela resolve o problema. Seja o mais ridículo possível!",
-    "howto.invention.4": "Vote alocando seus {n} pontos de financiamento para invenções. Pontuações mais altas = invenções mais engraçadas.",
+    "howto.invention.4": "Vote alocando seus pontos de financiamento para invenções. Pontuações mais altas = invenções mais engraçadas.",
 
     // Invention game UI
     "invention.collecting": "Coletando Problemas",
@@ -156,6 +157,7 @@ export const games = {
     "invention.submitInvention": "Enviar invenção",
     "invention.nextInvention": "Próxima invenção",
     "invention.skipVoting": "Pular para votação",
+    "invention.hostAdvance": "Anfitrião: pular a espera ▶",
     "invention.fundingBudget": "Aloque seus {budget} entre essas invenções",
     "invention.submitFunding": "Enviar financiamento",
     "invention.finalWinner": "{name} vence com {amount}!",

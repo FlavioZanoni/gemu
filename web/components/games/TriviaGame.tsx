@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { TimerBadge, Banner, Button, HowToPlayModal } from "../ui";
@@ -29,6 +29,14 @@ export function TriviaGame(props: GameProps) {
   const priv = props.privateState as { choice?: number } | null;
   const hue = hueFor("trivia");
   const [showHow, setShowHow] = useState(false);
+
+  // Auto-open the how-to-play modal on the first question of round 1, once
+  // the round payload actually arrives (publicState is briefly {} on mount).
+  useEffect(() => {
+    if (pub?.round === 1 && pub?.phase === "question") {
+      setShowHow(true);
+    }
+  }, [pub?.round, pub?.phase]);
 
   // publicState is briefly {} between status:playing and the first game.state,
   // so guard the round payload, not just null.

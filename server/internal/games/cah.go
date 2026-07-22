@@ -219,6 +219,11 @@ func (g *CahGame) enterJudging() {
 	g.deadline = time.Now().Add(time.Duration(CahJudgeSeconds) * time.Second)
 	g.deadlineName = "judge"
 
+	// Defensive: the judge must never have their own card in the pool they're
+	// judging (e.g. if a judge swap happened without this being cleaned up
+	// elsewhere).
+	delete(g.submissions, g.judge)
+
 	// Build anonymized submissions
 	g.shuffledSubs = make([][]string, 0)
 	g.subOrder = make([]string, 0)
@@ -306,7 +311,13 @@ func (g *CahGame) OnPlayerLeave(playerID string) {
 	if playerID == g.judge && (g.phase == "answering" || g.phase == "judging") {
 		g.rotateJudge()
 		if g.phase == "answering" {
-			// Recheck if all remaining players have submitted
+			// The new judge may have already submitted cards as a regular
+			// player before being promoted; drop that stale submission so it
+			// doesn't end up in the judging pool (and so the judge can't be
+			// counted as "submitted" while judging).
+			delete(g.submissions, g.judge)
+			// Removing that submission may mean everyone else has already
+			// submitted, so recheck before waiting on the ex-judge.
 			if g.checkAllSubmitted() {
 				g.enterJudging()
 			}

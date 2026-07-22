@@ -48,6 +48,9 @@ export const screens = {
     "decks.badJson": "That's not valid JSON.",
     "decks.badShape": "Deck needs a name, black[], and white[].",
 
+    // Join gate screen
+    "join.nameRequired": "Pick a nickname first.",
+
     // Lobby screen
     "lobby.readyUp": "Ready up",
     "lobby.startGame": "Start game",
@@ -136,6 +139,9 @@ export const screens = {
     "decks.done": "Pronto",
     "decks.badJson": "JSON inválido.",
     "decks.badShape": "O deck precisa de name, black[] e white[].",
+
+    // Join gate screen
+    "join.nameRequired": "Escolha um apelido primeiro.",
 
     // Lobby screen
     "lobby.readyUp": "Pronto",

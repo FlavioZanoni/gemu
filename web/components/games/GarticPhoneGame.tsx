@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useI18n } from "@/lib/i18n";
 import { Card, Button, TimerBadge, Banner, HowToPlayModal } from "../ui";
+import { Avatar } from "../ui/PlayerChip";
 import { DrawingCanvas } from "../DrawingCanvas";
 import { playerColorFor } from "../ui/gameHues";
 import type { GameProps } from "./types";
@@ -115,13 +116,6 @@ export function GarticPhoneGame(props: GameProps) {
     }
   };
 
-  const getPhaseTitle = () => {
-    if (phase === "prompt") return "WRITE YOUR PROMPT";
-    if (phase === "drawing") return "DRAW THE TEXT";
-    if (phase === "writing") return "DESCRIBE THE DRAWING";
-    return "REVEAL";
-  };
-
   const submittedCount = submitted.length;
   const totalPlayers = props.players.length;
   const submissionProgress = `${submittedCount} of ${totalPlayers} submitted`;
@@ -155,12 +149,14 @@ export function GarticPhoneGame(props: GameProps) {
           {!isSubmitted && (
             <div className="space-y-2">
               <textarea
+                data-testid="garticphone-prompt-input"
                 value={promptText}
                 onChange={(e) => setPromptText(e.target.value)}
                 placeholder="Write a silly prompt…"
                 className="w-full rounded-lg border-2 border-(--line) bg-(--panel) px-3 py-2 text-(--ink) placeholder-text-(--ink)/40 font-sans min-h-24"
               />
               <Button
+                data-testid="garticphone-prompt-submit"
                 variant="hue"
                 gameType="garticphone"
                 onClick={handleSubmitPrompt}
@@ -218,6 +214,7 @@ export function GarticPhoneGame(props: GameProps) {
             </div>
 
             <Button
+              data-testid="garticphone-submit-drawing"
               variant="hue"
               gameType="garticphone"
               onClick={handleSubmitDrawing}
@@ -255,7 +252,7 @@ export function GarticPhoneGame(props: GameProps) {
             {prevEntry && (
               <>
                 <div style={{ textAlign: "center", fontSize: "10px", fontWeight: 700, letterSpacing: "0.25em", color: "#b78bff", marginBottom: "12px", textTransform: "uppercase", fontFamily: "'Space Mono'" }}>
-                  RAFA DREW THIS… WHAT IS IT?!
+                  {(playerNames.get(prevEntry.author) ?? "SOMEONE").toUpperCase()} DREW THIS… WHAT IS IT?!
                 </div>
                 <div style={{ height: "290px", backgroundColor: "#fff8e7", borderRadius: "16px", border: "3px solid #b78bff", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
                   {prevEntry.kind === "text" ? (
@@ -272,6 +269,7 @@ export function GarticPhoneGame(props: GameProps) {
                 YOUR DESCRIPTION
               </div>
               <textarea
+                data-testid="garticphone-description-input"
                 value={descriptionText}
                 onChange={(e) => setDescriptionText(e.target.value)}
                 placeholder="a capybara driving a bus…"
@@ -280,6 +278,7 @@ export function GarticPhoneGame(props: GameProps) {
             </div>
 
             <Button
+              data-testid="garticphone-description-submit"
               variant="hue"
               gameType="garticphone"
               onClick={handleSubmitDescription}
@@ -339,6 +338,7 @@ export function GarticPhoneGame(props: GameProps) {
                 const authorName = playerNames.get(entry.author) ?? "Someone";
                 const authorIndex = props.players.findIndex((p) => p.id === entry.author);
                 const authorColor = playerColorFor(authorIndex >= 0 ? authorIndex : 0);
+                const authorPlayer = authorIndex >= 0 ? props.players[authorIndex] : undefined;
 
                 // Graduated opacity: latest 1, previous 0.75, older 0.55
                 const entryOpacity = isLatest ? 1 : idx === revealPos - 1 ? 0.75 : 0.55;
@@ -346,7 +346,11 @@ export function GarticPhoneGame(props: GameProps) {
                 if (entry.kind === "text") {
                   return (
                     <div key={idx} style={{ display: "flex", gap: "10px", alignItems: "flex-start", opacity: entryOpacity }}>
-                      <div style={{ flex: "none", width: "30px", height: "30px", borderRadius: "99px", backgroundColor: "#fff8e7", border: `2px solid ${authorColor}` }} />
+                      {authorPlayer ? (
+                        <Avatar player={authorPlayer} color={authorColor} size={30} />
+                      ) : (
+                        <div style={{ flex: "none", width: "30px", height: "30px", borderRadius: "99px", backgroundColor: "#fff8e7", border: `2px solid ${authorColor}` }} />
+                      )}
                       <div style={{ flex: 1, background: isLatest ? "linear-gradient(180deg, #c9a4ff, #a678f2)" : "#2b1a3d", border: `2px solid ${isLatest ? "transparent" : "#5a3f7a"}`, borderRadius: "4px 14px 14px 14px", padding: "9px 12px", boxShadow: isLatest ? "0 5px 0 #5f3d99" : "none", animation: isLatest ? "slam .45s ease-out" : "none" }}>
                         <div style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.2em", color: isLatest ? "rgba(45,22,80,.6)" : "rgba(255,233,168,.4)", marginBottom: "4px", textTransform: "uppercase", fontFamily: "'Space Mono'" }}>
                           {authorName} WROTE
@@ -360,7 +364,11 @@ export function GarticPhoneGame(props: GameProps) {
                 } else {
                   return (
                     <div key={idx} style={{ display: "flex", gap: "10px", alignItems: "flex-start", opacity: entryOpacity }}>
-                      <div style={{ flex: "none", width: "30px", height: "30px", borderRadius: "99px", backgroundColor: "#fff8e7", border: `2px solid ${authorColor}` }} />
+                      {authorPlayer ? (
+                        <Avatar player={authorPlayer} color={authorColor} size={30} />
+                      ) : (
+                        <div style={{ flex: "none", width: "30px", height: "30px", borderRadius: "99px", backgroundColor: "#fff8e7", border: `2px solid ${authorColor}` }} />
+                      )}
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.2em", color: "rgba(255,233,168,.4)", marginBottom: "4px", textTransform: "uppercase", fontFamily: "'Space Mono'" }}>
                           {authorName} DREW IT
@@ -420,6 +428,7 @@ export function GarticPhoneGame(props: GameProps) {
               </div>
               {props.isAdmin && (
                 <Button
+                  data-testid="garticphone-reveal-next"
                   variant="hue"
                   gameType="garticphone"
                   onClick={handleRevealNext}

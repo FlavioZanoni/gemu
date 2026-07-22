@@ -36,6 +36,9 @@ type DrawingCanvasProps = {
   value?: string;
   onChange?: (dataUrl: string) => void;
   readOnly?: boolean;
+  /** Multiplies the picked brush size — avatars render at ~38px, so their
+   *  strokes need to be proportionally thicker to survive the downscale. */
+  brushScale?: number;
 };
 
 const COLOR_SWATCHES = [
@@ -72,6 +75,7 @@ export const DrawingCanvas = forwardRef<
     value,
     onChange,
     readOnly = false,
+    brushScale = 1,
   },
   ref
 ) {
@@ -86,6 +90,7 @@ export const DrawingCanvas = forwardRef<
   const [tool, setTool] = useState<"brush" | "eraser" | "line" | "rect" | "ellipse" | "fill">("brush");
   const [color, setColor] = useState(COLOR_SWATCHES[0]);
   const [size, setSize] = useState(BRUSH_SIZES[1]);
+  const effectiveSize = size * brushScale;
   const [fill, setFill] = useState(false);
   const [startPos, setStartPos] = useState<[number, number] | null>(null);
 
@@ -352,15 +357,15 @@ export const DrawingCanvas = forwardRef<
 
     // Draw preview for shape tools
     if (tool === "line") {
-      drawLine(startPos[0], startPos[1], x, y, color, size);
+      drawLine(startPos[0], startPos[1], x, y, color, effectiveSize);
     } else if (tool === "rect") {
-      drawRect(startPos[0], startPos[1], x, y, color, size, fill);
+      drawRect(startPos[0], startPos[1], x, y, color, effectiveSize, fill);
     } else if (tool === "ellipse") {
-      drawEllipse(startPos[0], startPos[1], x, y, color, size, fill);
+      drawEllipse(startPos[0], startPos[1], x, y, color, effectiveSize, fill);
     } else if (tool === "brush" || tool === "eraser") {
       // For brush/eraser, accumulate points and draw
       strokePointsRef.current.push([x, y]);
-      drawStroke(strokePointsRef.current, color, size, tool === "eraser");
+      drawStroke(strokePointsRef.current, color, effectiveSize, tool === "eraser");
     }
   };
 
@@ -379,7 +384,7 @@ export const DrawingCanvas = forwardRef<
           kind: tool,
           points: strokePointsRef.current,
           color,
-          size,
+          size: effectiveSize,
         });
       } else if (tool === "line") {
         onStrokeBatch({
@@ -391,7 +396,7 @@ export const DrawingCanvas = forwardRef<
             strokePointsRef.current[strokePointsRef.current.length - 1]?.[1] ?? startPos[1],
           ],
           color,
-          size,
+          size: effectiveSize,
         });
       } else if (tool === "rect" || tool === "ellipse") {
         onStrokeBatch({
@@ -403,7 +408,7 @@ export const DrawingCanvas = forwardRef<
             strokePointsRef.current[strokePointsRef.current.length - 1]?.[1] ?? startPos[1],
           ],
           color,
-          size,
+          size: effectiveSize,
           fill,
         });
       }
@@ -511,7 +516,45 @@ export const DrawingCanvas = forwardRef<
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Toolbar */}
+      {/* Canvas */}
+      <div
+        ref={containerRef}
+        className="flex items-center justify-center rounded-3xl overflow-hidden"
+        style={{
+          backgroundColor: "#fff8e7",
+          border: "3px solid #5a3f7a",
+          boxShadow: "0 6px 0 rgba(0,0,0,.35)",
+          aspectRatio: "720 / 880",
+          width: "100%",
+        }}
+      >
+        <canvas
+          ref={canvasRef}
+          className="block"
+          style={{
+            cursor: readOnly ? "default" : tool === "eraser" ? "cell" : "crosshair",
+            touchAction: "none",
+            maxWidth: "100%",
+            maxHeight: "100%",
+          }}
+          onPointerDown={(e) => {
+            const pos = getEventPos(e);
+            start(pos[0], pos[1]);
+          }}
+          onPointerMove={(e) => {
+            const pos = getEventPos(e);
+            draw(pos[0], pos[1]);
+          }}
+          onPointerUp={end}
+          onPointerLeave={end}
+          onPointerCancel={end}
+          // Pointer events ONLY — browsers also fire compatibility mouse
+          // events after pointer events, so duplicating handlers would run
+          // every stroke twice (double undo pushes, doubled stroke relay).
+        />
+      </div>
+
+      {/* Toolbar (below the canvas — design/DrawingCanvas.dc.html) */}
       {!readOnly && (
         <div className="flex flex-col gap-2 rounded-lg p-3" style={{ background: "#2b1a3d" }}>
           {/* Tools row 1: Drawing tools (6 tools) */}
@@ -659,44 +702,6 @@ export const DrawingCanvas = forwardRef<
           </div>
         </div>
       )}
-
-      {/* Canvas */}
-      <div
-        ref={containerRef}
-        className="flex items-center justify-center rounded-3xl overflow-hidden"
-        style={{
-          backgroundColor: "#fff8e7",
-          border: "3px solid #5a3f7a",
-          boxShadow: "0 6px 0 rgba(0,0,0,.35)",
-          aspectRatio: "720 / 880",
-          width: "100%",
-        }}
-      >
-        <canvas
-          ref={canvasRef}
-          className="block"
-          style={{
-            cursor: readOnly ? "default" : tool === "eraser" ? "cell" : "crosshair",
-            touchAction: "none",
-            maxWidth: "100%",
-            maxHeight: "100%",
-          }}
-          onPointerDown={(e) => {
-            const pos = getEventPos(e);
-            start(pos[0], pos[1]);
-          }}
-          onPointerMove={(e) => {
-            const pos = getEventPos(e);
-            draw(pos[0], pos[1]);
-          }}
-          onPointerUp={end}
-          onPointerLeave={end}
-          onPointerCancel={end}
-          // Pointer events ONLY — browsers also fire compatibility mouse
-          // events after pointer events, so duplicating handlers would run
-          // every stroke twice (double undo pushes, doubled stroke relay).
-        />
-      </div>
     </div>
   );
 });

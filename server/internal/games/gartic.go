@@ -88,6 +88,9 @@ func (g *GarticGame) Start(roomID string, opts Options) {
 	g.scores = make(map[string]int)
 	g.shuffleDeck()
 	g.turnOrder = g.connected()
+	for _, id := range g.turnOrder {
+		g.scores[id] = 0
+	}
 	rand.Shuffle(len(g.turnOrder), func(i, j int) { g.turnOrder[i], g.turnOrder[j] = g.turnOrder[j], g.turnOrder[i] })
 	g.turnIdx = 0
 	g.startTurn()

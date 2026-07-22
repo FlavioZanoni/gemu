@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { Check, Cloud, Pencil } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Button, TimerBadge, Banner, HowToPlayModal } from "../ui";
+import { Avatar } from "../ui/PlayerChip";
 import { DrawingCanvas } from "../DrawingCanvas";
 import { getWSClient } from "@/lib/ws";
 import type { GameProps } from "./types";
@@ -50,12 +51,13 @@ export function GarticGame(props: GameProps) {
   const [showHowTo, setShowHowTo] = useState(round === 1 && phase === "drawing");
   const guessesEndRef = useRef<HTMLDivElement>(null);
 
+  // Every player gets a row even before anyone scores (scores map starts empty).
   const standings = useMemo(
     () =>
-      Object.entries(scores)
-        .map(([playerId, score]) => ({ playerId, score }))
+      props.players
+        .map((player) => ({ playerId: player.id, score: scores[player.id] ?? 0 }))
         .sort((a, b) => b.score - a.score),
-    [scores]
+    [props.players, scores]
   );
 
   const playerNames = useMemo(() => {
@@ -65,6 +67,11 @@ export function GarticGame(props: GameProps) {
     });
     return map;
   }, [props.players]);
+
+  const playerById = useMemo(
+    () => new Map(props.players.map((player) => [player.id, player])),
+    [props.players]
+  );
 
   // Subscribe to game.stream events for live canvas strokes
   useEffect(() => {
@@ -113,13 +120,14 @@ export function GarticGame(props: GameProps) {
           onClose={() => setShowHowTo(false)}
         />
         <div style={{ flex: 1, display: "flex", gap: "24px", padding: "22px 0 30px" }}>
-          {/* Left: Scoreboard */}
+          {/* Left: Scoreboard (design/games/Gartic.dc.html) */}
           <div style={{ width: "230px", flex: "none" }}>
             <div style={{ font: "700 11px 'Space Mono',monospace", letterSpacing: ".25em", color: "rgba(255,233,168,.45)", marginBottom: "10px" }}>
               SCOREBOARD · RD {round}/{totalRounds}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
               {standings.map((s) => {
+                const player = playerById.get(s.playerId);
                 const isPlayerDrawing = s.playerId === drawer;
                 const playerGuessed = guessed.includes(s.playerId);
                 const stateText = isPlayerDrawing
@@ -132,12 +140,15 @@ export function GarticGame(props: GameProps) {
                   : playerGuessed
                     ? "#35d4b9"
                     : "rgba(255,233,168,.4)";
+                const ringColor = s.playerId === props.playerId ? "var(--hue-gartic)" : "#5a3f7a";
 
                 return (
-                  <div key={s.playerId} style={{ display: "flex", alignItems: "center", gap: "9px", background: "#2b1a3d", border: "2px solid " + (s.playerId === props.playerId ? "var(--hue-gartic)" : "#5a3f7a"), borderRadius: "99px", padding: "5px 12px 5px 5px" }}>
-                    <div style={{ width: "28px", height: "28px", borderRadius: "99px", background: "#fff8e7", border: "2px solid " + (s.playerId === props.playerId ? "var(--hue-gartic)" : "#5a3f7a"), display: "flex", alignItems: "center", justifyContent: "center", font: "400 6px 'Space Mono',monospace", color: "#8a7f60" }}>
-                      {playerNames.get(s.playerId)?.slice(0, 2).toUpperCase() || "?"}
-                    </div>
+                  <div key={s.playerId} style={{ display: "flex", alignItems: "center", gap: "9px", background: "#2b1a3d", border: "2px solid " + ringColor, borderRadius: "99px", padding: "5px 12px 5px 5px" }}>
+                    {player ? (
+                      <Avatar player={player} color={ringColor} size={28} />
+                    ) : (
+                      <div style={{ width: "28px", height: "28px", borderRadius: "99px", background: "#fff8e7", border: "2px solid " + ringColor }} />
+                    )}
                     <div style={{ flex: 1, font: "700 12px 'Space Grotesk'", color: "#ffe9a8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       {playerNames.get(s.playerId)}
                     </div>
@@ -167,7 +178,7 @@ export function GarticGame(props: GameProps) {
                     <div style={{ font: "700 10px 'Space Mono',monospace", letterSpacing: ".35em", color: "var(--hue-gartic)" }}>
                       YOUR SECRET WORD
                     </div>
-                    <div style={{ fontFamily: "'Alfa Slab One'", fontSize: "26px", color: "#ffe9a8", textShadow: "0 3px 0 #c2452d" }}>
+                    <div data-testid="gartic-secret-word" style={{ fontFamily: "'Alfa Slab One'", fontSize: "26px", color: "#ffe9a8", textShadow: "0 3px 0 #c2452d" }}>
                       {word || "?"}
                     </div>
                   </>
@@ -194,7 +205,7 @@ export function GarticGame(props: GameProps) {
             </div>
 
             {/* Canvas with built-in toolbar from DrawingCanvas */}
-            <div style={{ borderRadius: "18px", boxShadow: "0 6px 0 rgba(0,0,0,.35)", marginBottom: "12px", overflow: "hidden" }}>
+            <div data-testid="gartic-canvas" style={{ borderRadius: "18px", boxShadow: "0 6px 0 rgba(0,0,0,.35)", marginBottom: "12px", overflow: "hidden" }}>
               <DrawingCanvas
                 ref={canvasRef}
                 onStrokeBatch={isDrawer ? handleCanvasSendStroke : undefined}
@@ -255,6 +266,7 @@ export function GarticGame(props: GameProps) {
             {!isDrawer && (
               <div style={{ display: "flex", gap: "8px" }}>
                 <input
+                  data-testid="gartic-guess-input"
                   type="text"
                   value={guess}
                   onChange={(e) => setGuess(e.target.value)}
@@ -273,6 +285,7 @@ export function GarticGame(props: GameProps) {
                   }}
                 />
                 <Button
+                  data-testid="gartic-guess-submit"
                   variant="hue"
                   gameType="gartic"
                   onClick={handleGuess}
@@ -373,19 +386,25 @@ export function GarticGame(props: GameProps) {
           SCORES
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
-          {standings.map((s) => (
-            <div key={s.playerId} style={{ display: "flex", alignItems: "center", gap: "9px", background: "#2b1a3d", border: "2px solid " + (s.playerId === props.playerId ? "var(--hue-gartic)" : "#5a3f7a"), borderRadius: "99px", padding: "4px 12px 4px 4px" }}>
-              <div style={{ width: "28px", height: "28px", borderRadius: "99px", background: "#fff8e7", border: "2px solid " + (s.playerId === props.playerId ? "var(--hue-gartic)" : "#5a3f7a"), display: "flex", alignItems: "center", justifyContent: "center", font: "400 6px 'Space Mono',monospace", color: "#8a7f60" }}>
-                {playerNames.get(s.playerId)?.slice(0, 2).toUpperCase() || "?"}
+          {standings.map((s) => {
+            const player = playerById.get(s.playerId);
+            const ringColor = s.playerId === props.playerId ? "var(--hue-gartic)" : "#5a3f7a";
+            return (
+              <div key={s.playerId} style={{ display: "flex", alignItems: "center", gap: "9px", background: "#2b1a3d", border: "2px solid " + ringColor, borderRadius: "99px", padding: "4px 12px 4px 4px" }}>
+                {player ? (
+                  <Avatar player={player} color={ringColor} size={28} />
+                ) : (
+                  <div style={{ width: "28px", height: "28px", borderRadius: "99px", background: "#fff8e7", border: "2px solid " + ringColor }} />
+                )}
+                <div style={{ flex: 1, font: "700 12px 'Space Grotesk'", color: "#ffe9a8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {playerNames.get(s.playerId)}
+                </div>
+                <span style={{ fontFamily: "'Alfa Slab One'", fontSize: "14px", color: "#ffe9a8" }}>
+                  {s.score}
+                </span>
               </div>
-              <div style={{ flex: 1, font: "700 12px 'Space Grotesk'", color: "#ffe9a8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {playerNames.get(s.playerId)}
-              </div>
-              <span style={{ fontFamily: "'Alfa Slab One'", fontSize: "14px", color: "#ffe9a8" }}>
-                {s.score}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

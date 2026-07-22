@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Grotesk:wght@400;500;600;700&family=Luckiest+Guy&family=Alfa+Slab+One&family=Baloo+2:wght@500;600;700;800&family=Gochi+Hand&family=Archivo+Black&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0d0d14;font-family:'Space Grotesk',system-ui,sans-serif;color:#fef3d4}
+a{color:#35d4b9}a:hover{color:#ffd23f}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(255,255,255,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 6px}
+.dv-tid{font:600 10px 'Space Mono',monospace;padding:3px 7px;background:#fff2c8;color:#131320;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 15px/1.2 'Space Grotesk',sans-serif;color:#fef3d4}
+.dv-sub{font:400 12px/1.5 'Space Grotesk',sans-serif;color:rgba(254,243,212,.55);max-width:720px;margin:0 0 24px}
+.dv-opts{display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px 'Space Mono',monospace;padding:3px 7px;background:rgba(255,255,255,.12);color:#fef3d4;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11.5px/1.3 'Space Grotesk',sans-serif;color:rgba(254,243,212,.6)}
+.dv-olabel b{color:#fef3d4;font-weight:600}
+.dv-opt:target .dv-oid{background:#ffd23f;color:#131320}
+.dv-next{margin:26px 0 0;font:12px/1.6 'Space Grotesk',sans-serif;color:rgba(254,243,212,.5)}
+@keyframes wobble{0%,100%{transform:rotate(-1.5deg)}50%{transform:rotate(1.5deg)}}
+@keyframes bulb{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes neonpulse{0%,100%{opacity:1}50%{opacity:.75}}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Prime Time '78 (<a class="dv-oid" href="#1b">1b</a>) with more color, two doses</span></div>
+<p class="dv-sub">Same game-show bones — marquee bulbs, slab type, hard drop-offsets — but the palette borrows <a class="dv-oid" href="#1c">1c</a>'s brights: coral, teal and yellow join the amber. <b>2a</b> is the restrained dose (one bright per zone); <b>2b</b> pushes further with colored option cards.</p>
+<div class="dv-opts">
+
+<!-- 2a -->
+<div class="dv-opt" id="2a">
+<div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a><b>Technicolor Broadcast</b> · vibrant accents, cards stay dark until leading</div>
+<div style="width:340px;background:#1c1230;border-radius:24px;border:1px solid rgba(255,255,255,.1);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+  <div style="padding:22px 18px 26px;background:radial-gradient(ellipse at 50% -10%,rgba(255,120,90,.22),transparent 60%)">
+    <div style="text-align:center;margin-bottom:6px">
+      <div style="display:inline-block;position:relative;background:#2b1a3d;border:3px solid #ffd23f;border-radius:14px;padding:10px 22px 12px">
+        <div style="position:absolute;top:-6px;left:12px;right:12px;display:flex;justify-content:space-between">
+          <div style="width:8px;height:8px;border-radius:99px;background:#ffe9a8;box-shadow:0 0 8px #ffd23f;animation:bulb 1s infinite"></div>
+          <div style="width:8px;height:8px;border-radius:99px;background:#ff8a9b;box-shadow:0 0 8px #ff4f6f;animation:bulb 1s .33s infinite"></div>
+          <div style="width:8px;height:8px;border-radius:99px;background:#8ceedd;box-shadow:0 0 8px #35d4b9;animation:bulb 1s .66s infinite"></div>
+        </div>
+        <div style="font-family:'Alfa Slab One';font-size:21px;color:#ffe9a8;text-shadow:0 3px 0 #c2452d">NEXT GAME</div>
+        <div style="font:700 10px 'Space Mono',monospace;letter-spacing:.3em;color:#35d4b9;text-align:center">AUDIENCE VOTE</div>
+      </div>
+    </div>
+    <div style="text-align:center;margin:10px 0 14px"><span style="font-family:'Alfa Slab One';font-size:26px;color:#1c1230;background:#ffd23f;padding:2px 16px;border-radius:8px;box-shadow:0 4px 0 #c2452d">00:17</span></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,#ffd23f,#f5b32a);border-radius:12px;padding:12px 14px;box-shadow:0 5px 0 #c2452d">
+        <div style="font-family:'Alfa Slab One';font-size:16px;color:#3d1f0e;width:24px;text-align:center">A</div>
+        <div style="flex:1"><div style="font-family:'Alfa Slab One';font-size:15px;color:#3d1f0e">STOP!</div><div style="font:600 10px 'Space Mono',monospace;color:rgba(61,31,14,.7)">CATEGORIES · 3–10</div></div>
+        <div style="display:flex;gap:3px"><div style="width:10px;height:18px;background:#3d1f0e;border-radius:2px"></div><div style="width:10px;height:18px;background:#3d1f0e;border-radius:2px"></div><div style="width:10px;height:18px;background:#3d1f0e;border-radius:2px"></div><div style="width:10px;height:18px;background:#3d1f0e;border-radius:2px"></div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;background:#2b1a3d;border:2px solid #35d4b9;border-radius:12px;padding:12px 14px">
+        <div style="font-family:'Alfa Slab One';font-size:16px;color:#35d4b9;width:24px;text-align:center">B</div>
+        <div style="flex:1"><div style="font-family:'Alfa Slab One';font-size:15px;color:#ffe9a8">GARTIC</div><div style="font:600 10px 'Space Mono',monospace;color:rgba(255,233,168,.5)">DRAW &amp; GUESS · 3–10</div></div>
+        <div style="display:flex;gap:3px"><div style="width:10px;height:18px;background:#35d4b9;border-radius:2px"></div><div style="width:10px;height:18px;background:#35d4b9;border-radius:2px"></div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;background:#2b1a3d;border:2px solid #ff4f6f;border-radius:12px;padding:12px 14px">
+        <div style="font-family:'Alfa Slab One';font-size:16px;color:#ff4f6f;width:24px;text-align:center">C</div>
+        <div style="flex:1"><div style="font-family:'Alfa Slab One';font-size:15px;color:#ffe9a8">CARDS VS. HUMANITY</div><div style="font:600 10px 'Space Mono',monospace;color:rgba(255,233,168,.5)">JUDGE PICKS · 4–10</div></div>
+        <div style="display:flex;gap:3px"><div style="width:10px;height:18px;background:#ff4f6f;border-radius:2px"></div></div>
+      </div>
+    </div>
+    <div style="margin-top:16px;text-align:center;font:600 10px 'Space Mono',monospace;letter-spacing:.2em;color:rgba(255,233,168,.45)">7 OF 8 CONTESTANTS VOTED</div>
+  </div>
+</div>
+<div style="width:340px;display:flex;gap:8px">
+  <div style="flex:1;height:34px;border-radius:8px;background:#1c1230;border:1px solid #5a3f7a"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#ffe9a8"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#ffd23f"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#ff4f6f"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#35d4b9"></div>
+</div>
+<div style="width:340px;font-family:'Alfa Slab One';font-size:16px;color:#ffe9a8">Alfa Slab One <span style="font-family:'Space Mono';font-size:12px;color:rgba(255,233,168,.6)">+ Space Mono · shadows go warm-red</span></div>
+</div>
+
+<!-- 2b -->
+<div class="dv-opt" id="2b">
+<div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a><b>Full Color Bars</b> · every option card wears its game hue</div>
+<div style="width:340px;background:#1c1230;border-radius:24px;border:1px solid rgba(255,255,255,.1);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+  <div style="padding:22px 18px 26px;background:radial-gradient(ellipse at 50% -10%,rgba(255,120,90,.22),transparent 60%)">
+    <div style="text-align:center;margin-bottom:6px">
+      <div style="display:inline-block;position:relative;background:linear-gradient(180deg,#e2564b,#c2452d);border:3px solid #ffe9a8;border-radius:14px;padding:10px 22px 12px;box-shadow:0 5px 0 rgba(0,0,0,.4)">
+        <div style="position:absolute;top:-6px;left:12px;right:12px;display:flex;justify-content:space-between">
+          <div style="width:8px;height:8px;border-radius:99px;background:#ffe9a8;box-shadow:0 0 8px #ffd23f;animation:bulb 1s infinite"></div>
+          <div style="width:8px;height:8px;border-radius:99px;background:#ffe9a8;box-shadow:0 0 8px #ffd23f;animation:bulb 1s .33s infinite"></div>
+          <div style="width:8px;height:8px;border-radius:99px;background:#ffe9a8;box-shadow:0 0 8px #ffd23f;animation:bulb 1s .66s infinite"></div>
+        </div>
+        <div style="font-family:'Alfa Slab One';font-size:21px;color:#ffe9a8;text-shadow:0 3px 0 rgba(0,0,0,.35)">NEXT GAME</div>
+        <div style="font:700 10px 'Space Mono',monospace;letter-spacing:.3em;color:#ffd8a8;text-align:center">AUDIENCE VOTE</div>
+      </div>
+    </div>
+    <div style="text-align:center;margin:10px 0 14px"><span style="font-family:'Alfa Slab One';font-size:26px;color:#1c1230;background:#ffe9a8;padding:2px 16px;border-radius:8px;box-shadow:0 4px 0 #c2452d">00:17</span></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,#ffd23f,#f5b32a);border-radius:12px;padding:12px 14px;box-shadow:0 5px 0 #9c7413">
+        <div style="font-family:'Alfa Slab One';font-size:16px;color:#3d1f0e;width:24px;text-align:center">A</div>
+        <div style="flex:1"><div style="font-family:'Alfa Slab One';font-size:15px;color:#3d1f0e">STOP!</div><div style="font:600 10px 'Space Mono',monospace;color:rgba(61,31,14,.7)">CATEGORIES · 3–10</div></div>
+        <div style="display:flex;gap:3px"><div style="width:10px;height:18px;background:#3d1f0e;border-radius:2px"></div><div style="width:10px;height:18px;background:#3d1f0e;border-radius:2px"></div><div style="width:10px;height:18px;background:#3d1f0e;border-radius:2px"></div><div style="width:10px;height:18px;background:#3d1f0e;border-radius:2px"></div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,#41e0c4,#28b89e);border-radius:12px;padding:12px 14px;box-shadow:0 5px 0 #0f6e5c;opacity:.92">
+        <div style="font-family:'Alfa Slab One';font-size:16px;color:#0c3d33;width:24px;text-align:center">B</div>
+        <div style="flex:1"><div style="font-family:'Alfa Slab One';font-size:15px;color:#0c3d33">GARTIC</div><div style="font:600 10px 'Space Mono',monospace;color:rgba(12,61,51,.7)">DRAW &amp; GUESS · 3–10</div></div>
+        <div style="display:flex;gap:3px"><div style="width:10px;height:18px;background:#0c3d33;border-radius:2px"></div><div style="width:10px;height:18px;background:#0c3d33;border-radius:2px"></div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,#ff6b85,#e84863),;border-radius:12px;padding:12px 14px;box-shadow:0 5px 0 #8f1f33;opacity:.92;background:linear-gradient(180deg,#ff6b85,#e84863)">
+        <div style="font-family:'Alfa Slab One';font-size:16px;color:#4a0f1c;width:24px;text-align:center">C</div>
+        <div style="flex:1"><div style="font-family:'Alfa Slab One';font-size:15px;color:#4a0f1c">CARDS VS. HUMANITY</div><div style="font:600 10px 'Space Mono',monospace;color:rgba(74,15,28,.7)">JUDGE PICKS · 4–10</div></div>
+        <div style="display:flex;gap:3px"><div style="width:10px;height:18px;background:#4a0f1c;border-radius:2px"></div></div>
+      </div>
+    </div>
+    <div style="margin-top:16px;text-align:center;font:600 10px 'Space Mono',monospace;letter-spacing:.2em;color:rgba(255,233,168,.45)">7 OF 8 CONTESTANTS VOTED</div>
+  </div>
+</div>
+<div style="width:340px;display:flex;gap:8px">
+  <div style="flex:1;height:34px;border-radius:8px;background:#1c1230;border:1px solid #5a3f7a"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#ffe9a8"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#e2564b"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#ffd23f"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#35d4b9"></div>
+</div>
+<div style="width:340px;font-family:'Alfa Slab One';font-size:16px;color:#ffe9a8">Same type system · louder cards, coral marquee</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "go with <a class="dv-oid" href="#2a">2a</a> — build the component system" · "<a class="dv-oid" href="#2b">2b</a> but calmer marquee" · "show <a class="dv-oid" href="#2a">2a</a> as the lobby"</p>
+</section>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Gemu — four visual directions</span></div>
+<p class="dv-sub">Same screen (the next-game vote) rendered four ways, each with its palette + type specimen below. All keep your repo's DNA — dark base, cream ink, hard offset shadows — pushed toward the refs you named: cartoon chaos, old TV shows, Gartic. Every direction assumes multi-color per-game hues: Stop = yellow, Gartic = teal, Gartic Phone = purple, CAH = coral, Patently Silly = orange.</p>
+<div class="dv-opts">
+
+<!-- 1a EVOLVED CURRENT -->
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a><b>Retro Cartridge</b> · your current DNA, tightened — Bungee + hard shadows, by the book</div>
+<div style="width:340px;background:#12121a;border-radius:24px;border:1px solid rgba(255,255,255,.1);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+  <div style="padding:22px 18px 26px;background:radial-gradient(circle at 20% 0%,rgba(255,79,111,.18),transparent 55%),radial-gradient(circle at 90% 100%,rgba(53,212,185,.12),transparent 50%)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <span style="font:400 11px 'Space Mono',monospace;letter-spacing:.25em;color:rgba(254,243,212,.6)">VOTE · ROUND 3</span>
+      <span style="font-family:Bungee;font-size:20px;color:#131320;background:#ffd23f;border:2px solid #fff2c8;border-radius:999px;padding:2px 12px;box-shadow:3px 3px 0 rgba(0,0,0,.35)">0:17</span>
+    </div>
+    <div style="font-family:Bungee;font-size:26px;line-height:1.05;color:#fff2c8;margin-bottom:16px">What's<br>next?</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:12px;background:#26263a;border:2px solid #ffd23f;border-radius:18px;padding:12px 14px;box-shadow:5px 5px 0 rgba(0,0,0,.35)">
+        <div style="width:40px;height:40px;border-radius:12px;background:#ffd23f;display:flex;align-items:center;justify-content:center;font-family:Bungee;font-size:18px;color:#131320">S</div>
+        <div style="flex:1"><div style="font-weight:700;font-size:15px;color:#fff2c8">Stop!</div><div style="font-size:11px;color:rgba(254,243,212,.55)">Categories · 3–10 players</div></div>
+        <div style="font-family:Bungee;font-size:18px;color:#ffd23f">4</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;background:#1c1c2c;border:2px solid #3a3a52;border-radius:18px;padding:12px 14px;box-shadow:5px 5px 0 rgba(0,0,0,.25)">
+        <div style="width:40px;height:40px;border-radius:12px;background:#35d4b9;display:flex;align-items:center;justify-content:center;font-family:Bungee;font-size:18px;color:#131320">G</div>
+        <div style="flex:1"><div style="font-weight:700;font-size:15px;color:#fff2c8">Gartic</div><div style="font-size:11px;color:rgba(254,243,212,.55)">Draw &amp; guess · 3–10</div></div>
+        <div style="font-family:Bungee;font-size:18px;color:rgba(254,243,212,.5)">2</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;background:#1c1c2c;border:2px solid #3a3a52;border-radius:18px;padding:12px 14px;box-shadow:5px 5px 0 rgba(0,0,0,.25)">
+        <div style="width:40px;height:40px;border-radius:12px;background:#ff4f6f;display:flex;align-items:center;justify-content:center;font-family:Bungee;font-size:18px;color:#131320">C</div>
+        <div style="flex:1"><div style="font-weight:700;font-size:15px;color:#fff2c8">Cards vs. Humanity</div><div style="font-size:11px;color:rgba(254,243,212,.55)">Judge picks · 4–10</div></div>
+        <div style="font-family:Bungee;font-size:18px;color:rgba(254,243,212,.5)">1</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:16px;justify-content:center">
+      <div style="width:26px;height:26px;border-radius:999px;background:#ff4f6f;border:2px solid #fff2c8"></div>
+      <div style="width:26px;height:26px;border-radius:999px;background:#35d4b9;border:2px solid #fff2c8"></div>
+      <div style="width:26px;height:26px;border-radius:999px;background:#ffd23f;border:2px solid #fff2c8"></div>
+      <div style="width:26px;height:26px;border-radius:999px;background:#26263a;border:2px solid #fff2c8;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff2c8">+4</div>
+    </div>
+  </div>
+</div>
+<div style="width:340px;display:flex;gap:8px">
+  <div style="flex:1;height:34px;border-radius:8px;background:#12121a;border:1px solid #3a3a52"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#fff2c8"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#ff4f6f"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#35d4b9"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#ffd23f"></div>
+</div>
+<div style="width:340px;font-family:Bungee;font-size:17px;color:#fff2c8">Bungee <span style="font-family:'Space Grotesk';font-weight:500;font-size:13px;color:rgba(254,243,212,.6)">+ Space Grotesk (unchanged from repo)</span></div>
+</div>
+
+<!-- 1b GAME SHOW 78 -->
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a><b>Prime Time '78</b> · old TV game show — marquee bulbs, warm wood-era palette, slab type</div>
+<div style="width:340px;background:#1a1026;border-radius:24px;border:1px solid rgba(255,255,255,.1);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+  <div style="padding:22px 18px 26px;background:radial-gradient(ellipse at 50% -10%,rgba(255,170,60,.25),transparent 60%)">
+    <div style="text-align:center;margin-bottom:6px">
+      <div style="display:inline-block;position:relative;background:#2b1a3d;border:3px solid #f5c76a;border-radius:14px;padding:10px 22px 12px">
+        <div style="position:absolute;top:-6px;left:12px;right:12px;display:flex;justify-content:space-between">
+          <div style="width:8px;height:8px;border-radius:99px;background:#ffe9a8;box-shadow:0 0 8px #ffd23f;animation:bulb 1s infinite"></div>
+          <div style="width:8px;height:8px;border-radius:99px;background:#ffe9a8;box-shadow:0 0 8px #ffd23f;animation:bulb 1s .33s infinite"></div>
+          <div style="width:8px;height:8px;border-radius:99px;background:#ffe9a8;box-shadow:0 0 8px #ffd23f;animation:bulb 1s .66s infinite"></div>
+        </div>
+        <div style="font-family:'Alfa Slab One';font-size:21px;color:#ffe9a8;text-shadow:0 3px 0 #7a3b1e">NEXT GAME</div>
+        <div style="font:700 10px 'Space Mono',monospace;letter-spacing:.3em;color:#f5c76a;text-align:center">AUDIENCE VOTE</div>
+      </div>
+    </div>
+    <div style="text-align:center;margin:10px 0 14px"><span style="font-family:'Alfa Slab One';font-size:26px;color:#1a1026;background:#ffe9a8;padding:2px 16px;border-radius:8px;box-shadow:0 4px 0 #7a3b1e">00:17</span></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,#f8b64c,#ef9231);border-radius:12px;padding:12px 14px;box-shadow:0 5px 0 #7a3b1e">
+        <div style="font-family:'Alfa Slab One';font-size:16px;color:#3d1f0e;width:24px;text-align:center">A</div>
+        <div style="flex:1"><div style="font-family:'Alfa Slab One';font-size:15px;color:#3d1f0e">STOP!</div><div style="font:600 10px 'Space Mono',monospace;color:rgba(61,31,14,.7)">CATEGORIES · 3–10</div></div>
+        <div style="display:flex;gap:3px"><div style="width:10px;height:18px;background:#3d1f0e;border-radius:2px"></div><div style="width:10px;height:18px;background:#3d1f0e;border-radius:2px"></div><div style="width:10px;height:18px;background:#3d1f0e;border-radius:2px"></div><div style="width:10px;height:18px;background:#3d1f0e;border-radius:2px"></div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:12px;padding:12px 14px">
+        <div style="font-family:'Alfa Slab One';font-size:16px;color:#c9a86a;width:24px;text-align:center">B</div>
+        <div style="flex:1"><div style="font-family:'Alfa Slab One';font-size:15px;color:#ffe9a8">GARTIC</div><div style="font:600 10px 'Space Mono',monospace;color:rgba(255,233,168,.5)">DRAW &amp; GUESS · 3–10</div></div>
+        <div style="display:flex;gap:3px"><div style="width:10px;height:18px;background:#f5c76a;border-radius:2px"></div><div style="width:10px;height:18px;background:#f5c76a;border-radius:2px"></div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;background:#2b1a3d;border:2px solid #5a3f7a;border-radius:12px;padding:12px 14px">
+        <div style="font-family:'Alfa Slab One';font-size:16px;color:#c9a86a;width:24px;text-align:center">C</div>
+        <div style="flex:1"><div style="font-family:'Alfa Slab One';font-size:15px;color:#ffe9a8">CARDS VS. HUMANITY</div><div style="font:600 10px 'Space Mono',monospace;color:rgba(255,233,168,.5)">JUDGE PICKS · 4–10</div></div>
+        <div style="display:flex;gap:3px"><div style="width:10px;height:18px;background:#f5c76a;border-radius:2px"></div></div>
+      </div>
+    </div>
+    <div style="margin-top:16px;text-align:center;font:600 10px 'Space Mono',monospace;letter-spacing:.2em;color:rgba(255,233,168,.45)">7 OF 8 CONTESTANTS VOTED</div>
+  </div>
+</div>
+<div style="width:340px;display:flex;gap:8px">
+  <div style="flex:1;height:34px;border-radius:8px;background:#1a1026;border:1px solid #5a3f7a"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#ffe9a8"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#f8b64c"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#e2564b"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#7a5cc4"></div>
+</div>
+<div style="width:340px;font-family:'Alfa Slab One';font-size:16px;color:#ffe9a8">Alfa Slab One <span style="font-family:'Space Mono';font-size:12px;color:rgba(255,233,168,.6)">+ Space Mono captions</span></div>
+</div>
+
+<!-- 1c STICKER CHAOS -->
+<div class="dv-opt" id="1c">
+<div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a><b>Sticker Bomb</b> · Gartic energy — rotated stickers, doodle marks, rounded chunky type</div>
+<div style="width:340px;background:#141420;border-radius:24px;border:1px solid rgba(255,255,255,.1);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+  <div style="padding:22px 18px 26px;position:relative">
+    <div style="position:absolute;top:14px;right:-8px;transform:rotate(8deg);font-family:'Gochi Hand';font-size:15px;color:#ffd23f">vote fast!! →</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <div style="transform:rotate(-4deg);background:#ff4f6f;color:#fff;font:800 13px 'Baloo 2';padding:4px 12px;border-radius:10px;box-shadow:3px 3px 0 rgba(0,0,0,.4)">ROUND 3</div>
+      <div style="transform:rotate(2deg);background:#fff;color:#141420;font:800 16px 'Baloo 2';padding:3px 12px;border-radius:10px;box-shadow:3px 3px 0 rgba(0,0,0,.4);animation:wobble 1s infinite">⏱ 17s</div>
+    </div>
+    <div style="font:800 27px/1.05 'Baloo 2';color:#fff;margin-bottom:16px;transform:rotate(-1deg)">pick the <span style="color:#35d4b9;text-decoration:underline wavy #ffd23f 2px">next game</span></div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="transform:rotate(-1.2deg);display:flex;align-items:center;gap:12px;background:#ffd23f;border-radius:16px;padding:12px 14px;box-shadow:4px 4px 0 rgba(0,0,0,.45)">
+        <div style="width:42px;height:42px;border-radius:99px;background:#141420;display:flex;align-items:center;justify-content:center;font:800 17px 'Baloo 2';color:#ffd23f;transform:rotate(-6deg)">S!</div>
+        <div style="flex:1"><div style="font:800 16px 'Baloo 2';color:#141420">Stop!</div><div style="font:600 11px 'Baloo 2';color:rgba(20,20,32,.6)">categories · 3–10</div></div>
+        <div style="background:#141420;color:#ffd23f;font:800 15px 'Baloo 2';border-radius:99px;padding:3px 11px">4 ✓</div>
+      </div>
+      <div style="transform:rotate(.8deg);display:flex;align-items:center;gap:12px;background:#1f1f30;border:2px dashed rgba(255,255,255,.25);border-radius:16px;padding:12px 14px">
+        <div style="width:42px;height:42px;border-radius:99px;background:#35d4b9;display:flex;align-items:center;justify-content:center;font:800 17px 'Baloo 2';color:#141420;transform:rotate(5deg)">G</div>
+        <div style="flex:1"><div style="font:800 16px 'Baloo 2';color:#fff">Gartic</div><div style="font:600 11px 'Baloo 2';color:rgba(255,255,255,.45)">draw &amp; guess · 3–10</div></div>
+        <div style="color:rgba(255,255,255,.5);font:800 15px 'Baloo 2'">2</div>
+      </div>
+      <div style="transform:rotate(-.6deg);display:flex;align-items:center;gap:12px;background:#1f1f30;border:2px dashed rgba(255,255,255,.25);border-radius:16px;padding:12px 14px">
+        <div style="width:42px;height:42px;border-radius:99px;background:#ff4f6f;display:flex;align-items:center;justify-content:center;font:800 17px 'Baloo 2';color:#fff;transform:rotate(-4deg)">C</div>
+        <div style="flex:1"><div style="font:800 16px 'Baloo 2';color:#fff">Cards vs. Humanity</div><div style="font:600 11px 'Baloo 2';color:rgba(255,255,255,.45)">judge picks · 4–10</div></div>
+        <div style="color:rgba(255,255,255,.5);font:800 15px 'Baloo 2'">1</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:18px;align-items:center">
+      <div style="width:28px;height:28px;border-radius:99px;background:#ffb3c1;transform:rotate(-5deg);border:2px solid #fff"></div>
+      <div style="width:28px;height:28px;border-radius:99px;background:#9de3d3;transform:rotate(4deg);border:2px solid #fff"></div>
+      <div style="width:28px;height:28px;border-radius:99px;background:#ffe08a;transform:rotate(-3deg);border:2px solid #fff"></div>
+      <div style="font-family:'Gochi Hand';font-size:14px;color:rgba(255,255,255,.55);margin-left:4px">+4 friends voted</div>
+    </div>
+  </div>
+</div>
+<div style="width:340px;display:flex;gap:8px">
+  <div style="flex:1;height:34px;border-radius:8px;background:#141420;border:1px solid #3a3a52"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#ffffff"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#ff4f6f"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#35d4b9"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#ffd23f"></div>
+</div>
+<div style="width:340px;font:800 17px 'Baloo 2';color:#fff">Baloo 2 <span style="font-family:'Gochi Hand';font-size:14px;color:rgba(255,255,255,.6)">+ Gochi Hand doodle notes</span></div>
+</div>
+
+<!-- 1d NEON CRT -->
+<div class="dv-opt" id="1d">
+<div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a><b>Channel Zero</b> · CRT broadcast — scanlines, neon per-game glow, Archivo Black headline</div>
+<div style="width:340px;background:#0a0a12;border-radius:24px;border:1px solid rgba(255,255,255,.1);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);position:relative">
+  <div style="position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,.03) 0 1px,transparent 1px 3px);z-index:2"></div>
+  <div style="padding:22px 18px 26px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <span style="font:700 10px 'Space Mono',monospace;letter-spacing:.3em;color:#35d4b9;animation:neonpulse 2s infinite">● LIVE VOTE</span>
+      <span style="font:700 20px 'Space Mono',monospace;color:#ffd23f;text-shadow:0 0 12px rgba(255,210,63,.6)">00:17</span>
+    </div>
+    <div style="font-family:'Archivo Black';font-size:24px;line-height:1.1;color:#fff;text-transform:uppercase;margin-bottom:4px">Choose the<br>next game</div>
+    <div style="font:400 11px 'Space Mono',monospace;color:rgba(255,255,255,.4);margin-bottom:16px">CH·03 — 7/8 VOTES IN</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:12px;background:rgba(255,210,63,.08);border:1px solid #ffd23f;border-radius:10px;padding:12px 14px;box-shadow:0 0 20px rgba(255,210,63,.25),inset 0 0 20px rgba(255,210,63,.05)">
+        <div style="font-family:'Archivo Black';font-size:15px;color:#ffd23f;text-shadow:0 0 10px rgba(255,210,63,.8)">STOP!</div>
+        <div style="flex:1;height:6px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden"><div style="width:57%;height:100%;background:#ffd23f;box-shadow:0 0 8px #ffd23f"></div></div>
+        <div style="font:700 14px 'Space Mono',monospace;color:#ffd23f">4</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.03);border:1px solid rgba(53,212,185,.4);border-radius:10px;padding:12px 14px">
+        <div style="font-family:'Archivo Black';font-size:15px;color:#35d4b9">GARTIC</div>
+        <div style="flex:1;height:6px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden"><div style="width:28%;height:100%;background:#35d4b9"></div></div>
+        <div style="font:700 14px 'Space Mono',monospace;color:rgba(255,255,255,.5)">2</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,79,111,.4);border-radius:10px;padding:12px 14px">
+        <div style="font-family:'Archivo Black';font-size:15px;color:#ff4f6f">CARDS VS. H.</div>
+        <div style="flex:1;height:6px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden"><div style="width:14%;height:100%;background:#ff4f6f"></div></div>
+        <div style="font:700 14px 'Space Mono',monospace;color:rgba(255,255,255,.5)">1</div>
+      </div>
+    </div>
+    <div style="margin-top:16px;border-top:1px dashed rgba(255,255,255,.15);padding-top:12px;font:400 10px 'Space Mono',monospace;color:rgba(255,255,255,.35);text-align:center">TAP A CHANNEL TO CAST YOUR VOTE</div>
+  </div>
+</div>
+<div style="width:340px;display:flex;gap:8px">
+  <div style="flex:1;height:34px;border-radius:8px;background:#0a0a12;border:1px solid #3a3a52"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#ffffff"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#ff4f6f;box-shadow:0 0 14px rgba(255,79,111,.6)"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#35d4b9;box-shadow:0 0 14px rgba(53,212,185,.6)"></div>
+  <div style="flex:1;height:34px;border-radius:8px;background:#ffd23f;box-shadow:0 0 14px rgba(255,210,63,.6)"></div>
+</div>
+<div style="width:340px;font-family:'Archivo Black';font-size:15px;color:#fff">Archivo Black <span style="font-family:'Space Mono';font-size:12px;color:rgba(255,255,255,.55)">+ Space Mono data</span></div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "go with <a class="dv-oid" href="#1c">1c</a> but with <a class="dv-oid" href="#1b">1b</a>'s marquee moments for reveals" · "show <a class="dv-oid" href="#1b">1b</a> as the lobby too" · "mix <a class="dv-oid" href="#1a">1a</a> structure with <a class="dv-oid" href="#1c">1c</a> stickers"</p>
+</section>
+
+</x-dc>
+</body>
+</html>

@@ -292,6 +292,73 @@ func TestCahJudgeDisconnectAutoPicks(t *testing.T) {
 	}
 }
 
+// If the judge disconnects during "answering" and rotateJudge() promotes a
+// player who had already submitted, that stale submission must not linger in
+// g.submissions (it would otherwise land in the judging pool and let the new
+// judge "judge" their own card). Removing it may also complete the
+// all-submitted check for the remaining players.
+func TestCahJudgeDisconnectDuringAnsweringPromotesSubmittedPlayer(t *testing.T) {
+	room := &fakeRoom{players: []string{"p1", "p2", "p3"}, admin: "p1"}
+	game := &CahGame{}
+	game.Start("room-1", Options{Room: room})
+	game.blackCard = cahBlackCard{Text: "____", Pick: 1}
+
+	oldJudge := game.judge
+
+	// Determine, from the fixed judgeOrder, exactly who rotateJudge() will
+	// promote once oldJudge is removed from the connected set.
+	n := len(game.judgeOrder)
+	nextJudge := ""
+	for i := 1; i <= n; i++ {
+		idx := (game.judgeIdx + i) % n
+		if id := game.judgeOrder[idx]; id != oldJudge {
+			nextJudge = id
+			break
+		}
+	}
+	other := ""
+	for _, id := range []string{"p1", "p2", "p3"} {
+		if id != oldJudge && id != nextJudge {
+			other = id
+		}
+	}
+
+	// The soon-to-be-promoted player submits while still a regular player.
+	_ = game.OnAction(nextJudge, map[string]any{"action": "submit", "cards": []any{float64(0)}})
+	if _, ok := game.submissions[nextJudge]; !ok {
+		t.Fatalf("expected %s's submission to be recorded before the judge leaves", nextJudge)
+	}
+
+	// Old judge disconnects.
+	room.players = []string{nextJudge, other}
+	game.OnPlayerLeave(oldJudge)
+
+	if game.judge != nextJudge {
+		t.Fatalf("expected %s to be promoted to judge, got %s", nextJudge, game.judge)
+	}
+	if _, ok := game.submissions[nextJudge]; ok {
+		t.Fatalf("expected new judge's stale submission to be removed from g.submissions")
+	}
+	if game.phase != "answering" {
+		t.Fatalf("expected phase to remain answering (waiting on %s), got %s", other, game.phase)
+	}
+
+	// The remaining non-judge player submits; now everyone but the judge has.
+	_ = game.OnAction(other, map[string]any{"action": "submit", "cards": []any{float64(0)}})
+
+	if game.phase != "judging" {
+		t.Fatalf("expected phase judging once %s submits, got %s", other, game.phase)
+	}
+	if len(game.shuffledSubs) != 1 {
+		t.Fatalf("expected exactly 1 submission in the judging pool, got %d", len(game.shuffledSubs))
+	}
+	for i, id := range game.subOrder {
+		if id == nextJudge {
+			t.Fatalf("new judge's own card must not appear in the judging pool, found at index %d", i)
+		}
+	}
+}
+
 func TestCahZeroSubmissionSkips(t *testing.T) {
 	room := &fakeRoom{players: []string{"p1", "p2", "p3"}, admin: "p1"}
 	game := &CahGame{}

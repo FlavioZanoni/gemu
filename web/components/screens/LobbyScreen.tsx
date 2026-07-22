@@ -103,11 +103,6 @@ export function LobbyScreen({
             <div className="mb-6">
               <div className="flex items-baseline gap-2 mb-3">
                 <span className="mono-caption">Tonight&apos;s playlist</span>
-                {isAdmin && (
-                  <span className="text-xs text-(--accent-2) cursor-pointer hover:opacity-75">
-                    · Edit ›
-                  </span>
-                )}
               </div>
               <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 mb-6">
                 {gamesCatalog.map((game) => {
@@ -211,7 +206,7 @@ export function LobbyScreen({
               className="text-lg py-5 flex items-center gap-2"
               data-testid="ready-up"
             >
-              {currentPlayer?.ready ? <><Check size={18} strokeWidth={2.5} /> Ready</> : t("lobby.readyUp")}
+              {currentPlayer?.ready ? <><Check size={18} strokeWidth={2.5} /> {t("common.ready")}</> : t("lobby.readyUp")}
             </Button>
 
             {isAdmin && (

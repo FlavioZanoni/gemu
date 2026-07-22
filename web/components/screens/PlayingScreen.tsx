@@ -154,32 +154,33 @@ export function PlayingScreen({
         </Button>
       </div>
 
-      {/* Score strip */}
-      {standings.length > 0 && (
-        <div data-testid="score-strip" className="mt-4">
-          <ScoreStrip
-            standings={standings}
+      {/* Game card: player list on the left (only for games without their
+          own in-card scoreboard — gartic/stop/cah draw theirs per design/games). */}
+      <div data-testid="game-surface" className="mt-4 flex flex-col gap-4 rounded-2xl border-2 border-(--line) bg-(--panel) p-4 lg:flex-row lg:items-start">
+        {!["gartic", "stop", "cah"].includes(snapshot.gameType) && standings.length > 0 && (
+          <aside className="w-full flex-none lg:w-56">
+            <ScoreStrip
+              standings={standings}
+              players={players}
+              playerId={playerId}
+              sessionScores={snapshot.sessionScores}
+              playedGames={snapshot.playedGames}
+            />
+          </aside>
+        )}
+        <div className="min-w-0 flex-1">
+          <GameSurface
+            gameType={snapshot.gameType}
+            playerId={playerId ?? ""}
             players={players}
-            playerId={playerId}
-            sessionScores={snapshot.sessionScores}
-            playedGames={snapshot.playedGames}
+            publicState={gamePublicState || {}}
+            privateState={gamePrivateState || {}}
+            sendAction={onSendAction}
+            sendStream={onSendStream}
+            isAdmin={isAdmin}
+            onLeave={onLeave}
           />
         </div>
-      )}
-
-      {/* Game surface */}
-      <div data-testid="game-surface" className="rounded-2xl border-2 border-(--line) bg-(--panel) p-4 mt-4">
-        <GameSurface
-          gameType={snapshot.gameType}
-          playerId={playerId ?? ""}
-          players={players}
-          publicState={gamePublicState || {}}
-          privateState={gamePrivateState || {}}
-          sendAction={onSendAction}
-          sendStream={onSendStream}
-          isAdmin={isAdmin}
-          onLeave={onLeave}
-        />
       </div>
 
       {/* How to play modal */}

@@ -47,6 +47,7 @@ export function AvatarDrawModal({
               ref={canvasRef}
               value={initial}
               onChange={setLatest}
+              brushScale={5}
             />
           </div>
           <p className="mt-3 text-center font-mono text-[10px] text-(--ink)/45">

@@ -5,7 +5,7 @@ import { useI18n } from "@/lib/i18n";
 import type { Player } from "@/lib/protocol";
 import { playerColorFor } from "./gameHues";
 
-function Avatar({
+export function Avatar({
   player,
   color,
   size = 38,

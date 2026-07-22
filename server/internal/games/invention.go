@@ -149,6 +149,14 @@ func (g *InventionGame) checkAdvance() {
 		if len(g.drawings) >= len(connected) {
 			_ = g.advanceToPresenting()
 		}
+	case "presenting":
+		// If the last remaining presenter disconnects mid-presentation,
+		// presentIdx/presenters shrink in OnPlayerLeave but nothing else
+		// drives the phase forward since this game has no timers. Finish the
+		// presentation flow the same way the "next" action would.
+		if len(g.presenters) == 0 || g.presentIdx >= len(g.presenters) {
+			g.phase = "voting"
+		}
 	case "voting":
 		if len(g.votes) >= len(connected) {
 			g.finalizeFunding()
@@ -160,6 +168,18 @@ func (g *InventionGame) OnAction(playerID string, payload map[string]any) error 
 	defer g.checkAdvance()
 	switch g.phase {
 	case "collecting":
+		if action, _ := payload["action"].(string); action == "advance" {
+			// Admin-only escape hatch: force collecting -> drawing even if
+			// some connected players never submitted problems. Missing
+			// submissions are simply treated as absent, same as elsewhere.
+			if g.room != nil && g.room.IsAdmin(playerID) {
+				connected := g.room.ConnectedPlayerIDs()
+				if len(connected) >= 2 {
+					g.startAssign(connected)
+				}
+			}
+			return nil
+		}
 		if p, ok := payload["problems"]; ok {
 			arr, ok := p.([]any)
 			if !ok {
@@ -195,6 +215,18 @@ func (g *InventionGame) OnAction(playerID string, payload map[string]any) error 
 	case "drawing":
 		action, _ := payload["action"].(string)
 		switch action {
+		case "advance":
+			// Admin-only: force drawing -> presenting even if some connected
+			// players never submitted a drawing. Missing submissions are
+			// treated as absent, same as the natural checkAdvance path.
+			if g.room != nil && g.room.IsAdmin(playerID) {
+				if err := g.advanceToPresenting(); err != nil {
+					// Zero drawings — nothing to present or fund; skip the
+					// round entirely instead of silently ignoring the click.
+					g.finalizeFunding()
+				}
+			}
+			return nil
 		case "submit_drawing":
 			title, _ := payload["title"].(string)
 			tagline, _ := payload["tagline"].(string)
@@ -237,6 +269,15 @@ func (g *InventionGame) OnAction(playerID string, payload map[string]any) error 
 		return nil
 
 	case "voting":
+		if action, _ := payload["action"].(string); action == "advance" {
+			// Admin-only: force voting -> results even if some connected
+			// players never cast a funding vote. Missing votes are treated
+			// as absent, same as the natural checkAdvance path.
+			if g.room != nil && g.room.IsAdmin(playerID) {
+				g.finalizeFunding()
+			}
+			return nil
+		}
 		allocations, ok := payload["funding"].(map[string]any)
 		if !ok {
 			return nil

@@ -4,6 +4,8 @@ import { Volume2, Repeat, ArrowRight } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { GameResult, Player } from "@/lib/protocol";
 import { Button } from "@/components/ui";
+import { Avatar } from "@/components/ui/PlayerChip";
+import { playerColorFor } from "@/components/ui/gameHues";
 
 export function ResultsScreen({
   gameResult,
@@ -39,6 +41,8 @@ export function ResultsScreen({
       <div className="flex flex-col gap-3 w-full max-w-2xl mb-8">
         {gameResult.standings.map((standing, idx) => {
           const isWinner = idx === 0;
+          const playerIdx = players.findIndex((p) => p.id === standing.playerId);
+          const player = players[playerIdx];
           return (
             <div
               key={standing.playerId}
@@ -65,9 +69,13 @@ export function ResultsScreen({
                 >
                   {standing.place}
                 </div>
-                <div className="flex-1 w-12 h-12 rounded-full bg-(--panel-raised) border-2 border-(--line) flex items-center justify-center text-xs text-(--ink)/60">
-                  doodle
-                </div>
+                {player ? (
+                  <Avatar player={player} color={playerColorFor(playerIdx)} size={48} />
+                ) : (
+                  <div className="flex-1 w-12 h-12 rounded-full bg-(--panel-raised) border-2 border-(--line) flex items-center justify-center text-xs text-(--ink)/60">
+                    ?
+                  </div>
+                )}
                 <div>
                   <div
                     className="font-bold"

@@ -30,7 +30,7 @@ export function JoinGateScreen({
 
   const handleJoin = () => {
     if (!displayName.trim()) {
-      setLocalError(t("home.displayName") + " is required.");
+      setLocalError(t("join.nameRequired"));
       return;
     }
     onJoin(displayName.trim(), avatarUrl.trim(), joinCode.trim() || undefined, password.trim() || undefined);
