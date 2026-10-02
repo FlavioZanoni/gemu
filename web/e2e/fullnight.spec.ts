@@ -1,5 +1,5 @@
 import { test as guarded } from "./fixtures";
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { openRoom, playTriviaToResults, ALL_GAMES, type Room, type GameType } from "./helpers";
 
 // The whole night in one browser run: lobby -> random first game -> play it ->
@@ -45,7 +45,7 @@ async function detectGame(room: Room): Promise<GameType> {
 // Play gartic to the results screen: each turn, read the drawer's secret word
 // and submit it from the other player, which ends the turn early.
 async function playGarticToResults(room: Room) {
-  const done = () => room.host.getByTestId("results-end-night").isVisible().catch(() => false);
+  const done = () => room.host.getByTestId("results-vote-next").isVisible().catch(() => false);
   for (let i = 0; i < 30; i++) {
     if (await done()) return;
     for (const drawer of room.pages) {
@@ -62,7 +62,7 @@ async function playGarticToResults(room: Room) {
     }
     await room.host.waitForTimeout(1000);
   }
-  await expect(room.host.getByTestId("results-end-night")).toBeVisible();
+  await expect(room.host.getByTestId("results-vote-next")).toBeVisible();
 }
 
 async function playToResults(room: Room, game: GameType) {
@@ -83,6 +83,11 @@ guarded("full night: play, vote, config, play, podium", async ({ browser }) => {
     await trimPlaylist(room);
     for (const page of room.pages) await page.getByTestId("ready-up").click();
     await room.host.getByTestId("start-game").click();
+    // The random pick gets the drumroll too, then the intro for game 1.
+    await expect(room.host.getByTestId("drumroll")).toBeVisible();
+    await expect(room.host.getByTestId("intro-title")).toBeVisible({ timeout: 15_000 });
+    // Everyone taps GOT IT — the game starts by itself once all are in.
+    for (const page of room.pages) await page.getByTestId("intro-ready").click({ timeout: 15_000 });
     await expect(room.host.getByTestId("game-surface")).toBeVisible({ timeout: 15_000 });
     await dismissHowTos(room);
 
@@ -98,6 +103,8 @@ guarded("full night: play, vote, config, play, podium", async ({ browser }) => {
     for (const page of room.pages) {
       await page.getByTestId(`vote-option-${second}`).click({ timeout: 15_000 });
     }
+    await expect(room.host.getByTestId("drumroll")).toBeVisible({ timeout: 15_000 });
+    await expect(room.host.getByTestId("drumroll")).toHaveAttribute("data-game", second);
     await expect(room.host.getByTestId("intro-start")).toBeVisible({ timeout: 30_000 });
 
     // Everyone readies through the intro; the host starts the queued game.
@@ -109,6 +116,7 @@ guarded("full night: play, vote, config, play, podium", async ({ browser }) => {
 
     // Game 2, then end the night at the podium.
     await playToResults(room, second);
+    await room.host.getByTestId("results-board").click();
     await room.host.getByTestId("results-end-night").click();
     for (const page of room.pages) {
       await expect(page.getByTestId("podium-winner")).toBeVisible({ timeout: 15_000 });

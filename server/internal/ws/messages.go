@@ -6,4 +6,3 @@ type Envelope struct {
 	RoomID    string         `json:"roomId,omitempty"`
 	Payload   map[string]any `json:"payload,omitempty"`
 }
-

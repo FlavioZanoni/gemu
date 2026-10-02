@@ -24,8 +24,13 @@ const listeners = new Set<(m: boolean) => void>();
 
 const STORAGE_KEY = "gemu:muted";
 
+// Storage can throw in sandboxed frames: fall back to "not muted".
 if (typeof window !== "undefined") {
-  muted = window.localStorage.getItem(STORAGE_KEY) === "1";
+  try {
+    muted = window.localStorage.getItem(STORAGE_KEY) === "1";
+  } catch {
+    muted = false;
+  }
 }
 
 const getCtx = (): AudioContext | null => {
@@ -116,12 +121,18 @@ export const isMuted = () => muted;
 export const toggleMuted = () => {
   muted = !muted;
   if (typeof window !== "undefined") {
-    window.localStorage.setItem(STORAGE_KEY, muted ? "1" : "0");
+    try {
+      window.localStorage.setItem(STORAGE_KEY, muted ? "1" : "0");
+    } catch {
+      // Not persisted; the toggle still works for this page.
+    }
   }
   listeners.forEach((fn) => fn(muted));
   if (!muted) playSfx("click");
 };
 export const onMuteChange = (fn: (m: boolean) => void) => {
   listeners.add(fn);
-  return () => listeners.delete(fn);
+  return () => {
+    listeners.delete(fn);
+  };
 };

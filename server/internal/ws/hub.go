@@ -1,6 +1,11 @@
 package ws
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"log"
 	"math/rand"
 	"strings"
 	"sync"
@@ -13,59 +18,32 @@ import (
 	"gemu-server/internal/rooms"
 )
 
-type Client struct {
-	ID        string
-	Conn      *websocket.Conn
-	RoomID    string
-	Player    rooms.Player
-	SessionID string
-	IP        string
-	// writeMu serializes writes to Conn: gorilla/websocket forbids concurrent
-	// WriteJSON on one connection, and any goroutine can broadcast to any
-	// client. Without this, ordinary concurrent traffic panics the process.
-	writeMu sync.Mutex
-}
-
-// write serializes and recovers around a single connection write so a broken
-// pipe or concurrent-write panic degrades one client, never the whole server.
-func (c *Client) write(env Envelope) {
-	if c == nil || c.Conn == nil {
-		return
-	}
-	c.writeMu.Lock()
-	defer c.writeMu.Unlock()
-	defer func() { _ = recover() }()
-	_ = c.Conn.WriteJSON(env)
-}
-
 type Hub struct {
-	mu         sync.RWMutex
-	clients    map[string]*Client
-	rooms      *rooms.Manager
-	registry   *games.Registry
-	sessions   map[string]*gameSession
-	connLimit  *ipLimiters // per-IP new connections
-	createLimit *ipLimiters // per-IP room creation
-	store       RoomStore   // optional durability (nil = in-memory only)
+	mu            sync.RWMutex
+	clients       map[string]*Client
+	rooms         *rooms.Manager
+	registry      *games.Registry
+	sessions      map[string]*gameSession
+	connLimit     *ipLimiters // per-IP new connections
+	createLimit   *ipLimiters // per-IP room creation
+	joinFailLimit *ipLimiters // per-IP failed joins (code/password guessing)
+	store         RoomStore   // optional durability (nil = in-memory only)
 }
 
 func NewHub(registry *games.Registry) *Hub {
 	return &Hub{
-		clients:     make(map[string]*Client),
-		rooms:       rooms.NewManager(),
-		registry:    registry,
-		sessions:    make(map[string]*gameSession),
-		connLimit:   newIPLimiters(connRatePerSec, connBurst),
-		createLimit: newIPLimiters(roomCreateRatePerSec, roomCreateBurst),
+		clients:       make(map[string]*Client),
+		rooms:         rooms.NewManager(),
+		registry:      registry,
+		sessions:      make(map[string]*gameSession),
+		connLimit:     newIPLimiters(connRatePerSec, connBurst),
+		createLimit:   newIPLimiters(roomCreateRatePerSec, roomCreateBurst),
+		joinFailLimit: newIPLimiters(joinFailRatePerSec, joinFailBurst),
 	}
 }
 
 func (h *Hub) AddClient(conn *websocket.Conn, ip string) *Client {
-	client := &Client{
-		ID:   uuid.NewString(),
-		Conn: conn,
-		IP:   ip,
-	}
+	client := newClient(conn, ip)
 	h.mu.Lock()
 	h.clients[client.ID] = client
 	h.mu.Unlock()
@@ -101,46 +79,89 @@ func (h *Hub) unbindClient(client *Client) {
 	h.bindClient(client, "", rooms.Player{}, "")
 }
 
+// ident snapshots a connection's room identity. Another goroutine (a kick, a
+// session takeover) may rebind any client, so handlers read these fields
+// through here rather than straight off the struct.
+func (h *Hub) ident(client *Client) (roomID, playerID string) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return client.RoomID, client.Player.ID
+}
+
+// boundToPlayerLocked reports whether any client other than except is bound
+// to playerID in roomID (or holds sessionID there). Requires h.mu.
+func (h *Hub) boundToPlayerLocked(roomID, playerID, sessionID string, except *Client) bool {
+	for _, other := range h.clients {
+		if other == except || other.RoomID != roomID {
+			continue
+		}
+		if other.Player.ID == playerID || (sessionID != "" && other.SessionID == sessionID) {
+			return true
+		}
+	}
+	return false
+}
+
 func (h *Hub) RemoveClient(clientID string) {
+	// Runs from the read loop's defer, outside the per-message recover: an
+	// adapter panic in here must not take the whole process down.
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Printf("recovered panic removing client %s: %v", clientID, rec)
+		}
+	}()
+
 	h.mu.Lock()
 	client, ok := h.clients[clientID]
 	delete(h.clients, clientID)
-	// Check if this session has been taken over by a newer client (e.g. after
-	// a refresh / brief network blip rejoined before the old socket timed out).
-	// In that case the session is still very much connected and we must not
-	// flip it back to disconnected when the old socket finally drains.
-	sessionTakenOver := false
-	if ok && client.SessionID != "" && client.RoomID != "" {
-		for _, other := range h.clients {
-			if other.SessionID == client.SessionID && other.RoomID == client.RoomID {
-				sessionTakenOver = true
-				break
-			}
+	if !ok {
+		h.mu.Unlock()
+		return
+	}
+	roomID, playerID := client.RoomID, client.Player.ID
+	var room *rooms.Room
+	// Mark the player disconnected only if no other connection is bound to
+	// them (a reconnect/takeover that landed before this old socket drained).
+	// The check and the update happen under h.mu, the same lock a join binds
+	// under, so a concurrent rejoin can't be flipped back to disconnected.
+	if roomID != "" && !h.boundToPlayerLocked(roomID, playerID, client.SessionID, client) {
+		if r, err := h.rooms.UpdatePlayer(roomID, playerID, func(player *rooms.Player) {
+			player.Connected = false
+			player.LastSeen = time.Now()
+		}); err == nil {
+			room = r
 		}
 	}
 	h.mu.Unlock()
+	client.close()
 
-	if ok && client.RoomID != "" && !sessionTakenOver {
-		roomID := client.RoomID
-		playerID := client.Player.ID
-		room, err := h.rooms.UpdatePlayer(roomID, playerID, func(player *rooms.Player) {
-			player.Connected = false
-			player.LastSeen = time.Now()
-		})
-		if err == nil {
-			h.Broadcast(roomID, Envelope{Type: "room.updated", RoomID: roomID, Payload: room.Snapshot()})
-			h.Broadcast(roomID, Envelope{Type: "room.playerDisconnected", RoomID: roomID, Payload: map[string]any{"playerId": playerID}})
-			// A disconnect can complete an "everyone submitted" gate.
-			if s, ok := h.session(roomID); ok {
-				s.mu.Lock()
-				if s.adapter != nil {
-					s.adapter.OnRoomChange()
-					h.afterAdapterCall(roomID, s)
-				}
-				s.mu.Unlock()
-			}
+	if room == nil {
+		return
+	}
+	h.Broadcast(roomID, Envelope{Type: "room.updated", RoomID: roomID, Payload: room.Snapshot()})
+	h.Broadcast(roomID, Envelope{Type: "room.playerDisconnected", RoomID: roomID, Payload: map[string]any{"playerId": playerID}})
+	h.onConnectivityChange(roomID, room)
+}
+
+// onConnectivityChange lets the running game re-check "everyone submitted"
+// gates (deferred until resume while paused) and re-checks an open vote,
+// since a disconnected voter no longer counts toward "everyone voted".
+func (h *Hub) onConnectivityChange(roomID string, room *rooms.Room) {
+	s, ok := h.session(roomID)
+	if !ok {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.adapter != nil {
+		if !s.pausedAt.IsZero() {
+			s.pendingRoomChange = true
+		} else {
+			s.adapter.OnRoomChange()
+			h.afterAdapterCall(roomID, s)
 		}
 	}
+	h.maybeResolveVote(roomID, room, s)
 }
 
 func (h *Hub) Send(client *Client, env Envelope) {
@@ -158,6 +179,42 @@ func (h *Hub) findClientBySession(sessionID string) (*Client, bool) {
 	return nil, false
 }
 
+// liveHolderElsewhere reports whether a connection other than client holds
+// sessionID bound to a room other than roomID (a second tab in another
+// room): that still blocks the join. A holder in the SAME room is the old
+// socket of a reconnecting player and gets taken over instead.
+func (h *Hub) liveHolderElsewhere(client *Client, sessionID, roomID string) bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for _, other := range h.clients {
+		if other != client && other.SessionID == sessionID && other.RoomID != "" && other.RoomID != roomID {
+			return true
+		}
+	}
+	return false
+}
+
+// takeOverSession unbinds every other connection holding sessionID in roomID
+// and tells it so. The old socket is left open (not closed): the web client
+// auto-reconnects on close, and two live tabs would then steal the seat back
+// and forth forever. An actually-dead socket times out on its own.
+func (h *Hub) takeOverSession(client *Client, sessionID, roomID string) {
+	h.mu.Lock()
+	var replaced []*Client
+	for _, other := range h.clients {
+		if other != client && other.SessionID == sessionID && other.RoomID == roomID {
+			other.RoomID = ""
+			other.Player = rooms.Player{}
+			other.SessionID = ""
+			replaced = append(replaced, other)
+		}
+	}
+	h.mu.Unlock()
+	for _, old := range replaced {
+		h.Send(old, Envelope{Type: "room.sessionReplaced", RoomID: roomID, Payload: map[string]any{"reason": "session_replaced"}})
+	}
+}
+
 // sessionBlocked reports whether a session may NOT bind to a new room. A
 // session actively held by a live connection (a second open tab) is blocked;
 // a session left only as a disconnected ghost in some old room (the common
@@ -167,9 +224,16 @@ func (h *Hub) sessionBlocked(sessionID string, exceptRoomID string) bool {
 	if _, ok := h.findClientBySession(sessionID); ok {
 		return true
 	}
+	h.evictStaleSession(sessionID, exceptRoomID)
+	return false
+}
+
+// evictStaleSession removes sessionID's disconnected ghost from any room
+// other than exceptRoomID.
+func (h *Hub) evictStaleSession(sessionID string, exceptRoomID string) {
 	roomID, player, ok := h.rooms.FindPlayerBySession(sessionID)
 	if !ok || roomID == exceptRoomID {
-		return false
+		return
 	}
 	if room, err := h.rooms.RemovePlayer(roomID, player.ID); err == nil {
 		h.notifyPlayerLeft(roomID, player.ID)
@@ -177,7 +241,6 @@ func (h *Hub) sessionBlocked(sessionID string, exceptRoomID string) bool {
 		h.Broadcast(roomID, Envelope{Type: "room.updated", RoomID: roomID, Payload: room.Snapshot()})
 		h.cleanupIfEmpty(roomID, room)
 	}
-	return false
 }
 
 func (h *Hub) Broadcast(roomID string, env Envelope) {
@@ -185,9 +248,8 @@ func (h *Hub) Broadcast(roomID string, env Envelope) {
 }
 
 func (h *Hub) BroadcastExcept(roomID string, exceptClientID string, env Envelope) {
-	// Snapshot targets under the lock, then write outside it: a client's
-	// writeMu can block, and we must not hold h.mu (which every handler needs)
-	// while a slow socket drains.
+	// Snapshot targets under the lock, serialize once, then enqueue: enqueue
+	// never blocks, so a stalled socket can't hold up the room.
 	h.mu.RLock()
 	targets := make([]*Client, 0, len(h.clients))
 	for _, client := range h.clients {
@@ -196,8 +258,16 @@ func (h *Hub) BroadcastExcept(roomID string, exceptClientID string, env Envelope
 		}
 	}
 	h.mu.RUnlock()
+	if len(targets) == 0 {
+		return
+	}
+	b, err := json.Marshal(env)
+	if err != nil {
+		log.Printf("marshal %s for room %s: %v", env.Type, roomID, err)
+		return
+	}
 	for _, client := range targets {
-		client.write(env)
+		client.enqueue(b)
 	}
 }
 
@@ -213,11 +283,11 @@ var streamActions = map[string]bool{
 
 // handleGameStream relays high-frequency transient payloads (canvas strokes)
 // to the rest of the room WITHOUT the full-state broadcast game.action does.
-// The adapter's OnAction is still consulted so games can reject illegal
-// senders (e.g. strokes from a non-drawer); rejected or gameless streams are
-// dropped silently — no error replies at stroke frequency.
+// Only games implementing games.Streamer relay, and only for senders they
+// accept (e.g. the current drawer); everything else is dropped silently — no
+// error replies at stroke frequency.
 func (h *Hub) handleGameStream(client *Client, env Envelope) {
-	roomID := client.RoomID
+	roomID, playerID := h.ident(client)
 	if roomID == "" {
 		return
 	}
@@ -229,25 +299,35 @@ func (h *Hub) handleGameStream(client *Client, env Envelope) {
 	if !ok {
 		return
 	}
-	s.mu.Lock()
-	if s.adapter == nil || !s.pausedAt.IsZero() {
-		s.mu.Unlock()
-		return
-	}
-	err := s.adapter.OnAction(client.Player.ID, env.Payload)
-	s.mu.Unlock()
-	if err != nil {
+	allowed := func() bool {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		if s.adapter == nil || !s.pausedAt.IsZero() {
+			return false
+		}
+		streamer, ok := s.adapter.(games.Streamer)
+		return ok && streamer.AcceptStream(playerID, action)
+	}()
+	if !allowed {
 		return
 	}
 	payload := make(map[string]any, len(env.Payload)+1)
 	for k, v := range env.Payload {
 		payload[k] = v
 	}
-	payload["playerId"] = client.Player.ID
+	payload["playerId"] = playerID
 	h.BroadcastExcept(roomID, client.ID, Envelope{Type: "game.stream", RoomID: roomID, Payload: payload})
 }
 
 func (h *Hub) HandleMessage(client *Client, env Envelope) {
+	// Per-connection token bucket over every message type (ready toggles and
+	// other snapshot-triggering requests included). Streams drop silently.
+	if !client.allow(env.Type) {
+		if env.Type != "game.stream" {
+			h.Send(client, Envelope{Type: "system.error", RequestID: env.RequestID, Payload: map[string]any{"code": "rate_limited", "message": "too many messages, slow down"}})
+		}
+		return
+	}
 	switch env.Type {
 	case "lobby.games.list":
 		h.Send(client, Envelope{Type: "lobby.games.list.ok", RequestID: env.RequestID, Payload: map[string]any{"games": h.registry.List()}})
@@ -289,6 +369,8 @@ func (h *Hub) HandleMessage(client *Client, env Envelope) {
 		h.handleCahDecksSet(client, env)
 	case "session.deck.add":
 		h.handleDeckAdd(client, env)
+	case "session.next.random":
+		h.handleSessionNextRandom(client, env)
 	default:
 		h.Send(client, Envelope{Type: "system.error", RequestID: env.RequestID, Payload: map[string]any{"code": "unknown_type", "message": "unknown message type"}})
 	}
@@ -327,6 +409,11 @@ const (
 	maxAvatarLen   = 256 * 1024 // doodle avatars are small data: URLs
 	maxPasswordLen = 100
 	roomPlayerCap  = 16 // hard ceiling regardless of client maxPlayers
+	roomPlayerMin  = 2  // every game needs at least two players
+	// awful.chat session ids are short random tokens; anything longer is junk.
+	maxExternalKeyLen = 128
+	// Client session ids are UUIDs; cap junk so it can't bloat persistence.
+	maxSessionIDLen = 128
 )
 
 // sanitizeAvatar drops any avatar URL that isn't an inline image or https,
@@ -340,11 +427,16 @@ func sanitizeAvatar(url string) string {
 	return ""
 }
 
-// clampMaxPlayers turns a client value into a sane room size; 0/negative means
-// "no explicit limit", which we still cap at roomPlayerCap.
+// clampMaxPlayers turns a client value into a sane room size in
+// [roomPlayerMin, roomPlayerCap]; 0/negative means "no explicit limit", which
+// we still cap at roomPlayerCap. Every game needs at least two players, so a
+// one-seat room could never start anything.
 func clampMaxPlayers(v int) int {
 	if v <= 0 || v > roomPlayerCap {
 		return roomPlayerCap
+	}
+	if v < roomPlayerMin {
+		return roomPlayerMin
 	}
 	return v
 }
@@ -352,7 +444,7 @@ func clampMaxPlayers(v int) int {
 func (h *Hub) handleRoomCreate(client *Client, env Envelope) {
 	// A connection already bound to a room must leave it first; otherwise
 	// rebinding orphans a connected ghost player that never gets cleaned up.
-	if client.RoomID != "" {
+	if currentRoom, _ := h.ident(client); currentRoom != "" {
 		h.Send(client, Envelope{Type: "room.create.error", RequestID: env.RequestID, Payload: map[string]any{"code": "already_in_room", "message": "leave your current room first"}})
 		return
 	}
@@ -369,10 +461,10 @@ func (h *Hub) handleRoomCreate(client *Client, env Envelope) {
 	maxPlayers := clampMaxPlayers(decodeInt(env.Payload, "maxPlayers"))
 	displayName := games.TruncateText(decodeString(env.Payload, "displayName"), maxNameLen)
 	avatarURL := sanitizeAvatar(games.TruncateText(decodeString(env.Payload, "avatarUrl"), maxAvatarLen))
-	sessionID := decodeString(env.Payload, "sessionId")
+	sessionID := games.TruncateText(decodeString(env.Payload, "sessionId"), maxSessionIDLen)
 	password := games.TruncateText(decodeString(env.Payload, "password"), maxPasswordLen)
 	locale := decodeString(env.Payload, "locale")
-	if locale == "" {
+	if locale != "pt-BR" {
 		locale = "en"
 	}
 
@@ -388,11 +480,10 @@ func (h *Hub) handleRoomCreate(client *Client, env Envelope) {
 		h.Send(client, Envelope{Type: "room.create.error", RequestID: env.RequestID, Payload: map[string]any{"code": "invalid_payload", "message": "missing required fields"}})
 		return
 	}
-	for _, gameType := range playlist {
-		if _, ok := h.registry.Get(gameType); !ok {
-			h.Send(client, Envelope{Type: "room.create.error", RequestID: env.RequestID, Payload: map[string]any{"code": "invalid_game", "message": "game not found"}})
-			return
-		}
+	playlist, ok := h.cleanPlaylist(playlist)
+	if !ok {
+		h.Send(client, Envelope{Type: "room.create.error", RequestID: env.RequestID, Payload: map[string]any{"code": "invalid_game", "message": "game not found"}})
+		return
 	}
 
 	if visibility == "" {
@@ -410,13 +501,12 @@ func (h *Hub) handleRoomCreate(client *Client, env Envelope) {
 
 	// Every room gets a shareable code so friends can join by code alone
 	// (design's "OR JOIN THE PARTY"), regardless of public/private listing.
-	joinCode := strings.ToUpper(uuid.NewString()[:6])
-
+	// The manager re-rolls it on a collision.
 	room := &rooms.Room{
 		ID:         uuid.NewString(),
 		Name:       name,
 		Visibility: rooms.Visibility(visibility),
-		JoinCode:   joinCode,
+		JoinCode:   rooms.NewJoinCode(),
 		Password:   password,
 		MaxPlayers: maxPlayers,
 		Locale:     locale,
@@ -428,16 +518,44 @@ func (h *Hub) handleRoomCreate(client *Client, env Envelope) {
 	h.sessions[room.ID] = &gameSession{}
 	h.mu.Unlock()
 
-	player := rooms.Player{ID: uuid.NewString(), Name: displayName, AvatarURL: avatarURL, SessionID: sessionID, Connected: true, Ready: false, LastSeen: time.Now()}
-	if _, err := h.rooms.AddPlayer(room.ID, player); err != nil {
+	player, err := room.TryAddPlayer(rooms.Player{ID: uuid.NewString(), Name: displayName, AvatarURL: avatarURL, SessionID: sessionID, Connected: true, Ready: false, LastSeen: time.Now()}, false)
+	if err != nil {
 		h.Send(client, Envelope{Type: "room.create.error", RequestID: env.RequestID, Payload: map[string]any{"code": "room_full", "message": "room full"}})
 		return
 	}
 
 	h.bindClient(client, room.ID, player, sessionID)
 
-	h.Send(client, Envelope{Type: "room.create.ok", RequestID: env.RequestID, RoomID: room.ID, Payload: room.Snapshot()})
+	h.Send(client, Envelope{Type: "room.create.ok", RequestID: env.RequestID, RoomID: room.ID, Payload: withPlayerID(room.Snapshot(), player.ID)})
 	h.Broadcast(room.ID, Envelope{Type: "room.updated", RoomID: room.ID, Payload: room.Snapshot()})
+}
+
+// cleanPlaylist dedupes a client playlist (order kept) and rejects unknown
+// games. Every entry is a distinct registered game, so the length is bounded
+// by the registry size.
+func (h *Hub) cleanPlaylist(playlist []string) ([]string, bool) {
+	out := make([]string, 0, len(playlist))
+	for _, gameType := range playlist {
+		if _, ok := h.registry.Get(gameType); !ok {
+			return nil, false
+		}
+		if !containsString(out, gameType) {
+			out = append(out, gameType)
+		}
+	}
+	return out, len(out) > 0
+}
+
+// joinFailed replies with a join error and, for guessable failures (unknown
+// room/code, wrong password), spends the IP's failed-join budget.
+func (h *Hub) joinFailed(client *Client, env Envelope, code, message string) {
+	switch code {
+	case "not_found", "invalid_code", "invalid_password":
+		if !isLoopback(client.IP) {
+			h.joinFailLimit.allow(client.IP)
+		}
+	}
+	h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": code, "message": message}})
 }
 
 func (h *Hub) handleRoomJoin(client *Client, env Envelope) {
@@ -445,62 +563,94 @@ func (h *Hub) handleRoomJoin(client *Client, env Envelope) {
 	joinCode := decodeString(env.Payload, "joinCode")
 	displayName := games.TruncateText(decodeString(env.Payload, "displayName"), maxNameLen)
 	avatarURL := sanitizeAvatar(games.TruncateText(decodeString(env.Payload, "avatarUrl"), maxAvatarLen))
-	sessionID := decodeString(env.Payload, "sessionId")
+	sessionID := games.TruncateText(decodeString(env.Payload, "sessionId"), maxSessionIDLen)
 	isRejoin := false
 
 	if displayName == "" || sessionID == "" {
 		h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "invalid_payload", "message": "missing required fields"}})
 		return
 	}
+	// Brute-force guard: an IP that keeps failing code/password checks is
+	// refused outright until its budget refills.
+	if !isLoopback(client.IP) && h.joinFailLimit.exhausted(client.IP) {
+		h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "rate_limited", "message": "too many failed join attempts, slow down"}})
+		return
+	}
 
 	// Resolve the room by id, or by join code when only a code is supplied
-	// (the "join the party" flow enters just a code).
+	// (the "join the party" flow enters just a code), or by the embedding
+	// host's session (awful.chat): everyone opening the same app card lands
+	// in the same room, created by whoever opens it first.
 	var room *rooms.Room
 	var ok bool
+	awfulSession := decodeString(env.Payload, "awfulSession")
+	viaExternal := false
 	if roomID != "" {
 		room, ok = h.rooms.Get(roomID)
 	} else if joinCode != "" {
 		room, ok = h.rooms.FindByCode(joinCode)
 	}
+	// Embedded in awful.chat without an explicit room (or the code it was
+	// started with is gone): use the room bound to the host's app session.
+	if (!ok || room == nil) && roomID == "" && awfulSession != "" {
+		var code string
+		room, code = h.awfulRoom(client, env, awfulSession)
+		if room == nil {
+			h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": code, "message": "could not open the room"}})
+			return
+		}
+		ok, viaExternal = true, true
+	}
 	if !ok || room == nil {
-		h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "not_found", "message": "room not found"}})
+		h.joinFailed(client, env, "not_found", "room not found")
 		return
 	}
 	roomID = room.ID
 
 	// Reject a join from a connection already bound to a different room; without
 	// this, rebinding strands a connected ghost player in the old room.
-	if client.RoomID != "" && client.RoomID != roomID {
+	if currentRoom, _ := h.ident(client); currentRoom != "" && currentRoom != roomID {
 		h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "already_in_room", "message": "leave your current room first"}})
 		return
 	}
 
-	// Evict a stale session from a different old room; block only if a live
-	// connection still holds it (a second tab).
-	if h.sessionBlocked(sessionID, roomID) {
+	// A live connection holding this session in ANOTHER room (a second tab)
+	// blocks the join. One in THIS room is the old socket of a reconnecting
+	// player; it is taken over below.
+	if h.liveHolderElsewhere(client, sessionID, roomID) {
 		h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "session_in_room", "message": "session already in room"}})
 		return
 	}
 
-	if room.Visibility == rooms.Private && room.JoinCode != strings.ToUpper(joinCode) {
-		h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "invalid_code", "message": "invalid join code"}})
+	// A member reconnecting by session doesn't need the code or password
+	// again: they proved it when they first joined.
+	_, alreadyMember := room.FindPlayerBySession(sessionID)
+	if !viaExternal && !alreadyMember && room.Visibility == rooms.Private && room.JoinCode != strings.ToUpper(strings.TrimSpace(joinCode)) {
+		h.joinFailed(client, env, "invalid_code", "invalid join code")
 		return
 	}
 
-	_, alreadyMember := room.FindPlayerBySession(sessionID)
-	if !alreadyMember && room.Password != "" && decodeString(env.Payload, "password") != room.Password {
-		h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "invalid_password", "message": "invalid password"}})
+	if !viaExternal && !alreadyMember && room.Password != "" && decodeString(env.Payload, "password") != room.Password {
+		h.joinFailed(client, env, "invalid_password", "invalid password")
 		return
 	}
+
+	// Past auth: take the seat over from a stale socket of this session in
+	// this room, and evict the session's ghost from any other room.
+	h.takeOverSession(client, sessionID, roomID)
+	h.evictStaleSession(sessionID, roomID)
 
 	var player rooms.Player
 	if existing, ok := room.FindPlayerBySession(sessionID); ok {
-		player = existing
 		isRejoin = true
 		// On rejoin a conflicting rename silently keeps the old name rather
 		// than blocking the reconnect.
 		nameConflict := room.NameTaken(displayName, existing.ID)
-		if _, err := h.rooms.UpdatePlayer(room.ID, player.ID, func(p *rooms.Player) {
+		// Mark connected and bind in one h.mu section: RemoveClient checks
+		// "is anyone bound to this player" under the same lock, so the old
+		// socket draining concurrently can't flip us back to disconnected.
+		h.mu.Lock()
+		_, err := h.rooms.UpdatePlayer(room.ID, existing.ID, func(p *rooms.Player) {
 			p.Connected = true
 			p.LastSeen = time.Now()
 			if !nameConflict {
@@ -509,78 +659,193 @@ func (h *Hub) handleRoomJoin(client *Client, env Envelope) {
 			if avatarURL != "" {
 				p.AvatarURL = avatarURL
 			}
-		}); err != nil {
+			player = *p
+		})
+		if err == nil {
+			client.RoomID = room.ID
+			client.Player = player
+			client.SessionID = sessionID
+		}
+		h.mu.Unlock()
+		if err != nil {
 			h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "not_found", "message": "player not found"}})
 			return
 		}
 	} else {
-		if room.NameTaken(displayName, "") {
+		// Capacity, name check and insert happen atomically in the room, so
+		// concurrent joins can't overfill it or share a name. Embedded in
+		// awful.chat the host's names are labels, not unique: two people can
+		// share one, so it's suffixed instead of refusing someone already in
+		// the call.
+		seated, err := room.TryAddPlayer(rooms.Player{ID: uuid.NewString(), Name: displayName, AvatarURL: avatarURL, SessionID: sessionID, Connected: true, Ready: false, LastSeen: time.Now()}, awfulSession != "")
+		switch {
+		case errors.Is(err, rooms.ErrNameTaken):
 			h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "name_taken", "message": "display name already in use"}})
 			return
-		}
-		player = rooms.Player{ID: uuid.NewString(), Name: displayName, AvatarURL: avatarURL, SessionID: sessionID, Connected: true, Ready: false, LastSeen: time.Now()}
-		if _, err := h.rooms.AddPlayer(room.ID, player); err != nil {
+		case err != nil:
 			h.Send(client, Envelope{Type: "room.join.error", RequestID: env.RequestID, Payload: map[string]any{"code": "room_full", "message": "room full"}})
 			return
 		}
-		if s, ok := h.session(room.ID); ok {
-			s.mu.Lock()
-			if s.adapter != nil {
-				s.adapter.OnPlayerJoin(player.ID)
-			}
-			s.mu.Unlock()
-		}
+		player = seated
+		h.bindClient(client, room.ID, player, sessionID)
 	}
 
-	if isRejoin {
-		if updated, ok := room.FindPlayerBySession(sessionID); ok {
-			player = updated
-		}
-	}
-
-	h.bindClient(client, room.ID, player, sessionID)
-
-	h.Send(client, Envelope{Type: "room.join.ok", RequestID: env.RequestID, RoomID: room.ID, Payload: room.Snapshot()})
+	h.Send(client, Envelope{Type: "room.join.ok", RequestID: env.RequestID, RoomID: room.ID, Payload: withPlayerID(room.Snapshot(), player.ID)})
 	if !isRejoin {
 		h.Broadcast(room.ID, Envelope{Type: "room.playerJoined", RoomID: room.ID, Payload: map[string]any{"player": player}})
 	}
 	h.Broadcast(room.ID, Envelope{Type: "room.updated", RoomID: room.ID, Payload: room.Snapshot()})
 	if s, ok := h.session(room.ID); ok {
-		s.mu.Lock()
-		if s.adapter != nil {
-			h.Send(client, Envelope{Type: "game.state", RoomID: room.ID, Payload: map[string]any{"public": s.adapter.PublicState(), "private": s.adapter.PrivateState(player.ID)}})
-		}
-		// Replay the open next-game vote so a rejoiner isn't stuck on a blank
-		// voting screen (the session.vote push already fired before they joined).
-		if s.votes != nil && len(s.voteOptions) > 0 {
-			options := make([]map[string]string, 0, len(s.voteOptions))
-			for _, gameType := range s.voteOptions {
-				options = append(options, h.gameOption(gameType))
-			}
-			h.Send(client, Envelope{Type: "session.vote", RoomID: room.ID, Payload: map[string]any{
-				"options":  options,
-				"deadline": s.voteDeadline.UnixMilli(),
-			}})
-			h.Send(client, Envelope{Type: "session.vote.update", RoomID: room.ID, Payload: map[string]any{"counts": voteCounts(s)}})
-		}
-		s.mu.Unlock()
+		h.syncJoiner(client, room, s, player.ID, isRejoin)
 	}
 }
 
+// syncJoiner hands a (re)joining player the live game and vote state. A
+// brand-new player is announced to the running game first, then the usual
+// post-adapter routine broadcasts state and re-arms the timer. While paused
+// the announcement is queued (replayed on resume after Shift, like leaves):
+// the game must not change phase while frozen.
+func (h *Hub) syncJoiner(client *Client, room *rooms.Room, s *gameSession, playerID string, isRejoin bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	roomID := room.ID
+	if s.adapter != nil && !isRejoin {
+		if !s.pausedAt.IsZero() {
+			s.pendingJoins = append(s.pendingJoins, playerID)
+		} else {
+			s.adapter.OnPlayerJoin(playerID)
+			h.afterAdapterCall(roomID, s)
+		}
+	}
+	if s.adapter != nil {
+		h.Send(client, Envelope{Type: "game.state", RoomID: roomID, Payload: map[string]any{
+			"public":    s.adapter.PublicState(),
+			"private":   s.adapter.PrivateState(playerID),
+			"standings": memberStandings(room, s.adapter.Standings()),
+		}})
+		if isRejoin {
+			// A reconnect changes who's connected: let the game re-check its
+			// gates now (e.g. a Gartic drawer back from a refresh resumes the
+			// turn instead of waiting out the grace timer).
+			if s.pausedAt.IsZero() {
+				s.adapter.OnRoomChange()
+				h.afterAdapterCall(roomID, s)
+			} else {
+				s.pendingRoomChange = true
+			}
+		}
+	}
+	// Replay the open next-game vote so a rejoiner isn't stuck on a blank
+	// voting screen (the session.vote push already fired before they joined).
+	if s.votes != nil && len(s.voteOptions) > 0 {
+		options := make([]map[string]string, 0, len(s.voteOptions))
+		for _, gameType := range s.voteOptions {
+			options = append(options, h.gameOption(gameType))
+		}
+		h.Send(client, Envelope{Type: "session.vote", RoomID: roomID, Payload: map[string]any{
+			"options":  options,
+			"deadline": s.voteDeadline.UnixMilli(),
+		}})
+		h.Send(client, Envelope{Type: "session.vote.update", RoomID: roomID, Payload: map[string]any{"counts": voteCounts(s)}})
+	}
+}
+
+// awfulRoom finds or creates the room bound to an awful.chat app session. The
+// session id is a bearer value shared by the host's room members, so only
+// its hash is kept. On failure it returns nil and an error code.
+func (h *Hub) awfulRoom(client *Client, env Envelope, awfulSession string) (*rooms.Room, string) {
+	if len(awfulSession) > maxExternalKeyLen {
+		return nil, "invalid_payload"
+	}
+	sum := sha256.Sum256([]byte("awful/1\n" + awfulSession))
+	key := hex.EncodeToString(sum[:])
+
+	refusal := ""
+	room, _ := h.rooms.FindOrCreateExternal(key, func(roomCount int) *rooms.Room {
+		if !isLoopback(client.IP) && !h.createLimit.allow(client.IP) {
+			refusal = "rate_limited"
+			return nil
+		}
+		if roomCount >= maxRooms {
+			refusal = "server_full"
+			return nil
+		}
+		locale := decodeString(env.Payload, "locale")
+		if locale != "pt-BR" {
+			locale = "en"
+		}
+		playlist := make([]string, 0)
+		for _, gameType := range decodeStringSlice(env.Payload, "playlist") {
+			if _, ok := h.registry.Get(gameType); ok && !containsString(playlist, gameType) {
+				playlist = append(playlist, gameType)
+			}
+		}
+		if len(playlist) == 0 {
+			playlist = h.registry.Types()
+		}
+		name := games.TruncateText(decodeString(env.Payload, "roomName"), maxRoomNameLen)
+		if name == "" {
+			name = "Gemu"
+		}
+		return &rooms.Room{
+			ID:         uuid.NewString(),
+			Name:       name,
+			Visibility: rooms.Private,
+			JoinCode:   rooms.NewJoinCode(),
+			MaxPlayers: roomPlayerCap,
+			Locale:     locale,
+			Playlist:   playlist,
+		}
+	})
+	if room == nil {
+		if refusal == "" {
+			refusal = "invalid_payload"
+		}
+		return nil, refusal
+	}
+	// Ensure the session exists even when a concurrent opener created the
+	// room an instant ago and hasn't registered it yet.
+	h.mu.Lock()
+	if _, ok := h.sessions[room.ID]; !ok {
+		h.sessions[room.ID] = &gameSession{}
+	}
+	h.mu.Unlock()
+	return room, ""
+}
+
+// withPlayerID tells the joining client which seat is theirs, so it never has
+// to guess from display names (which the server may have suffixed).
+func withPlayerID(snapshot map[string]any, playerID string) map[string]any {
+	snapshot["playerId"] = playerID
+	return snapshot
+}
+
+func containsString(list []string, value string) bool {
+	return indexString(list, value) >= 0
+}
+
+func indexString(list []string, value string) int {
+	for i, item := range list {
+		if item == value {
+			return i
+		}
+	}
+	return -1
+}
+
 func (h *Hub) handleRoomLeave(client *Client, env Envelope) {
-	roomID := client.RoomID
+	roomID, playerID := h.ident(client)
 	if roomID == "" {
 		h.Send(client, Envelope{Type: "room.leave.error", RequestID: env.RequestID, Payload: map[string]any{"code": "not_in_room", "message": "not in room"}})
 		return
 	}
 
-	room, err := h.rooms.RemovePlayer(roomID, client.Player.ID)
+	room, err := h.rooms.RemovePlayer(roomID, playerID)
 	if err != nil {
 		h.Send(client, Envelope{Type: "room.leave.error", RequestID: env.RequestID, Payload: map[string]any{"code": "not_found", "message": "room not found"}})
 		return
 	}
 
-	playerID := client.Player.ID
 	h.unbindClient(client)
 	h.notifyPlayerLeft(roomID, playerID)
 	h.Send(client, Envelope{Type: "room.leave.ok", RequestID: env.RequestID})
@@ -589,7 +854,10 @@ func (h *Hub) handleRoomLeave(client *Client, env Envelope) {
 	h.cleanupIfEmpty(roomID, room)
 }
 
-// notifyPlayerLeft forwards a permanent leave to the running game, if any.
+// notifyPlayerLeft forwards a permanent leave (leave/kick/eviction; the player
+// is already removed from the room) to the running game — deferred until
+// resume while paused — and drops their next-game ballot, re-checking whether
+// everyone still present has now voted.
 func (h *Hub) notifyPlayerLeft(roomID, playerID string) {
 	s, ok := h.session(roomID)
 	if !ok {
@@ -598,8 +866,26 @@ func (h *Hub) notifyPlayerLeft(roomID, playerID string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.adapter != nil {
-		s.adapter.OnPlayerLeave(playerID)
-		h.afterAdapterCall(roomID, s)
+		if !s.pausedAt.IsZero() {
+			// Joined and left within the same pause: the game never heard of
+			// them, so drop the queued join instead of replaying both.
+			if i := indexString(s.pendingJoins, playerID); i >= 0 {
+				s.pendingJoins = append(s.pendingJoins[:i], s.pendingJoins[i+1:]...)
+			} else {
+				s.pendingLeaves = append(s.pendingLeaves, playerID)
+			}
+		} else {
+			s.adapter.OnPlayerLeave(playerID)
+			h.afterAdapterCall(roomID, s)
+		}
+	}
+	if s.votes != nil {
+		_, hadBallot := s.votes[playerID]
+		delete(s.votes, playerID)
+		room, ok := h.rooms.Get(roomID)
+		if ok && !h.maybeResolveVote(roomID, room, s) && hadBallot {
+			h.Broadcast(roomID, Envelope{Type: "session.vote.update", RoomID: roomID, Payload: map[string]any{"counts": voteCounts(s)}})
+		}
 	}
 }
 
@@ -620,9 +906,13 @@ func (h *Hub) removeRoom(roomID string) {
 	h.mu.Unlock()
 	if ok {
 		s.mu.Lock()
+		defer s.mu.Unlock()
 		s.adapter = nil
 		s.stopTimer()
-		s.mu.Unlock()
+		s.cancelPendingState()
+		s.clearPause()
+		s.voteOptions = nil
+		s.votes = nil
 	}
 }
 
@@ -649,7 +939,7 @@ func (h *Hub) sweepAbandoned(cutoff time.Time) {
 }
 
 func (h *Hub) handleRoomKick(client *Client, env Envelope) {
-	roomID := client.RoomID
+	roomID, adminID := h.ident(client)
 	targetID := decodeString(env.Payload, "playerId")
 	if roomID == "" || targetID == "" {
 		h.Send(client, Envelope{Type: "room.kick.error", RequestID: env.RequestID, Payload: map[string]any{"code": "invalid_payload", "message": "missing required fields"}})
@@ -662,8 +952,18 @@ func (h *Hub) handleRoomKick(client *Client, env Envelope) {
 		return
 	}
 
-	if room.AdminID() != client.Player.ID {
+	if room.AdminID() != adminID {
 		h.Send(client, Envelope{Type: "room.kick.error", RequestID: env.RequestID, Payload: map[string]any{"code": "not_admin", "message": "admin only"}})
+		return
+	}
+	if targetID == adminID {
+		h.Send(client, Envelope{Type: "room.kick.error", RequestID: env.RequestID, Payload: map[string]any{"code": "invalid_target", "message": "use room.leave to leave"}})
+		return
+	}
+	// The target must be a member of the admin's room: an admin of one room
+	// must not be able to unbind players of another.
+	if !room.HasPlayer(targetID) {
+		h.Send(client, Envelope{Type: "room.kick.error", RequestID: env.RequestID, Payload: map[string]any{"code": "not_found", "message": "player not found"}})
 		return
 	}
 
@@ -672,24 +972,24 @@ func (h *Hub) handleRoomKick(client *Client, env Envelope) {
 		return
 	}
 
-	h.notifyPlayerLeft(roomID, targetID)
-
-	var kickedClient *Client
+	// Unbind only connections seated as the target in THIS room.
+	var kicked []*Client
 	h.mu.Lock()
 	for _, c := range h.clients {
-		if c.Player.ID == targetID {
+		if c.RoomID == roomID && c.Player.ID == targetID {
 			c.RoomID = ""
 			c.Player = rooms.Player{}
 			c.SessionID = ""
-			kickedClient = c
-			break
+			kicked = append(kicked, c)
 		}
 	}
 	h.mu.Unlock()
 
+	h.notifyPlayerLeft(roomID, targetID)
+
 	h.Send(client, Envelope{Type: "room.kick.ok", RequestID: env.RequestID})
-	if kickedClient != nil {
-		h.Send(kickedClient, Envelope{Type: "room.kicked", RoomID: roomID, Payload: map[string]any{"reason": "kicked"}})
+	for _, c := range kicked {
+		h.Send(c, Envelope{Type: "room.kicked", RoomID: roomID, Payload: map[string]any{"reason": "kicked"}})
 	}
 	h.Broadcast(roomID, Envelope{Type: "room.playerLeft", RoomID: roomID, Payload: map[string]any{"playerId": targetID}})
 	h.Broadcast(roomID, Envelope{Type: "room.updated", RoomID: roomID, Payload: room.Snapshot()})
@@ -697,7 +997,7 @@ func (h *Hub) handleRoomKick(client *Client, env Envelope) {
 }
 
 func (h *Hub) handleRoomReadySet(client *Client, env Envelope) {
-	roomID := client.RoomID
+	roomID, playerID := h.ident(client)
 	if roomID == "" {
 		h.Send(client, Envelope{Type: "room.ready.set.error", RequestID: env.RequestID, Payload: map[string]any{"code": "not_in_room", "message": "not in room"}})
 		return
@@ -710,7 +1010,7 @@ func (h *Hub) handleRoomReadySet(client *Client, env Envelope) {
 			}
 		}
 	}
-	room, err := h.rooms.UpdatePlayer(roomID, client.Player.ID, func(player *rooms.Player) {
+	room, err := h.rooms.UpdatePlayer(roomID, playerID, func(player *rooms.Player) {
 		player.Ready = ready
 		player.LastSeen = time.Now()
 	})
@@ -723,7 +1023,7 @@ func (h *Hub) handleRoomReadySet(client *Client, env Envelope) {
 }
 
 func (h *Hub) handleGameStart(client *Client, env Envelope) {
-	roomID := client.RoomID
+	roomID, playerID := h.ident(client)
 	if roomID == "" {
 		h.Send(client, Envelope{Type: "game.start.error", RequestID: env.RequestID, Payload: map[string]any{"code": "not_in_room", "message": "not in room"}})
 		return
@@ -735,12 +1035,12 @@ func (h *Hub) handleGameStart(client *Client, env Envelope) {
 		return
 	}
 
-	if room.AdminID() != client.Player.ID {
+	if room.AdminID() != playerID {
 		h.Send(client, Envelope{Type: "game.start.error", RequestID: env.RequestID, Payload: map[string]any{"code": "not_admin", "message": "admin only"}})
 		return
 	}
 	if len(room.ConnectedPlayerIDs()) < 2 {
-		h.Send(client, Envelope{Type: "game.start.error", RequestID: env.RequestID, Payload: map[string]any{"code": "not_enough_players", "message": "need at least 2 players"}})
+		h.Send(client, Envelope{Type: "game.start.error", RequestID: env.RequestID, Payload: map[string]any{"code": "not_enough_players", "message": "need at least 2 players", "minPlayers": 2}})
 		return
 	}
 	readyCheck := true
@@ -770,7 +1070,8 @@ func (h *Hub) handleGameStart(client *Client, env Envelope) {
 		return
 	}
 
-	// The next game is either the vote winner or a random playlist pick.
+	// The next game is either the vote winner / random pick, or (back-compat)
+	// a random playlist game chosen right now.
 	gameType := room.GetNextGameType()
 	if gameType == "" {
 		playlist := room.GetPlaylist()
@@ -795,9 +1096,15 @@ func (h *Hub) handleGameStart(client *Client, env Envelope) {
 	if factory.Type == "cah" {
 		opts.Decks = s.resolveCahDecks(room.GetCahDeckIDs(), room.Locale)
 	}
+	// A previous game that ended mid-pause must not leave this one frozen.
+	s.clearPause()
+	room.SetPaused(false)
 	adapter := factory.New()
 	adapter.Start(roomID, opts)
 	s.adapter = adapter
+	s.timerLoopWarn = false
+	s.cancelPendingState()
+	s.lastState = time.Time{} // a new game's first state never waits
 	room.SetCurrentGame(factory.Type, factory.Name)
 	room.SetNextGame("", "")
 	room.SetStatus(rooms.StatusPlaying)
@@ -805,12 +1112,14 @@ func (h *Hub) handleGameStart(client *Client, env Envelope) {
 
 	h.Send(client, Envelope{Type: "game.start.ok", RequestID: env.RequestID, Payload: map[string]any{"gameType": factory.Type, "gameName": factory.Name}})
 	h.broadcastRoom(roomID)
-	h.broadcastGameState(roomID, adapter)
-	h.armGameTimer(roomID, s)
+	// Same routine as every other adapter call: a game that is already over
+	// after Start (e.g. Gartic with too few connected players) is finalised
+	// instead of left running with no timer.
+	h.afterAdapterCall(roomID, s)
 }
 
 func (h *Hub) handleGameAction(client *Client, env Envelope) {
-	roomID := client.RoomID
+	roomID, playerID := h.ident(client)
 	if roomID == "" {
 		h.Send(client, Envelope{Type: "game.action.error", RequestID: env.RequestID, Payload: map[string]any{"code": "not_in_room", "message": "not in room"}})
 		return
@@ -833,8 +1142,8 @@ func (h *Hub) handleGameAction(client *Client, env Envelope) {
 		return
 	}
 
-	if err := s.adapter.OnAction(client.Player.ID, env.Payload); err != nil {
-		h.Send(client, Envelope{Type: "game.action.error", RequestID: env.RequestID, Payload: map[string]any{"code": "bad_action", "message": "invalid action"}})
+	if err := s.adapter.OnAction(playerID, env.Payload); err != nil {
+		h.Send(client, Envelope{Type: "game.action.error", RequestID: env.RequestID, Payload: map[string]any{"code": "bad_action", "message": err.Error()}})
 		return
 	}
 
@@ -842,17 +1151,23 @@ func (h *Hub) handleGameAction(client *Client, env Envelope) {
 	h.Send(client, Envelope{Type: "game.action.ok", RequestID: env.RequestID})
 }
 
+// hydratePrivateState sends each seated client its private view. Caller holds
+// s.mu (PrivateState reads adapter state).
 func (h *Hub) hydratePrivateState(roomID string, game games.Adapter) {
+	type seat struct {
+		client   *Client
+		playerID string
+	}
 	h.mu.RLock()
-	clients := make([]*Client, 0)
+	seats := make([]seat, 0)
 	for _, client := range h.clients {
 		if client.RoomID == roomID {
-			clients = append(clients, client)
+			seats = append(seats, seat{client: client, playerID: client.Player.ID})
 		}
 	}
 	h.mu.RUnlock()
 
-	for _, client := range clients {
-		h.Send(client, Envelope{Type: "game.state", RoomID: roomID, Payload: map[string]any{"private": game.PrivateState(client.Player.ID)}})
+	for _, st := range seats {
+		h.Send(st.client, Envelope{Type: "game.state", RoomID: roomID, Payload: map[string]any{"private": game.PrivateState(st.playerID)}})
 	}
 }

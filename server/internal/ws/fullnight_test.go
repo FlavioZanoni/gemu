@@ -336,19 +336,25 @@ func playStop(t *testing.T, hub *Hub, roomID string, host *Client, clients []*Cl
 			return
 		}
 		// Get categories and letter from public state while holding lock
-		categories, _ := publicState["categories"].([]any)
+		var categories []string
+		switch cats := publicState["categories"].(type) {
+		case []string:
+			categories = append(categories, cats...)
+		case []any:
+			for _, c := range cats {
+				if cat, ok := c.(string); ok {
+					categories = append(categories, cat)
+				}
+			}
+		}
 		letter, _ := publicState["letter"].(string)
 		s.mu.Unlock()
 
 		for i, client := range clients {
 			answers := make(map[string]any)
-			if categories != nil {
-				for j, catAny := range categories {
-					if cat, ok := catAny.(string); ok {
-						// Build a valid answer: letter + category + index
-						answers[cat] = letter + "word" + string(rune('0'+i*10+j))
-					}
-				}
+			for j, cat := range categories {
+				// Build a valid answer: letter + category + index
+				answers[cat] = letter + "word" + string(rune('0'+i*10+j))
 			}
 			hub.handleGameAction(client, Envelope{
 				Type: "game.action",

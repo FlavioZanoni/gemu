@@ -1,196 +1,204 @@
 "use client";
 
-import { Star, Check } from "lucide-react";
+import { Check, Star, Users } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { gamesCatalog } from "@/lib/games";
+import { gamesCatalog, gameSettings, minPlayersFor, gameLabel } from "@/lib/games";
 import type { Player } from "@/lib/protocol";
 import { hueFor } from "@/components/ui/gameHues";
-import { Button, Bulbs } from "@/components/ui";
+import { Bulbs } from "@/components/ui/Bulbs";
 
+/**
+ * Pre-game intro (Gemu Prototype · INTRO, Screens · 3): the queued game's
+ * name, how to play, the host's options, and GOT IT — I'M READY. The game
+ * starts by itself once everyone connected is ready; the host can also
+ * start now.
+ */
 export function IntroScreen({
   gameType,
-  roundCount,
-  roundTimer,
+  gameNumber,
+  settings,
   isAdmin,
   players,
   playerId,
-  onSetRounds,
-  onSetTimer,
+  onSetting,
   onReady,
+  onStartNow,
+  onManage,
 }: {
   gameType: string;
-  roundCount: number;
-  roundTimer: number;
+  /** 1-based game number of the night. */
+  gameNumber: number;
+  /** Host's chosen values by settings key (missing = server default). */
+  settings: Record<string, number>;
   isAdmin: boolean;
   players: Player[];
   playerId: string | null;
-  onSetRounds: (count: number) => void;
-  onSetTimer: (seconds: number) => void;
+  onSetting: (key: string, value: number) => void;
   onReady: () => void;
+  onStartNow: () => void;
+  onManage?: () => void;
 }) {
   const { t } = useI18n();
   const game = gamesCatalog.find((g) => g.type === gameType);
+  const name = (game ? gameLabel(game.type, t, game.name) : gameType).toUpperCase();
   const hue = hueFor(gameType);
   const stepCount = game?.howToSteps ?? 0;
   const connected = players.filter((p) => p.connected);
   const readyCount = connected.filter((p) => p.ready).length;
   const meReady = Boolean(players.find((p) => p.id === playerId)?.ready);
+  const specs = gameSettings[gameType] ?? [];
+  const tooFew = connected.length < minPlayersFor(gameType);
 
-  // Round / timer choices per game (literal — no interpolation needed).
-  const gameOptions: Record<string, { rounds: number[]; timer: number[] }> = {
-    invention: { rounds: [1, 2, 3, 4, 5], timer: [] },
-    stop: { rounds: [1, 3, 5, 7, 9], timer: [30, 165, 300] },
-    gartic: { rounds: [1, 2, 3, 5, 7, 9], timer: [30, 105, 180] },
-    garticphone: { rounds: [1, 3, 5, 7, 9], timer: [30, 165, 300] },
-    cah: { rounds: [3, 7, 8, 11, 15, 19], timer: [] },
-  };
-  const { rounds: roundOptions, timer: timerOptions } =
-    gameOptions[gameType] || gameOptions.stop;
+  const status =
+    readyCount === connected.length - (meReady ? 0 : 1) && !meReady && connected.length > 1
+      ? t("intro.waitingOnYou")
+      : t("intro.readyStatus", { ready: readyCount, total: connected.length });
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-12 px-6 py-12">
-      {/* Game intro on left */}
-      <div className="text-center animate-slam">
-        <div className="mono-caption mb-3">{t("common.upNext")}</div>
-        <h1 className="slab break-words text-5xl sm:text-7xl lg:text-9xl">
-          {game?.name.toUpperCase() || gameType}
-        </h1>
-        <p className="text-sm text-(--ink)/60 mt-4">
-          {readyCount}/{connected.length} ready · the host starts the game
-        </p>
+    <div className="flex flex-1 flex-col items-center justify-center gap-8 py-8 lg:flex-row lg:gap-[60px]">
+      {/* Title: plain on desktop, a bulb marquee on phones. */}
+      <div className="animate-slam text-center">
+        <div className="relative inline-block rounded-[22px] border-[3px] border-(--accent) bg-(--panel) px-8 pb-4 pt-4 lg:border-0 lg:bg-transparent lg:p-0">
+          <Bulbs count={3} size={9} className="absolute -top-[6px] left-5 right-5 lg:hidden" />
+          <div className="font-mono text-xs font-bold uppercase tracking-[0.4em] text-(--accent-2)">
+            <span className="lg:hidden">{t("common.upNext")}</span>
+            <span className="hidden lg:inline">{t("intro.gameUpNext", { n: gameNumber })}</span>
+          </div>
+          <h1
+            className="break-words font-display text-[clamp(40px,12vw,80px)] leading-[1.05] text-(--ink)"
+            style={{ textShadow: "0 7px 0 var(--drop)" }}
+            data-testid="intro-title"
+          >
+            {name}
+          </h1>
+          <div className="mt-1 font-mono text-[11px] font-semibold uppercase text-(--ink)/45 lg:hidden">
+            {t("intro.gameOfNight", { n: gameNumber })}
+          </div>
+        </div>
+        <p className="mt-3 hidden font-mono text-[13px] font-semibold uppercase text-(--ink)/45 lg:block">{status}</p>
       </div>
 
-      {/* How to play on right */}
-      {stepCount > 0 && (
-        <div className="w-full max-w-sm">
-          {/* How to play box */}
-          <div
-            className="rounded-2xl border-4 bg-(--panel) mb-5 overflow-hidden"
-            style={{ borderColor: hue.base }}
-          >
+      <div className="w-full max-w-[440px]">
+        {stepCount > 0 ? (
+          <div className="mb-4 overflow-hidden rounded-[20px] border-[3px] bg-(--panel)" style={{ borderColor: hue.base }}>
             <div
-              className="px-5 py-3 text-xs font-bold uppercase tracking-widest"
-              style={{
-                background: `linear-gradient(180deg, ${hue.gradFrom}, ${hue.gradTo})`,
-                color: hue.ink,
-              }}
+              className="px-5 py-3.5 font-mono text-[10px] font-bold uppercase tracking-[0.3em]"
+              style={{ background: `linear-gradient(180deg, ${hue.gradFrom}, ${hue.gradTo})`, color: `${hue.ink}b3` }}
             >
-              How to play
+              {t("intro.howToPlay")}
             </div>
-            <div className="p-5 space-y-4">
+            <ol className="flex flex-col gap-3.5 p-5">
               {Array.from({ length: stepCount }, (_, idx) => (
-                <div key={idx} className="flex gap-3">
-                  <div
-                    className="flex-none w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
-                    style={{
-                      background: hue.base,
-                      color: hue.ink,
-                    }}
+                <li key={idx} className="flex gap-3">
+                  <span
+                    className="flex h-[27px] w-[27px] flex-none items-center justify-center rounded-full font-display text-[13px]"
+                    style={{ background: hue.base, color: hue.ink }}
                   >
                     {idx + 1}
-                  </div>
-                  <div className="flex-1 text-sm leading-relaxed text-(--ink)">
-                    {t(`howto.${gameType}.${idx + 1}`)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Game options (admin only) */}
-          {isAdmin && (
-            <div className="rounded-2xl border-2 border-(--line) bg-(--panel) p-4 mb-5">
-              <div className="flex justify-between items-baseline mb-3">
-                <span className="mono-caption">Game Options</span>
-                <span className="text-xs font-bold text-(--accent) flex items-center gap-1">
-                  <Star size={14} strokeWidth={2.5} style={{ color: "#ffd23f" }} /> Host Only
-                </span>
-              </div>
-
-              <div className="mb-4">
-                <span className="text-xs font-bold text-(--ink)/60 uppercase tracking-widest">
-                  Rounds
-                </span>
-                <div className="flex gap-2 mt-2">
-                  {roundOptions.map((count) => (
-                    <button
-                      key={count}
-                      onClick={() => onSetRounds(count)}
-                      className={`min-w-11 py-2 rounded-lg border-2 font-bold text-sm transition ${
-                        roundCount === count
-                          ? "text-(--dark-ink)"
-                          : "border-(--line) bg-transparent text-(--ink)"
-                      }`}
-                      style={
-                        roundCount === count
-                          ? {
-                              borderColor: hue.base,
-                              background: hue.base,
-                              color: hue.ink,
-                            }
-                          : {}
-                      }
-                    >
-                      {count}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {timerOptions.length > 0 && (
-                <div>
-                  <span className="text-xs font-bold text-(--ink)/60 uppercase tracking-widest">
-                    Round Timer
                   </span>
-                  <div className="flex gap-2 mt-2">
-                    {timerOptions.map((seconds) => (
-                      <button
-                        key={seconds}
-                        onClick={() => onSetTimer(seconds)}
-                        className={`min-w-14 py-2 rounded-lg border-2 font-bold text-sm transition`}
-                        style={
-                          roundTimer === seconds
-                            ? {
-                                borderColor: "#35d4b9",
-                                background: "#35d4b9",
-                                color: "#0c3d33",
-                              }
-                            : {
-                                borderColor: "var(--line)",
-                                background: "transparent",
-                                color: "var(--ink)",
-                              }
-                        }
-                      >
-                        {seconds}s
-                      </button>
-                    ))}
+                  <span className="flex-1 text-[15px] font-medium leading-[1.45] text-(--ink)">
+                    {t(`howto.${gameType}.${idx + 1}`)}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        ) : null}
+
+        {isAdmin && specs.length > 0 ? (
+          <div className="mb-4 rounded-2xl border-2 border-(--line) bg-(--panel) px-4 py-4" data-testid="intro-options">
+            <div className="mb-3 flex items-baseline justify-between gap-2">
+              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-(--ink)/50">
+                {t("intro.gameOptions")}
+              </span>
+              <span className="flex items-center gap-1 font-mono text-[9px] font-bold uppercase text-(--accent)">
+                <Star size={11} strokeWidth={2.5} aria-hidden /> {t("intro.hostOnly")}
+              </span>
+            </div>
+            {specs.map((spec) => {
+              const current = settings[spec.key] ?? spec.def;
+              const label = spec.kind === "rounds" ? t("intro.rounds") : t("intro.roundTimer");
+              return (
+                <div key={spec.key} className="mb-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 last:mb-0" role="group" aria-label={label}>
+                  <span className="w-[100px] font-mono text-[10px] font-bold uppercase text-(--ink)/50">{label}</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {spec.options.map((value) => {
+                      const on = current === value;
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          aria-pressed={on}
+                          data-testid={`intro-opt-${spec.key}-${value}`}
+                          onClick={() => onSetting(spec.key, value)}
+                          className="min-w-[42px] rounded-[10px] border-2 px-2 py-2 font-display text-[13px]"
+                          style={
+                            on
+                              ? {
+                                  background: "linear-gradient(180deg,#ffd23f,#f5b32a)",
+                                  borderColor: "#ffd23f",
+                                  color: "var(--dark-ink)",
+                                }
+                              : { background: "var(--bg)", borderColor: "var(--line)", color: "rgba(255,233,168,.6)" }
+                          }
+                        >
+                          {spec.kind === "timer" ? `${value}s` : value}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+              );
+            })}
+          </div>
+        ) : null}
 
-          {/* Ready button: pressed state + waiting hint so clicking visibly
-              registers — only the host actually starts the game. */}
-          {meReady ? (
-            <div className="text-center">
-              <Button className="w-full py-4 text-lg font-bold" variant="secondary" disabled>
-                <span className="inline-flex items-center gap-2">
-                  <Check size={18} strokeWidth={2.5} /> Ready
-                </span>
-              </Button>
-              <p className="mono-caption mt-3 animate-pulse">
-                waiting for the host to start…
-              </p>
-            </div>
-          ) : (
-            <Button className="w-full py-4 text-lg font-bold" onClick={onReady}>
-              Got it — I&apos;m ready
-            </Button>
-          )}
-        </div>
-      )}
+        {meReady ? (
+          <div
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-(--accent-2) bg-(--panel) py-4 font-display text-lg uppercase text-(--accent-2)"
+            role="status"
+            data-testid="intro-ready-done"
+          >
+            <Check size={18} strokeWidth={3} aria-hidden /> {t("common.ready")}
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="buzzer w-full rounded-2xl py-[18px] text-lg uppercase"
+            style={{ background: "linear-gradient(180deg,#ffd23f,#f5b32a)", color: "var(--dark-ink)", boxShadow: "0 6px 0 var(--drop)" }}
+            onClick={onReady}
+            data-testid="intro-ready"
+          >
+            {t("common.gotIt")}
+          </button>
+        )}
+        <p className="mt-3 text-center font-mono text-[10px] uppercase tracking-[0.1em] text-(--ink)/45" aria-live="polite">
+          {tooFew ? t("intro.tooFew", { n: minPlayersFor(gameType) }) : t("intro.startsWhenAll", { ready: readyCount, total: connected.length })}
+        </p>
+
+        {isAdmin ? (
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5">
+            <button
+              type="button"
+              data-testid="intro-start"
+              onClick={onStartNow}
+              className="rounded-full border-2 border-(--accent) px-4 py-2 font-sans text-[13px] font-bold text-(--accent) hover:bg-(--accent)/10"
+            >
+              {readyCount === connected.length ? t("intro.startNow") : t("intro.startAnyway")} ▶
+            </button>
+            {onManage ? (
+              <button
+                type="button"
+                data-testid="manage-room"
+                onClick={onManage}
+                className="flex items-center gap-1.5 rounded-full border-2 border-(--accent-2) px-4 py-2 font-sans text-[13px] font-bold text-(--accent-2) hover:bg-(--accent-2)/10"
+              >
+                <Users size={14} strokeWidth={2.5} aria-hidden /> {t("manage.title")}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

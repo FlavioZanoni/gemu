@@ -12,13 +12,21 @@ const initialState: LobbyState = {
   connected: false,
 };
 
+// The public room list doesn't push every change (rooms opening elsewhere,
+// counts on rooms we're not in): poll while the home page is up.
+const REFRESH_MS = 15_000;
+
+const requestRooms = () => {
+  const client = getWSClient();
+  client.connect();
+  // Not open yet: the open listener asks (a queued copy would ask twice).
+  if (!client.isOpen()) return;
+  client.send({ type: "lobby.rooms.list", requestId: createRequestId() });
+};
+
 export const useLobbyStore = () => {
   const [state, setState] = useState(initialState);
-  const refresh = useCallback(() => {
-    const client = getWSClient();
-    client.connect();
-    client.send({ type: "lobby.rooms.list", requestId: createRequestId() });
-  }, []);
+  const refresh = useCallback(() => requestRooms(), []);
 
   useEffect(() => {
     const client = getWSClient();
@@ -26,7 +34,7 @@ export const useLobbyStore = () => {
 
     const offOpen = client.onOpen(() => {
       setState((prev) => ({ ...prev, connected: true }));
-      refresh();
+      requestRooms();
     });
 
     const offClose = client.onClose(() => {
@@ -36,7 +44,9 @@ export const useLobbyStore = () => {
     const offMessage = client.onMessage((message: Envelope) => {
       if (message.type === "lobby.rooms.list.ok") {
         const rooms = (message.payload?.rooms ?? []) as PublicRoom[];
-        setState((prev) => ({ ...prev, rooms }));
+        // Any answer proves the socket is up (covers a socket that opened
+        // before this hook subscribed).
+        setState((prev) => ({ ...prev, rooms, connected: true }));
       }
       if (message.type === "room.updated") {
         const snapshot = message.payload as {
@@ -68,27 +78,43 @@ export const useLobbyStore = () => {
         }
         setState((prev) => {
           const nextRooms = prev.rooms.filter((r) => r.id !== snapshot.id);
-      nextRooms.push({
-          id: snapshot.id,
-          name: snapshot.name,
-          gameType: snapshot.gameType,
-          gameName: snapshot.gameName ?? "",
-          visibility: snapshot.visibility,
-          maxPlayers: snapshot.maxPlayers,
-          playerCount,
-          hasPassword: snapshot.hasPassword ?? false,
-          status: snapshot.status ?? "lobby",
-          playlist: snapshot.playlist ?? [],
-        });
+          nextRooms.push({
+            id: snapshot.id,
+            name: snapshot.name,
+            gameType: snapshot.gameType,
+            gameName: snapshot.gameName ?? "",
+            visibility: snapshot.visibility,
+            maxPlayers: snapshot.maxPlayers,
+            playerCount,
+            hasPassword: snapshot.hasPassword ?? false,
+            status: snapshot.status ?? "lobby",
+            playlist: snapshot.playlist ?? [],
+          });
           return { ...prev, rooms: nextRooms };
         });
       }
     });
 
+    // The socket may already be open (we came back from a room, or a room
+    // link opened it first): its `open` event won't fire again for us.
+    if (client.isOpen()) requestRooms();
+
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible" && client.isOpen()) requestRooms();
+    }, REFRESH_MS);
+    const onFocus = () => {
+      if (client.isOpen()) requestRooms();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+
     return () => {
       offOpen();
       offClose();
       offMessage();
+      clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
     };
   }, []);
 

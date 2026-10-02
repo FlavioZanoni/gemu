@@ -17,6 +17,7 @@ func (f Factory) MinConnected() int {
 
 type Registry struct {
 	games map[string]Factory
+	order []string
 }
 
 func NewRegistry() *Registry {
@@ -24,7 +25,15 @@ func NewRegistry() *Registry {
 }
 
 func (r *Registry) Register(factory Factory) {
+	if _, exists := r.games[factory.Type]; !exists {
+		r.order = append(r.order, factory.Type)
+	}
 	r.games[factory.Type] = factory
+}
+
+// Types returns every registered game type in registration order.
+func (r *Registry) Types() []string {
+	return append([]string(nil), r.order...)
 }
 
 func (r *Registry) Get(gameType string) (Factory, bool) {
@@ -34,7 +43,8 @@ func (r *Registry) Get(gameType string) (Factory, bool) {
 
 func (r *Registry) List() []map[string]any {
 	out := make([]map[string]any, 0, len(r.games))
-	for _, game := range r.games {
+	for _, gameType := range r.order {
+		game := r.games[gameType]
 		out = append(out, map[string]any{
 			"type":       game.Type,
 			"name":       game.Name,

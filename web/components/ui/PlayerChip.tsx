@@ -16,15 +16,15 @@ export function Avatar({
 }) {
   return (
     <div
-      className="flex flex-none items-center justify-center overflow-hidden rounded-full bg-(--panel-raised)"
-      style={{ width: size, height: size, border: `2px solid ${color}` }}
+      className="flex flex-none items-center justify-center overflow-hidden rounded-full"
+      style={{ width: size, height: size, border: `2px solid ${color}`, background: "#fff8e7" }}
     >
       {player.avatarUrl ? (
         // Doodle avatars are data-URL PNGs drawn at join.
         // eslint-disable-next-line @next/next/no-img-element
         <img src={player.avatarUrl} alt="" className="h-full w-full object-cover" />
       ) : (
-        <span className="font-display text-sm" style={{ color }}>
+        <span className="font-display text-sm" style={{ color: "#3d1f0e" }}>
           {player.name.slice(0, 1).toUpperCase()}
         </span>
       )}
@@ -33,7 +33,7 @@ export function Avatar({
 }
 
 /** Player chip (Gemu System · 06): doodle avatar in the player-color ring,
- *  name (star = host), status caption. Dims when disconnected. */
+ *  name (star = host), status caption on the right. Dims when disconnected. */
 export function PlayerChip({
   player,
   colorIndex,
@@ -54,10 +54,10 @@ export function PlayerChip({
   const status = statusOverride
     ? statusOverride
     : !player.connected
-      ? { text: t("common.reconnecting").split(" — ")[0].toUpperCase(), tone: "coral" as const }
+      ? { text: t("lobby.statusAway"), tone: "dim" as const }
       : player.ready
-        ? { text: t("common.ready").toUpperCase(), tone: "teal" as const }
-        : { text: t("common.waiting").toUpperCase(), tone: "dim" as const };
+        ? { text: `✓ ${t("common.ready").toUpperCase()}`, tone: "teal" as const }
+        : { text: t("lobby.statusNotReady"), tone: "coral" as const };
 
   const toneColor =
     status.tone === "teal"
@@ -70,19 +70,21 @@ export function PlayerChip({
 
   return (
     <div
-      className={`flex items-center gap-2.5 rounded-full border-2 bg-(--panel) py-1.5 pl-1.5 pr-4 ${
+      className={`flex min-w-0 items-center gap-2.5 rounded-full border-2 bg-(--panel) py-1.5 pl-1.5 pr-3 ${
         player.connected ? "" : "opacity-45"
       }`}
       style={{ borderColor }}
+      data-testid={`player-chip-${player.name}`}
     >
-      <Avatar player={player} color={color} />
-      <div className="min-w-0">
-        <div className="truncate text-[13px] font-bold text-(--ink) flex items-center gap-1">
-          {player.name} {isHost ? <Star size={14} strokeWidth={2.5} style={{ color: "#ffd23f" }} /> : null}
-        </div>
-        <div className="font-mono text-[10px]" style={{ color: toneColor }}>
-          {status.text}
-        </div>
+      <Avatar player={player} color={color} size={40} />
+      <div className="flex min-w-0 flex-1 items-center gap-1 truncate text-[15px] font-bold text-(--ink)">
+        <span className="truncate">{player.name}</span>
+        {isHost ? (
+          <Star size={14} strokeWidth={2.5} style={{ color: "#ffd23f", flex: "none" }} aria-label={t("lobby.host")} />
+        ) : null}
+      </div>
+      <div className="flex-none font-mono text-[10px] font-bold" style={{ color: toneColor }}>
+        {status.text}
       </div>
       {trailing}
     </div>

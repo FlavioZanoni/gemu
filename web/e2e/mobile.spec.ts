@@ -21,6 +21,7 @@ test("phone: home and green room fit the screen", async ({ page }) => {
 
   await page.getByTestId("nick-input").fill("Phone");
   await page.getByTestId("create-room").click();
+  await page.getByTestId("create-room-confirm").click();
   await page.waitForURL(/\/room\/.+/);
 
   await expect(page.getByTestId("room-code")).toBeVisible();
@@ -29,4 +30,25 @@ test("phone: home and green room fit the screen", async ({ page }) => {
   await expect(page.getByTestId("game-card-garticphone")).toBeVisible();
   await expect(page.getByTestId("ready-up")).toBeVisible();
   await expectNoHorizontalOverflow(page, "green room");
+});
+
+test.describe("embedded tile", () => {
+  // awful.chat tiles can be this small.
+  test.use({ viewport: { width: 480, height: 360 }, hasTouch: false });
+
+  test("480x360: lobby controls reachable, no sideways scroll", async ({ page }) => {
+    await page.goto("/");
+    await expectNoHorizontalOverflow(page, "home (tile)");
+    await page.getByTestId("nick-input").fill("Tile");
+    await page.getByTestId("create-room").click();
+    await page.getByTestId("create-room-confirm").click();
+    await page.waitForURL(/\/room\/.+/);
+
+    await expect(page.getByTestId("room-code")).toBeVisible();
+    // Ready / start stay pinned in view even though the playlist is long.
+    await expect(page.getByTestId("ready-up")).toBeInViewport();
+    await expect(page.getByTestId("start-game")).toBeInViewport();
+    await expect(page.getByTestId("room-menu")).toBeVisible();
+    await expectNoHorizontalOverflow(page, "green room (tile)");
+  });
 });

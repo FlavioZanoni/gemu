@@ -35,10 +35,17 @@ func TestClientIPIgnoresSpoofedXFFByDefault(t *testing.T) {
 		t.Errorf("with trustProxy off, want real peer 203.0.113.5, got %q", got)
 	}
 
-	// Behind a trusted proxy: XFF is honored.
+	// Behind a trusted proxy: XFF is honored, but a forwarded loopback
+	// address must not unlock the loopback exemption.
 	trustProxy = true
-	if got := clientIP(req); got != "127.0.0.1" {
-		t.Errorf("with trustProxy on, want XFF 127.0.0.1, got %q", got)
+	if got := clientIP(req); isLoopback(got) {
+		t.Errorf("with trustProxy on, forwarded loopback must not be exempt, got %q", got)
+	}
+
+	// The rightmost entry (appended by our proxy) wins over a spoofed prefix.
+	req.Header = http.Header{"X-Forwarded-For": {"127.0.0.1, 198.51.100.7"}}
+	if got := clientIP(req); got != "198.51.100.7" {
+		t.Errorf("want rightmost XFF entry 198.51.100.7, got %q", got)
 	}
 }
 

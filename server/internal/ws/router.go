@@ -55,11 +55,14 @@ func (r *Router) HandleWS(w http.ResponseWriter, req *http.Request) {
 
 	client := r.hub.AddClient(conn, ip)
 	log.Printf("client connected: %s", client.ID)
+	// The client's single writer (data + pings, each with a write deadline).
+	go client.writePump()
 
 	go func() {
 		defer func() {
+			// RemoveClient also closes the socket and stops the writer; it
+			// never writes synchronously, so a stuck peer can't hold it up.
 			r.hub.RemoveClient(client.ID)
-			_ = conn.Close()
 			log.Printf("client disconnected: %s", client.ID)
 		}()
 
@@ -78,16 +81,6 @@ func (r *Router) HandleWS(w http.ResponseWriter, req *http.Request) {
 				}()
 				r.hub.HandleMessage(client, env)
 			}()
-		}
-	}()
-
-	go func() {
-		ticker := time.NewTicker(25 * time.Second)
-		defer ticker.Stop()
-		for range ticker.C {
-			if err := conn.WriteControl(websocket.PingMessage, []byte("ping"), time.Now().Add(5*time.Second)); err != nil {
-				return
-			}
 		}
 	}()
 }

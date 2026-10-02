@@ -44,7 +44,8 @@ NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
 |-----|---------|---------|
 | `WS_ADDR` | `:8080` | listen address |
 | `REDIS_URL` | *(unset)* | enable durability — rooms survive restarts/deploys. Unset = pure in-memory (friends mode) |
-| `GEMU_TRUST_PROXY` | `false` | honor `X-Forwarded-For` for the client IP. **Enable only behind a proxy that strips inbound XFF**, or per-IP rate limits can be spoofed |
+| `GEMU_TRUST_PROXY` | `false` | honor `X-Forwarded-For` for the client IP (the entry `GEMU_PROXY_HOPS` from the right, i.e. what your proxy appended). **Enable only behind a proxy you control**, or per-IP rate limits can be spoofed |
+| `GEMU_PROXY_HOPS` | `1` | number of trusted proxies appending to `X-Forwarded-For` (e.g. 2 for CDN → nginx) |
 | `GEMU_MAX_CLIENTS` | `5000` | global concurrent-connection cap |
 | `GEMU_MAX_ROOMS` | `1000` | global live-room cap |
 

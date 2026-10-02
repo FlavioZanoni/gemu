@@ -1,12 +1,17 @@
 package games
 
 import (
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"path"
+	"regexp"
 	"sort"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 //go:embed decks/*.json
@@ -52,59 +57,146 @@ type deckJSON struct {
 
 const blankToken = "____"
 
+// Custom-deck limits. The hub caps raw payload size before parsing; these
+// keep a parsed deck sane on their own.
+const (
+	DeckMinBlack    = 1
+	DeckMinWhite    = 10
+	DeckMaxCards    = 1000
+	DeckMaxCardLen  = 200
+	DeckMaxNameLen  = 60
+	deckMaxLocLen   = 10
+	deckMaxIDLength = 64
+)
+
+// blankRun matches any run of 3+ underscores: decks written by hand use "___"
+// or "________" for a blank; both mean one blank.
+var blankRun = regexp.MustCompile(`_{3,}`)
+
 // countBlanks counts blank tokens in a black card.
 func countBlanks(text string) int {
 	return strings.Count(text, blankToken)
 }
 
+// cleanCardText trims, collapses inner whitespace and normalizes blanks.
+func cleanCardText(s string) string {
+	s = strings.Join(strings.Fields(s), " ")
+	return blankRun.ReplaceAllString(s, blankToken)
+}
+
 // ParseDeck validates raw deck JSON and returns a Deck. Used for both embedded
-// decks (panic on failure at startup) and custom uploads (error returned).
+// decks (panic on failure at startup) and custom uploads (error returned, its
+// message shown to the host). Cards are trimmed and de-duplicated; a pick of
+// 0/omitted is inferred from the blanks.
 func ParseDeck(raw []byte) (Deck, error) {
 	var dj deckJSON
 	if err := json.Unmarshal(raw, &dj); err != nil {
 		return Deck{}, fmt.Errorf("invalid deck json: %w", err)
 	}
-	if strings.TrimSpace(dj.Name) == "" {
+	name := strings.Join(strings.Fields(dj.Name), " ")
+	if name == "" {
 		return Deck{}, fmt.Errorf("deck needs a name")
 	}
-	if len(dj.Black) < 3 {
-		return Deck{}, fmt.Errorf("deck needs at least 3 black cards")
+	if utf8.RuneCountInString(name) > DeckMaxNameLen {
+		return Deck{}, fmt.Errorf("deck name is longer than %d characters", DeckMaxNameLen)
 	}
-	if len(dj.White) < 8 {
-		return Deck{}, fmt.Errorf("deck needs at least 8 white cards")
+	if len(dj.Black)+len(dj.White) > DeckMaxCards {
+		return Deck{}, fmt.Errorf("deck has more than %d cards", DeckMaxCards)
 	}
-	deck := Deck{
-		ID:     strings.TrimSpace(dj.ID),
-		Name:   strings.TrimSpace(dj.Name),
-		Locale: dj.Locale,
-		NSFW:   dj.NSFW,
+	locale := strings.TrimSpace(dj.Locale)
+	if locale == "" || len(locale) > deckMaxLocLen {
+		locale = "en"
 	}
-	if deck.Locale == "" {
-		deck.Locale = "en"
+	id := strings.TrimSpace(dj.ID)
+	if len(id) > deckMaxIDLength {
+		id = id[:deckMaxIDLength]
 	}
-	for _, b := range dj.Black {
-		if b.Pick != 1 && b.Pick != 2 {
-			return Deck{}, fmt.Errorf("black card pick must be 1 or 2: %q", b.Text)
+	deck := Deck{ID: id, Name: name, Locale: locale, NSFW: dj.NSFW}
+
+	seen := make(map[string]bool)
+	for i, b := range dj.Black {
+		text := cleanCardText(b.Text)
+		if text == "" {
+			return Deck{}, fmt.Errorf("black card %d is empty", i+1)
+		}
+		if utf8.RuneCountInString(text) > DeckMaxCardLen {
+			return Deck{}, fmt.Errorf("black card %d is longer than %d characters", i+1, DeckMaxCardLen)
+		}
+		blanks := countBlanks(text)
+		pick := b.Pick
+		if pick == 0 {
+			pick = max(blanks, 1)
+		}
+		if pick != 1 && pick != 2 {
+			return Deck{}, fmt.Errorf("black card pick must be 1 or 2: %q", text)
 		}
 		// Two card styles: a question (pick 1, no blank — the white card is the
 		// answer) or fill-in (blanks must equal pick).
-		blanks := countBlanks(b.Text)
 		if blanks == 0 {
-			if b.Pick != 1 {
-				return Deck{}, fmt.Errorf("blank-less card must be pick 1: %q", b.Text)
+			if pick != 1 {
+				return Deck{}, fmt.Errorf("blank-less card must be pick 1: %q", text)
 			}
-		} else if blanks != b.Pick {
-			return Deck{}, fmt.Errorf("black card must have %d blank(s) to match pick: %q", b.Pick, b.Text)
+		} else if blanks != pick {
+			return Deck{}, fmt.Errorf("black card must have %d blank(s) to match pick: %q", pick, text)
 		}
-		deck.Black = append(deck.Black, cahBlackCard{Text: b.Text, Pick: b.Pick})
+		key := strings.ToLower(text)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		deck.Black = append(deck.Black, cahBlackCard{Text: text, Pick: pick})
 	}
-	for _, w := range dj.White {
-		if strings.TrimSpace(w) == "" {
-			return Deck{}, fmt.Errorf("white card cannot be empty")
+
+	seen = make(map[string]bool)
+	for i, w := range dj.White {
+		text := strings.Join(strings.Fields(w), " ")
+		if text == "" {
+			return Deck{}, fmt.Errorf("white card %d is empty", i+1)
 		}
-		deck.White = append(deck.White, w)
+		if utf8.RuneCountInString(text) > DeckMaxCardLen {
+			return Deck{}, fmt.Errorf("white card %d is longer than %d characters", i+1, DeckMaxCardLen)
+		}
+		key := strings.ToLower(text)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		deck.White = append(deck.White, text)
+	}
+
+	if len(deck.Black) < DeckMinBlack {
+		return Deck{}, fmt.Errorf("deck needs at least %d black card", DeckMinBlack)
+	}
+	if len(deck.White) < DeckMinWhite {
+		return Deck{}, fmt.Errorf("deck needs at least %d different white cards (has %d)", DeckMinWhite, len(deck.White))
 	}
 	return deck, nil
+}
+
+// CustomDeckID derives a custom deck's id from its name: "custom:" + a
+// readable slug + a short hash of the exact (whitespace-normalized) name.
+// The slug alone is ambiguous ("A b" and "a_b" both slug to "a_b"); the hash
+// keeps distinct names apart while re-uploading the same name still replaces
+// the earlier deck. Namespaced so it can never shadow a built-in id.
+func CustomDeckID(name string) string {
+	name = strings.Join(strings.Fields(name), " ")
+	var slug strings.Builder
+	lastUnderscore := false
+	for _, r := range strings.ToLower(name) {
+		switch {
+		case unicode.IsLetter(r) || unicode.IsDigit(r):
+			slug.WriteRune(r)
+			lastUnderscore = false
+		case !lastUnderscore && slug.Len() > 0:
+			slug.WriteByte('_')
+			lastUnderscore = true
+		}
+		if slug.Len() >= 32 {
+			break
+		}
+	}
+	sum := sha256.Sum256([]byte(name))
+	return "custom:" + strings.TrimSuffix(slug.String(), "_") + "-" + hex.EncodeToString(sum[:4])
 }
 
 var builtinDecks = loadBuiltinDecks()

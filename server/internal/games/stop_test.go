@@ -154,8 +154,8 @@ func TestStopStopRejectedWithoutAllAnswers(t *testing.T) {
 		"action": "stop",
 	})
 
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+	if err == nil {
+		t.Fatalf("expected an error explaining the rejected stop")
 	}
 
 	if game.stopped {
@@ -278,8 +278,8 @@ func TestStopMajorityRejection(t *testing.T) {
 		t.Fatalf("expected phase roundResults after all validated")
 	}
 
-	// With 2 validators, 1 rejection is not a majority (1*2 > 2 is false)
-	// So p2's answer should be valid
+	// With 2 players the author can't vote on their own answer, so p1 is the
+	// only eligible voter on p2's answer: 1 rejection of 1 is a majority.
 	verdict := ""
 	for _, result := range game.PublicState()["results"].(map[string][]map[string]any)[game.categories[0]] {
 		if result["playerId"] == "p2" {
@@ -287,8 +287,11 @@ func TestStopMajorityRejection(t *testing.T) {
 		}
 	}
 
-	if verdict == "invalid" {
-		t.Fatalf("expected p2's answer to survive with only 1 rejection out of 2 validators")
+	if verdict != "invalid" {
+		t.Fatalf("expected p2's answer rejected by the only other voter, got %q", verdict)
+	}
+	if game.roundScores["p2"] != 70 {
+		t.Fatalf("expected p2 to score 7 uniques (70), got %d", game.roundScores["p2"])
 	}
 }
 
@@ -301,7 +304,7 @@ func TestStopMajorityRejectionWith3Players(t *testing.T) {
 	for _, playerID := range []string{"p1", "p2", "p3"} {
 		answers := make(map[string]any)
 		for _, cat := range game.categories {
-			answers[cat] = "answer"
+			answers[cat] = game.letter + "answer" + playerID
 		}
 		_ = game.OnAction(playerID, map[string]any{
 			"action":  "set_answers",
@@ -614,6 +617,16 @@ func TestStopFinishedAfterLastRound(t *testing.T) {
 		"rejected": []any{},
 	})
 
+	// The last round's results are shown before the game finishes.
+	if game.phase != "roundResults" || game.Status() == StatusFinished {
+		t.Fatalf("expected final roundResults before finishing, got phase %s", game.phase)
+	}
+	name, _, ok := game.NextDeadline()
+	if !ok || name != "final" {
+		t.Fatalf("expected a final-results deadline, got %q ok=%v", name, ok)
+	}
+	game.OnTimer("final")
+
 	// At this point, game should be finished
 	if game.Status() != StatusFinished {
 		t.Fatalf("expected StatusFinished after all rounds complete")
@@ -641,7 +654,7 @@ func TestStopOnPlayerLeaveCompletesValidationGate(t *testing.T) {
 	for _, playerID := range []string{"p1", "p2", "p3"} {
 		answers := make(map[string]any)
 		for _, cat := range game.categories {
-			answers[cat] = "answer"
+			answers[cat] = game.letter + "answer" + playerID
 		}
 		_ = game.OnAction(playerID, map[string]any{
 			"action":  "set_answers",
@@ -774,8 +787,16 @@ func TestStopNextDeadlineInAnsweringPhase(t *testing.T) {
 }
 
 func TestStopNextDeadlineInValidatingPhase(t *testing.T) {
+	room := fakeRoom{players: []string{"p1", "p2"}, admin: "p1"}
 	game := &StopGame{}
-	game.Start("room-1", Options{})
+	game.Start("room-1", Options{Room: room})
+	for _, playerID := range []string{"p1", "p2"} {
+		answers := make(map[string]any)
+		for _, cat := range game.categories {
+			answers[cat] = game.letter + "x" + playerID
+		}
+		_ = game.OnAction(playerID, map[string]any{"action": "set_answers", "answers": answers})
+	}
 
 	// Enter validating
 	game.OnTimer("answers")
@@ -874,5 +895,210 @@ func TestStopUnknownLocaleDefaultsToEnglish(t *testing.T) {
 
 	if game.locale != "en" {
 		t.Fatalf("expected locale to default to en, got %s", game.locale)
+	}
+}
+
+// stopFill submits a full form for each player: letter + suffix + playerID.
+func stopFill(game *StopGame, players ...string) {
+	for _, playerID := range players {
+		answers := make(map[string]any)
+		for _, cat := range game.categories {
+			answers[cat] = game.letter + "word" + playerID
+		}
+		_ = game.OnAction(playerID, map[string]any{"action": "set_answers", "answers": answers})
+	}
+}
+
+func stopVerdict(game *StopGame, cat, playerID string) (string, int) {
+	for _, r := range game.results[cat] {
+		if r["playerId"] == playerID {
+			return r["verdict"].(string), r["points"].(int)
+		}
+	}
+	return "", -1
+}
+
+func TestStopUnknownActionErrors(t *testing.T) {
+	game := &StopGame{}
+	game.Start("room-1", Options{})
+	if err := game.OnAction("p1", map[string]any{"action": "explode"}); err == nil {
+		t.Fatalf("expected error for unknown action")
+	}
+	if err := game.OnAction("p1", map[string]any{}); err == nil {
+		t.Fatalf("expected error for missing action")
+	}
+}
+
+// Two players: a single NONSENSE vote from the only other player zeroes the
+// answer (the author is not a voter on their own answer).
+func TestStopTwoPlayerVoteRejects(t *testing.T) {
+	room := fakeRoom{players: []string{"p1", "p2"}, admin: "p1"}
+	game := &StopGame{}
+	game.Start("room-1", Options{Room: room})
+	stopFill(game, "p1", "p2")
+	game.OnTimer("answers")
+	if game.phase != "validating" {
+		t.Fatalf("expected validating, got %s", game.phase)
+	}
+
+	key := game.categories[0] + "|p2"
+	if err := game.OnAction("p1", map[string]any{"action": "vote", "key": key, "valid": false}); err != nil {
+		t.Fatalf("vote: %v", err)
+	}
+	tally := game.PublicState()["tally"].(map[string]map[string]int)
+	if tally[key]["nope"] != 1 || tally[key]["valid"] != 0 {
+		t.Fatalf("expected live tally 0/1 for %s, got %v", key, tally[key])
+	}
+	// Self-votes and unknown keys are refused.
+	if err := game.OnAction("p2", map[string]any{"action": "vote", "key": key, "valid": true}); err == nil {
+		t.Fatalf("expected error voting on own answer")
+	}
+	if err := game.OnAction("p2", map[string]any{"action": "vote", "key": "Nope|p1", "valid": true}); err == nil {
+		t.Fatalf("expected error voting on unknown key")
+	}
+
+	_ = game.OnAction("p1", map[string]any{"action": "validate"})
+	_ = game.OnAction("p2", map[string]any{"action": "validate"})
+	if game.phase != "roundResults" {
+		t.Fatalf("expected roundResults, got %s", game.phase)
+	}
+	if v, pts := stopVerdict(game, game.categories[0], "p2"); v != "invalid" || pts != 0 {
+		t.Fatalf("expected p2's first answer zeroed, got %s/%d", v, pts)
+	}
+	if v, pts := stopVerdict(game, game.categories[1], "p2"); v != "unique" || pts != 10 {
+		t.Fatalf("expected p2's second answer unique, got %s/%d", v, pts)
+	}
+	if game.roundScores["p2"] != 70 || game.roundScores["p1"] != 80 {
+		t.Fatalf("unexpected round scores %v", game.roundScores)
+	}
+}
+
+func TestStopValidateIgnoresForeignKeys(t *testing.T) {
+	room := fakeRoom{players: []string{"p1", "p2"}, admin: "p1"}
+	game := &StopGame{}
+	game.Start("room-1", Options{Room: room})
+	stopFill(game, "p1", "p2")
+	game.OnTimer("answers")
+
+	junk := make([]any, 0, 1000)
+	for i := 0; i < 1000; i++ {
+		junk = append(junk, "Junk|p2")
+	}
+	junk = append(junk, game.categories[0]+"|p2")
+	_ = game.OnAction("p1", map[string]any{"action": "validate", "rejected": junk})
+	for key := range game.validations["p1"] {
+		if _, ok := game.judgeable[key]; !ok {
+			t.Fatalf("stored a foreign key %q", key)
+		}
+	}
+	if len(game.validations["p1"]) > len(game.judgeable) {
+		t.Fatalf("validation map grew beyond the judgeable set")
+	}
+}
+
+func TestStopValidatingSkippedWhenNothingToJudge(t *testing.T) {
+	room := fakeRoom{players: []string{"p1", "p2"}, admin: "p1"}
+	game := &StopGame{}
+	game.Start("room-1", Options{Room: room})
+	// Nobody typed anything.
+	game.OnTimer("answers")
+	if game.phase != "roundResults" {
+		t.Fatalf("expected validation skipped straight to roundResults, got %s", game.phase)
+	}
+}
+
+func TestStopAnswersAcceptedDuringGrace(t *testing.T) {
+	room := fakeRoom{players: []string{"p1", "p2"}, admin: "p1"}
+	game := &StopGame{}
+	game.Start("room-1", Options{Room: room})
+	stopFill(game, "p1")
+	if err := game.OnAction("p1", map[string]any{"action": "stop"}); err != nil {
+		t.Fatalf("stop: %v", err)
+	}
+	if !game.stopped {
+		t.Fatalf("expected stopped")
+	}
+	cat := game.categories[0]
+	_ = game.OnAction("p2", map[string]any{"action": "set_answers", "answers": map[string]any{cat: game.letter + "late"}})
+	if game.answers["p2"][cat] != game.letter+"late" {
+		t.Fatalf("expected grace-period answer to be stored")
+	}
+}
+
+func TestStopPrivateStateCarriesRound(t *testing.T) {
+	room := fakeRoom{players: []string{"p1", "p2"}, admin: "p1"}
+	game := &StopGame{}
+	game.Start("room-1", Options{Room: room})
+	stopFill(game, "p1", "p2")
+	game.OnTimer("answers")
+	_ = game.OnAction("p1", map[string]any{"action": "validate"})
+	_ = game.OnAction("p2", map[string]any{"action": "validate"})
+	_ = game.OnAction("p1", map[string]any{"action": "next_round"})
+	priv := game.PrivateState("p1")
+	if priv["round"] != 2 {
+		t.Fatalf("expected private round 2, got %v", priv["round"])
+	}
+	if len(priv["answers"].(map[string]string)) != 0 {
+		t.Fatalf("expected empty answers in a fresh round")
+	}
+}
+
+func TestStopResultsFrozenAfterLeave(t *testing.T) {
+	room := &fakeRoom{players: []string{"p1", "p2", "p3"}, admin: "p1"}
+	game := &StopGame{}
+	game.Start("room-1", Options{Room: room})
+	stopFill(game, "p1", "p2", "p3")
+	game.OnTimer("answers")
+	for _, p := range []string{"p1", "p2", "p3"} {
+		_ = game.OnAction(p, map[string]any{"action": "validate"})
+	}
+	before := len(game.results[game.categories[0]])
+	scoreBefore := game.roundScores["p1"]
+	room.players = []string{"p1", "p2"}
+	game.OnPlayerLeave("p3")
+	if len(game.results[game.categories[0]]) != before || game.roundScores["p1"] != scoreBefore {
+		t.Fatalf("results changed after a leave during roundResults")
+	}
+}
+
+func TestStopFinalResultsThenFinish(t *testing.T) {
+	room := fakeRoom{players: []string{"p1", "p2"}, admin: "p1"}
+	game := &StopGame{}
+	game.Start("room-1", Options{Room: room, Settings: map[string]any{"rounds": 1}})
+	stopFill(game, "p1", "p2")
+	game.OnTimer("answers")
+	_ = game.OnAction("p1", map[string]any{"action": "validate"})
+	_ = game.OnAction("p2", map[string]any{"action": "validate"})
+	st := game.PublicState()
+	if st["phase"] != "roundResults" || st["final"] != true || st["results"] == nil {
+		t.Fatalf("expected final round results to be shown, got %v", st["phase"])
+	}
+	if game.Status() == StatusFinished {
+		t.Fatalf("finished before showing the last round's results")
+	}
+	// Admin can skip ahead.
+	_ = game.OnAction("p1", map[string]any{"action": "next_round"})
+	if game.Status() != StatusFinished {
+		t.Fatalf("expected admin skip to finish the game")
+	}
+}
+
+// With nobody connected, firing any phase's timer must leave the next
+// deadline (if any) in the future, or the hub re-fires OnTimer in a loop.
+func TestStopTimerWithNobodyConnectedRearms(t *testing.T) {
+	for _, rounds := range []int{1, 2} {
+		room := &fakeRoom{players: []string{"p1", "p2"}, admin: "p1"}
+		game := &StopGame{}
+		game.Start("room-1", Options{Room: room, Settings: map[string]any{"rounds": rounds}})
+		stopFill(game, "p1", "p2")
+		room.players = nil
+		for i := 0; i < 5; i++ {
+			name, _, ok := game.NextDeadline()
+			if !ok {
+				break
+			}
+			game.OnTimer(name)
+			assertDeadlineNotPast(t, game, "stop "+game.phase)
+		}
 	}
 }

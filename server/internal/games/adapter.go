@@ -81,3 +81,11 @@ type Adapter interface {
 	PublicState() map[string]any
 	PrivateState(playerID string) map[string]any
 }
+
+// Streamer is implemented by games with a live canvas (Gartic). The hub
+// relays a game.stream message only when the running game implements it and
+// AcceptStream allows this sender right now; stream payloads never reach
+// OnAction, so a stroke can't double as a real game action.
+type Streamer interface {
+	AcceptStream(playerID, action string) bool
+}

@@ -3,10 +3,47 @@ package games
 import "strings"
 
 // maxDrawingBytes caps an embedded canvas data: URL, independent of the WS
-// frame ceiling — these get stored and rebroadcast in full game state.
-// 512 KiB fits a full-canvas PNG doodle comfortably while staying under the
-// hub's 1 MiB per-message read limit.
-const maxDrawingBytes = 512 * 1024
+// frame ceiling — these get stored and rebroadcast in full game state to
+// every player, so they must stay small. Clients export compressed
+// JPEG/WebP (≤ ~150KB); 200KB leaves headroom for base64 overhead.
+const maxDrawingBytes = 200_000
+
+// MaxDrawingBytes is the exported drawing cap, for docs/tests.
+const MaxDrawingBytes = maxDrawingBytes
+
+var imageDataURLPrefixes = []string{
+	"data:image/png;base64,",
+	"data:image/jpeg;base64,",
+	"data:image/webp;base64,",
+}
+
+// ValidImageDataURL reports whether s is a base64 PNG/JPEG/WebP data: URL
+// within maxDrawingBytes. Games must check submitted drawings with it before
+// storing them: anything else (SVG with script, remote URLs, oversized blobs)
+// would be rebroadcast verbatim to every player.
+func ValidImageDataURL(s string) bool {
+	if len(s) > maxDrawingBytes {
+		return false
+	}
+	for _, prefix := range imageDataURLPrefixes {
+		if strings.HasPrefix(s, prefix) && len(s) > len(prefix) {
+			return isBase64Body(s[len(prefix):])
+		}
+	}
+	return false
+}
+
+func isBase64Body(s string) bool {
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case c >= 'A' && c <= 'Z', c >= 'a' && c <= 'z', c >= '0' && c <= '9', c == '+', c == '/', c == '=':
+		default:
+			return false
+		}
+	}
+	return true
+}
 
 // TruncateText caps a string to max runes.
 func TruncateText(s string, max int) string {

@@ -60,3 +60,26 @@ func TestRoomAllConnectedReady(t *testing.T) {
 		t.Fatalf("expected all connected players to be ready")
 	}
 }
+
+func TestTryAddPlayerCapacityAndNames(t *testing.T) {
+	room := &Room{Players: map[string]Player{}, MaxPlayers: 3}
+	if _, err := room.TryAddPlayer(Player{ID: "p1", Name: "Ana"}, false); err != nil {
+		t.Fatalf("first add: %v", err)
+	}
+	if _, err := room.TryAddPlayer(Player{ID: "p2", Name: " ana "}, false); err != ErrNameTaken {
+		t.Fatalf("want ErrNameTaken, got %v", err)
+	}
+	p, err := room.TryAddPlayer(Player{ID: "p2", Name: "Ana"}, true)
+	if err != nil || p.Name != "Ana 2" {
+		t.Fatalf("dedupe should suffix, got %q %v", p.Name, err)
+	}
+	if _, err := room.TryAddPlayer(Player{ID: "p3", Name: "Bo"}, false); err != nil {
+		t.Fatalf("third add: %v", err)
+	}
+	if _, err := room.TryAddPlayer(Player{ID: "p4", Name: "Cy"}, false); err != ErrRoomFull {
+		t.Fatalf("want ErrRoomFull, got %v", err)
+	}
+	if len(room.AdminChain) != 3 {
+		t.Fatalf("admin chain should track seated players, got %v", room.AdminChain)
+	}
+}

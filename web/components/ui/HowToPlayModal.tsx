@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { useI18n } from "@/lib/i18n";
 import { hueFor } from "./gameHues";
 import { Bulbs } from "./Bulbs";
@@ -25,9 +26,10 @@ export function HowToPlayModal({
 }) {
   const { t } = useI18n();
   const hue = hueFor(gameType);
+  const titleId = useId();
 
   return (
-    <Modal open={open} onClose={onClose}>
+    <Modal open={open} onClose={onClose} labelledBy={titleId}>
       <div
         className="overflow-hidden rounded-[20px] bg-(--panel)"
         style={{ border: `3px solid ${hue.base}`, boxShadow: "0 12px 0 rgba(0,0,0,.35)" }}
@@ -43,7 +45,7 @@ export function HowToPlayModal({
           >
             {t("common.howToPlay").replace("? ", "").toUpperCase()}
           </div>
-          <div className="font-display text-[22px]" style={{ color: hue.ink }}>
+          <div id={titleId} className="font-display text-[22px]" style={{ color: hue.ink }}>
             {gameName.toUpperCase()}
           </div>
         </div>

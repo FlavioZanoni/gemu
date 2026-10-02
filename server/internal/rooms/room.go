@@ -1,6 +1,9 @@
 package rooms
 
 import (
+	"encoding/json"
+	"errors"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -61,8 +64,12 @@ type Room struct {
 	Visibility Visibility `json:"visibility"`
 	JoinCode   string     `json:"joinCode"`
 	Password   string     `json:"-"`
-	MaxPlayers int        `json:"maxPlayers"`
-	Locale     string     `json:"locale"`
+	// ExternalKey binds the room to an embedding host's session (a hash of
+	// the awful.chat session id). Never sent to clients: the session id is a
+	// bearer value for the room.
+	ExternalKey string `json:"-"`
+	MaxPlayers  int    `json:"maxPlayers"`
+	Locale      string `json:"locale"`
 
 	mu         sync.RWMutex
 	Players    map[string]Player `json:"players"`
@@ -78,6 +85,51 @@ type Room struct {
 	NextGameName  string         `json:"nextGameName"`
 	SessionScores map[string]int `json:"sessionScores"`
 	PlayedGames   []PlayedGame   `json:"playedGames"`
+
+	// customDecks is the room's host-uploaded CAH decks, serialized by the hub
+	// (rooms can't import games). Opaque here; persisted with the room so a
+	// restart doesn't lose them. Never sent in snapshots.
+	customDecks json.RawMessage
+}
+
+// SetCustomDecks stores the serialized custom decks for persistence.
+func (r *Room) SetCustomDecks(blob []byte) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.customDecks = append(json.RawMessage(nil), blob...)
+}
+
+// CustomDecks returns the serialized custom decks (nil when none).
+func (r *Room) CustomDecks() []byte {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return append([]byte(nil), r.customDecks...)
+}
+
+// HasPlayer reports whether playerID is a member (connected or not).
+func (r *Room) HasPlayer(playerID string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	_, ok := r.Players[playerID]
+	return ok
+}
+
+// KnownName returns a member's current name, falling back to the name
+// captured in this session's played-game history for someone who left.
+func (r *Room) KnownName(playerID string) string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if p, ok := r.Players[playerID]; ok {
+		return p.Name
+	}
+	for i := len(r.PlayedGames) - 1; i >= 0; i-- {
+		for _, row := range r.PlayedGames[i].Standings {
+			if row.PlayerID == playerID && row.Name != "" {
+				return row.Name
+			}
+		}
+	}
+	return ""
 }
 
 func (r *Room) Snapshot() map[string]any {
@@ -180,12 +232,66 @@ func (r *Room) AddPlayer(player Player) {
 	r.AdminChain = append(r.AdminChain, player.ID)
 }
 
+var (
+	ErrRoomFull  = errors.New("room full")
+	ErrNameTaken = errors.New("display name already in use")
+)
+
+// maxNameRunes mirrors the hub's display-name cap; suffixed names stay within it.
+const maxNameRunes = 40
+
+// TryAddPlayer seats a new player atomically: the capacity check, the name
+// check and the insert all happen under one r.mu section, so concurrent joins
+// can neither overfill the room nor seat two players under one name. With
+// dedupe a taken name gets a numeric suffix ("Ana 2", "Ana 3"…) instead of
+// failing — for embedding hosts (awful.chat) whose names are labels, not
+// unique. Returns the player as seated (name possibly suffixed).
+func (r *Room) TryAddPlayer(player Player, dedupe bool) (Player, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.MaxPlayers > 0 && len(r.Players) >= r.MaxPlayers {
+		return Player{}, ErrRoomFull
+	}
+	if r.nameTakenLocked(player.Name, "") {
+		if !dedupe {
+			return Player{}, ErrNameTaken
+		}
+		base := []rune(player.Name)
+		if len(base) > maxNameRunes-4 {
+			base = base[:maxNameRunes-4]
+		}
+		found := false
+		for n := 2; n < 100; n++ {
+			candidate := string(base) + " " + strconv.Itoa(n)
+			if !r.nameTakenLocked(candidate, "") {
+				player.Name = candidate
+				found = true
+				break
+			}
+		}
+		if !found {
+			return Player{}, ErrNameTaken
+		}
+	}
+	if r.Players == nil {
+		r.Players = make(map[string]Player)
+	}
+	r.Players[player.ID] = player
+	r.AdminChain = append(r.AdminChain, player.ID)
+	return player, nil
+}
+
 // NameTaken reports whether another player (excluding excludePlayerID)
 // already uses this display name, case-insensitively.
 func (r *Room) NameTaken(name string, excludePlayerID string) bool {
-	name = strings.TrimSpace(name)
 	r.mu.RLock()
 	defer r.mu.RUnlock()
+	return r.nameTakenLocked(name, excludePlayerID)
+}
+
+// nameTakenLocked is NameTaken with r.mu already held.
+func (r *Room) nameTakenLocked(name string, excludePlayerID string) bool {
+	name = strings.TrimSpace(name)
 	for id, player := range r.Players {
 		if id == excludePlayerID {
 			continue

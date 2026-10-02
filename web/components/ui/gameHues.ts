@@ -38,10 +38,12 @@ export const gameHues: Record<string, GameHue> = {
     ink: "#ffffff",
     drop: "#8f1f33",
   },
+  // System token --hue-invention (#FF9D3F); trivia/fibber have no System
+  // swatch yet and keep their own.
   invention: {
-    base: "#ffb56b",
-    gradFrom: "#ffb56b",
-    gradTo: "#f28e35",
+    base: "#ff9d3f",
+    gradFrom: "#ffb15c",
+    gradTo: "#f28a2a",
     ink: "#3d1f0e",
     drop: "#9c5413",
   },

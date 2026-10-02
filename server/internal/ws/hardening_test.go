@@ -159,6 +159,10 @@ func TestConcurrentBroadcastNoPanic(t *testing.T) {
 		}()
 		go func() {
 			defer wg.Done()
+			// The per-connection rate limiter answers part of the burst with
+			// a single system.error instead of ok + broadcasts, so don't
+			// count on a fixed message total: read until quiet.
+			_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 			for i := 0; i < 200; i++ {
 				var env Envelope
 				if err := conn.ReadJSON(&env); err != nil {

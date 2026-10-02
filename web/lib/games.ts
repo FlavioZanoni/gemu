@@ -95,3 +95,64 @@ export const gamesCatalog: CuratedGame[] = [
     },
   },
 ];
+
+/** Compact label for chips and pills (design: "G. PHONE", "P. SILLY"). */
+export const shortGameName = (type: string, fallback = type) =>
+  (
+    {
+      stop: "Stop!",
+      gartic: "Gartic",
+      garticphone: "G. Phone",
+      cah: "CAH",
+      trivia: "Trivia",
+      fibber: "Fibber",
+      invention: "P. Silly",
+    } as Record<string, string>
+  )[type] ?? fallback;
+
+/** Localized compact game label (i18n `gameShort.<type>`), e.g. CAH is
+ *  "CARTAS" in pt-BR. Falls back to the catalog/server name. */
+export const gameLabel = (
+  type: string,
+  t: (key: string) => string,
+  fallback?: string,
+) => {
+  const key = `gameShort.${type}`;
+  const text = t(key);
+  return text === key ? (fallback ?? shortGameName(type)) : text;
+};
+
+export const minPlayersFor = (type: string) =>
+  gamesCatalog.find((g) => g.type === type)?.minPlayers ?? 2;
+
+/** One host-tunable knob for the intro screen. `key` is the server's
+ *  game.start settings key; options sit inside the server's clamp range and
+ *  `def` mirrors the server default (server/internal/games/*.go). */
+export type SettingSpec = {
+  key: string;
+  kind: "rounds" | "timer";
+  options: number[];
+  def: number;
+};
+
+export const gameSettings: Record<string, SettingSpec[]> = {
+  stop: [
+    { key: "rounds", kind: "rounds", options: [1, 3, 5, 10], def: 3 },
+    { key: "answerSeconds", kind: "timer", options: [60, 90, 150], def: 90 },
+  ],
+  gartic: [
+    { key: "rounds", kind: "rounds", options: [1, 2, 3, 5], def: 2 },
+    { key: "turnSeconds", kind: "timer", options: [45, 75, 120], def: 75 },
+  ],
+  garticphone: [{ key: "drawSeconds", kind: "timer", options: [60, 120, 180], def: 120 }],
+  cah: [{ key: "rounds", kind: "rounds", options: [3, 5, 8, 12], def: 8 }],
+  trivia: [
+    { key: "rounds", kind: "rounds", options: [5, 8, 12, 16], def: 8 },
+    { key: "answerSeconds", kind: "timer", options: [10, 20, 30], def: 20 },
+  ],
+  fibber: [
+    { key: "rounds", kind: "rounds", options: [3, 4, 6, 8], def: 4 },
+    { key: "writeSeconds", kind: "timer", options: [30, 45, 90], def: 45 },
+  ],
+  invention: [{ key: "rounds", kind: "rounds", options: [1, 2, 3, 5], def: 3 }],
+};

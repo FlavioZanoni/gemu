@@ -20,11 +20,14 @@ test("import a custom CAH deck via paste JSON", async ({ page }) => {
       { text: "The best part of ____.", pick: 1 },
       { text: "Nothing beats ____.", pick: 1 },
     ],
-    white: ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel"],
+    white: ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel", "india", "juliet"],
   };
   await picker.getByTestId("deck-paste-textarea").fill(JSON.stringify(deck));
   await picker.getByTestId("deck-add").click();
 
-  // The imported deck now appears in the picker's list.
-  await expect(picker.getByText("E2E Test Deck")).toBeVisible();
+  // The imported deck now appears in the picker's list (as a custom deck;
+  // the id format is the server's business, only its namespace is assumed).
+  await expect(picker.locator('[data-testid^="deck-custom:"]', { hasText: "E2E Test Deck" })).toBeVisible();
+  // The confirmation is a real string, not a raw i18n key.
+  await expect(picker.getByText("Deck added!")).toBeVisible();
 });

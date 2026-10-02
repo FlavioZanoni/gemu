@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { X, Check } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { CustomDeck, DeckMeta } from "@/lib/protocol";
@@ -13,6 +13,7 @@ export function DeckPicker({
   onClose,
   decks,
   selected,
+  deckAdd,
   onToggle,
   onAddCustom,
 }: {
@@ -20,13 +21,25 @@ export function DeckPicker({
   onClose: () => void;
   decks: DeckMeta[];
   selected: string[];
+  /** Server outcome of the last upload (store.deckAdd). */
+  deckAdd?: { seq: number; status: "pending" | "ok" | "error"; message?: string } | null;
   onToggle: (id: string) => void;
-  onAddCustom: (deck: CustomDeck) => void;
+  /** Sends the deck; returns the upload's seq to match deckAdd against. */
+  onAddCustom: (deck: CustomDeck) => number | void;
 }) {
   const { t } = useI18n();
+  const titleId = useId();
   const [showPaste, setShowPaste] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const [pasteError, setPasteError] = useState<string | null>(null);
+  // The upload we're waiting on: the paste box stays open (text intact)
+  // until the server accepts it, and shows its reason if it doesn't.
+  const [submittedSeq, setSubmittedSeq] = useState<number | null>(null);
+  const outcome = submittedSeq !== null && deckAdd && deckAdd.seq === submittedSeq ? deckAdd : null;
+  const accepted = outcome?.status === "ok";
+  const pending = outcome?.status === "pending";
+  const serverError = outcome?.status === "error" ? (outcome.message || t("decks.rejected")) : null;
+  const pasteOpen = showPaste && !accepted;
 
   const effectiveSelected =
     selected.length > 0
@@ -51,18 +64,18 @@ export function DeckPicker({
       setPasteError(t("decks.badShape"));
       return;
     }
-    onAddCustom(deck as CustomDeck);
-    setPasteText("");
+    const seq = onAddCustom(deck as CustomDeck);
     setPasteError(null);
-    setShowPaste(false);
+    setSubmittedSeq(typeof seq === "number" ? seq : null);
+    if (typeof seq !== "number") setShowPaste(false);
   };
 
   return (
-    <Modal open={open} onClose={onClose}>
+    <Modal open={open} onClose={onClose} labelledBy={titleId}>
       <div className="overflow-hidden rounded-[20px] border-[3px] border-(--hue-cah) bg-(--panel)" data-testid="deck-picker">
         <div className="flex items-center justify-between bg-[linear-gradient(180deg,#ff6b85,#e84863)] px-5 py-4">
-          <div className="font-display text-lg text-white">{t("decks.title")}</div>
-          <button onClick={onClose} className="font-display text-white/90 flex items-center">
+          <h2 id={titleId} className="font-display text-lg text-white">{t("decks.title")}</h2>
+          <button onClick={onClose} aria-label={t("common.close")} className="font-display text-white/90 flex items-center">
             <X size={20} strokeWidth={2.5} />
           </button>
         </div>
@@ -118,7 +131,12 @@ export function DeckPicker({
             })}
           </div>
 
-          {showPaste ? (
+          {accepted ? (
+            <p className="mt-3 text-xs font-semibold text-(--accent-2)" role="status">
+              {t("decks.added")}
+            </p>
+          ) : null}
+          {pasteOpen ? (
             <div className="mt-4 rounded-xl border-2 border-(--line) bg-(--bg-deep) p-3">
               <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-(--ink)/50">
                 {t("decks.pasteLabel")}
@@ -134,11 +152,13 @@ export function DeckPicker({
                 className="w-full rounded-lg border-2 border-(--line) bg-(--panel) p-2 font-mono text-xs text-(--ink) focus:border-(--accent-2) focus:outline-none"
                 data-testid="deck-paste-textarea"
               />
-              {pasteError ? (
-                <p className="mt-1 text-xs text-[#ffb3c1]">{pasteError}</p>
+              {pasteError || serverError ? (
+                <p className="mt-1 text-xs text-[#ffb3c1]" role="alert" data-testid="deck-error">
+                  {pasteError ?? serverError}
+                </p>
               ) : null}
               <div className="mt-2 flex gap-2">
-                <Button variant="hue" gameType="cah" size="sm" onClick={submitPaste} data-testid="deck-add">
+                <Button variant="hue" gameType="cah" size="sm" onClick={submitPaste} disabled={pending} data-testid="deck-add">
                   {t("decks.addDeck")}
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => setShowPaste(false)}>
@@ -149,7 +169,11 @@ export function DeckPicker({
           ) : (
             <button
               type="button"
-              onClick={() => setShowPaste(true)}
+              onClick={() => {
+                setShowPaste(true);
+                setSubmittedSeq(null);
+                setPasteText("");
+              }}
               className="mt-4 w-full rounded-xl border-2 border-dashed border-(--line) px-3 py-2.5 font-mono text-[11px] font-bold uppercase tracking-wider text-(--ink)/60 hover:border-(--accent-2) hover:text-(--accent-2)"
               data-testid="deck-import-toggle"
             >

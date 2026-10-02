@@ -1,22 +1,37 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { useI18n } from "@/lib/i18n";
-import { Card, Button, TimerBadge, Banner, HowToPlayModal } from "../ui";
+import { HowToPlayModal } from "../ui";
 import { Avatar } from "../ui/PlayerChip";
-import { DrawingCanvas } from "../DrawingCanvas";
+import { DrawingCanvas, type DrawingCanvasHandle } from "../DrawingCanvas";
 import { playerColorFor } from "../ui/gameHues";
+import { playSfx } from "@/lib/sfx";
+import type { Player } from "@/lib/protocol";
 import type { GameProps } from "./types";
+
+// ---------------------------------------------------------------------------
+// Wire types (server: internal/games/garticphone.go)
+// ---------------------------------------------------------------------------
 
 type GarticPhoneEntry = {
   author: string;
   kind: "text" | "drawing";
   text?: string;
+  /** Empty for a drawing step the author never submitted (auto-filled blank). */
   dataUrl?: string;
 };
 
 type GarticPhoneChain = {
   starter: string;
+  /** Full chain length — entries only holds the revealed prefix. */
   length: number;
   entries: GarticPhoneEntry[];
 };
@@ -27,10 +42,16 @@ type GarticPhonePublicState = {
   totalSteps: number;
   turnOrder: string[];
   scores: Record<string, number>;
-  deadline: number;
+  deadline?: number;
+  /** deadline - server now, at broadcast time: skew-free countdown anchor. */
+  remainingMs?: number;
   submitted?: string[];
+  /** Chain on screen during the reveal. */
   revealChain?: number;
+  /** COUNT of revealChain's entries revealed (newest = revealPos - 1). */
   revealPos?: number;
+  /** Last chain fully shown: the host's next press is FINISH. */
+  revealDone?: boolean;
   likes?: Record<string, number>;
   reactions?: Record<string, Record<string, number>>;
   chains?: GarticPhoneChain[];
@@ -40,416 +61,999 @@ type GarticPhonePrivateState = {
   submitted?: boolean;
   chain?: number;
   prevEntry?: GarticPhoneEntry;
+  /** Joined after the chains were dealt: watches, reacts in the reveal. */
+  spectator?: boolean;
+  /** "chain|entry" -> emoji this player reacted with. */
+  myReactions?: Record<string, string>;
 };
+
+const EMOJIS = ["😂", "💀", "⭐"] as const;
+type Emoji = (typeof EMOJIS)[number];
+
+const MAX_CHARS = 200;
+/** Submit unsent work this long before the server deadline commits the step. */
+const AUTO_SUBMIT_LEAD_MS = 2000;
+/** Lead used instead when drafting starts inside the normal lead window. */
+const LATE_LEAD_MS = 500;
+
+// Design tokens (Gemu System · G. PHONE hue).
+const HUE = "var(--hue-garticphone)";
+const HUE_HEX = "#b78bff";
+const HUE_GRAD = "linear-gradient(180deg,#c9a4ff,#a678f2)";
+const HUE_INK = "#2d1650";
+const HUE_DROP = "#5f3d99";
+const CREAM = "#fff8e7";
+
+type StepClock = { deadline?: number; remainingMs?: number };
+
+/** Fires `fire` AUTO_SUBMIT_LEAD_MS before the step deadline, while enabled.
+ *  The deadline is anchored to THIS device's clock from the server's
+ *  remainingMs when each state arrives (server/client clock skew can't make
+ *  it fire early); the epoch `deadline` is only a fallback. Drafting that
+ *  starts inside the lead window waits until LATE_LEAD_MS before the
+ *  deadline instead of submitting the first keystroke/stroke right away. */
+function useAutoSubmit(clock: StepClock, enabled: boolean, fire: () => void) {
+  const { deadline, remainingMs } = clock;
+  const fireRef = useRef(fire);
+  useEffect(() => {
+    fireRef.current = fire;
+  });
+  const deadlineAt = useRef<number | null>(null);
+  useEffect(() => {
+    if (typeof remainingMs === "number") deadlineAt.current = Date.now() + remainingMs;
+    else deadlineAt.current = deadline ?? null;
+  }, [deadline, remainingMs]);
+  useEffect(() => {
+    const at = deadlineAt.current;
+    if (!enabled || at === null) return;
+    const remaining = at - Date.now();
+    const lead = remaining > AUTO_SUBMIT_LEAD_MS + LATE_LEAD_MS ? AUTO_SUBMIT_LEAD_MS : LATE_LEAD_MS;
+    const id = setTimeout(() => fireRef.current(), Math.max(0, remaining - lead));
+    return () => clearTimeout(id);
+  }, [deadline, remainingMs, enabled]);
+}
+
+// ---------------------------------------------------------------------------
+// Small presentational pieces
+// ---------------------------------------------------------------------------
+
+const eyebrow: CSSProperties = {
+  font: "700 11px var(--font-mono), monospace",
+  letterSpacing: ".22em",
+  textTransform: "uppercase",
+  color: HUE,
+};
+
+const label: CSSProperties = {
+  font: "700 10px var(--font-mono), monospace",
+  letterSpacing: ".2em",
+  textTransform: "uppercase",
+  color: "var(--ink-dim)",
+};
+
+function LockButton({
+  children,
+  disabled,
+  onClick,
+  testId,
+}: {
+  children: ReactNode;
+  disabled?: boolean;
+  onClick: () => void;
+  testId: string;
+}) {
+  return (
+    <button
+      type="button"
+      data-testid={testId}
+      className="buzzer w-full"
+      disabled={disabled}
+      onClick={() => {
+        playSfx("buzzer");
+        onClick();
+      }}
+      style={{
+        fontSize: 15,
+        color: HUE_INK,
+        background: HUE_GRAD,
+        padding: "13px 16px",
+        ["--buzzer-drop" as string]: HUE_DROP,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function TextDraft({
+  value,
+  onChange,
+  onSubmit,
+  placeholder,
+  testId,
+  autoFocus,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onSubmit: () => void;
+  placeholder: string;
+  testId: string;
+  autoFocus?: boolean;
+}) {
+  return (
+    <div className="relative">
+      <textarea
+        data-testid={testId}
+        value={value}
+        maxLength={MAX_CHARS}
+        autoFocus={autoFocus}
+        rows={2}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            onSubmit();
+          }
+        }}
+        placeholder={placeholder}
+        className="block w-full resize-none rounded-xl px-3 py-3 outline-none placeholder:text-(--ink-faint)"
+        style={{
+          background: "var(--bg)",
+          border: `2px solid ${HUE}`,
+          boxShadow: "0 0 0 4px rgba(183,139,255,.12)",
+          font: "600 15px var(--font-sans), sans-serif",
+          color: "var(--ink)",
+          minHeight: 64,
+        }}
+      />
+      <span
+        className="pointer-events-none absolute right-3 bottom-2"
+        style={{
+          font: "400 10px var(--font-mono), monospace",
+          color: "var(--ink-faint)",
+        }}
+      >
+        {value.length}/{MAX_CHARS}
+      </span>
+    </div>
+  );
+}
+
+/** A drawing on cream paper, or a placeholder when the step was auto-filled blank. */
+function DrawingFrame({
+  dataUrl,
+  alt,
+  blankLabel,
+  style,
+  border = `3px solid ${HUE}`,
+  testId,
+}: {
+  dataUrl?: string;
+  alt: string;
+  blankLabel: string;
+  style?: CSSProperties;
+  border?: string;
+  testId?: string;
+}) {
+  return (
+    <div
+      data-testid={testId}
+      className="flex items-center justify-center overflow-hidden"
+      style={{ background: CREAM, border, borderRadius: 16, ...style }}
+    >
+      {dataUrl ? (
+        // Player drawings are data: URLs — next/image adds nothing here.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={dataUrl} alt={alt} className="h-full w-full object-contain" />
+      ) : (
+        <span
+          className="px-4 text-center"
+          style={{
+            font: "700 11px var(--font-mono), monospace",
+            letterSpacing: ".15em",
+            color: "#8a7f60",
+          }}
+        >
+          {blankLabel}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function PlayerDot({
+  player,
+  index,
+  size = 30,
+}: {
+  player?: Player;
+  index: number;
+  size?: number;
+}) {
+  const color = playerColorFor(index >= 0 ? index : 0);
+  if (player) return <Avatar player={player} color={color} size={size} />;
+  return (
+    <div
+      className="flex-none rounded-full"
+      style={{
+        width: size,
+        height: size,
+        background: CREAM,
+        border: `2px solid ${color}`,
+      }}
+    />
+  );
+}
+
+/** turnOrder of the game whose auto how-to was already dismissed. */
+let howToSeenFor = "";
+
+// ---------------------------------------------------------------------------
+// Root
+// ---------------------------------------------------------------------------
 
 export function GarticPhoneGame(props: GameProps) {
   const { t } = useI18n();
-  const publicState = props.publicState as GarticPhonePublicState | null;
-  const privateState = props.privateState as GarticPhonePrivateState | null;
-  const canvasRef = useRef(null);
+  const pub = (props.publicState ?? {}) as Partial<GarticPhonePublicState>;
+  const priv = (props.privateState ?? {}) as GarticPhonePrivateState;
 
-  const phase = publicState?.phase ?? "prompt";
-  const step = publicState?.step ?? 0;
-  const totalSteps = publicState?.totalSteps ?? 1;
-  const scores = publicState?.scores ?? {};
-  const deadline = publicState?.deadline ?? null;
-  const submitted = publicState?.submitted ?? [];
-  const chains = publicState?.chains ?? [];
-  const revealChain = publicState?.revealChain ?? 0;
-  const revealPos = publicState?.revealPos ?? 0;
-  const reactions = publicState?.reactions ?? {};
-
-  const [promptText, setPromptText] = useState("");
-  const [descriptionText, setDescriptionText] = useState("");
-  const [drawingData, setDrawingData] = useState("");
-  const [showHowTo, setShowHowTo] = useState(step === 0 && phase === "prompt");
-  const [localReacted, setLocalReacted] = useState<Set<string>>(new Set());
-
-  const isSubmitted = privateState?.submitted ?? false;
-  const myChain = privateState?.chain ?? -1;
-  const prevEntry = privateState?.prevEntry;
-
-  const playerNames = useMemo(() => {
-    const map = new Map<string, string>();
-    props.players.forEach((player) => {
-      map.set(player.id, player.name);
-    });
-    return map;
-  }, [props.players]);
-
-  const handleSubmitPrompt = () => {
-    if (promptText.trim()) {
-      props.sendAction({ action: "submit_prompt", text: promptText });
-      setPromptText("");
-    }
+  const phase = pub.phase ?? "prompt";
+  const step = pub.step ?? 0;
+  // Auto-open the how-to once per game: a remount (layout change, reconnect)
+  // must not pop it again over a half-typed prompt.
+  const gameKey = (pub.turnOrder ?? []).join(",");
+  const [showHowTo, setShowHowTo] = useState(
+    step === 0 && phase === "prompt" && howToSeenFor !== gameKey,
+  );
+  const closeHowTo = () => {
+    howToSeenFor = gameKey;
+    setShowHowTo(false);
   };
 
-  const handleCanvasDrawing = (dataUrl: string) => {
-    setDrawingData(dataUrl);
-  };
+  const nameOf = useCallback(
+    (id: string | undefined) =>
+      props.players.find((p) => p.id === id)?.name ?? t("garticphone.someone"),
+    [props.players, t],
+  );
 
-  const handleSubmitDrawing = () => {
-    if (drawingData) {
-      props.sendAction({ action: "submit_drawing", draw: drawingData });
-      setDrawingData("");
-    }
-  };
-
-  const handleSubmitDescription = () => {
-    if (descriptionText.trim()) {
-      props.sendAction({ action: "submit_description", text: descriptionText });
-      setDescriptionText("");
-    }
-  };
-
-  const handleRevealNext = () => {
-    if (props.isAdmin) {
-      props.sendAction({ action: "reveal_next" });
-    }
-  };
-
-  const handleReact = (chainIdx: number, entryIdx: number, emoji: "😂" | "💀" | "⭐") => {
-    const key = `${chainIdx}|${entryIdx}`;
-    if (!localReacted.has(key)) {
-      setLocalReacted((prev) => new Set([...prev, key]));
-      props.sendAction({ action: "react", chain: chainIdx, entry: entryIdx, emoji });
-    }
-  };
-
-  const submittedCount = submitted.length;
-  const totalPlayers = props.players.length;
-  const submissionProgress = `${submittedCount} of ${totalPlayers} submitted`;
-
-  // Prompt phase
-  if (phase === "prompt") {
-    return (
-      <>
-        <HowToPlayModal
-          open={showHowTo}
-          gameType="garticphone"
-          gameName="GARTIC PHONE"
-          stepCount={4}
-          onClose={() => setShowHowTo(false)}
-        />
-        <div className="space-y-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="text-sm font-mono text-(--ink)/60">STEP 1 OF {totalSteps}</div>
-              <div className="slab mt-1 text-2xl" style={{ color: "var(--hue-garticphone)" }}>
-                WRITE PROMPT
-              </div>
-            </div>
-            <TimerBadge deadline={deadline} />
-          </div>
-
-          {isSubmitted && (
-            <Banner variant="waiting">{submissionProgress}</Banner>
-          )}
-
-          {!isSubmitted && (
-            <div className="space-y-2">
-              <textarea
-                data-testid="garticphone-prompt-input"
-                value={promptText}
-                onChange={(e) => setPromptText(e.target.value)}
-                placeholder="Write a silly prompt…"
-                className="w-full rounded-lg border-2 border-(--line) bg-(--panel) px-3 py-2 text-(--ink) placeholder-text-(--ink)/40 font-sans min-h-24"
-              />
-              <Button
-                data-testid="garticphone-prompt-submit"
-                variant="hue"
-                gameType="garticphone"
-                onClick={handleSubmitPrompt}
-                disabled={!promptText.trim()}
-                className="w-full"
-              >
-                SUBMIT
-              </Button>
-            </div>
-          )}
-        </div>
-      </>
+  let body: ReactNode;
+  if (phase === "reveal") {
+    body = <RevealPhase {...props} pub={pub} priv={priv} nameOf={nameOf} />;
+  } else if (priv.spectator) {
+    body = <SpectatorPanel />;
+  } else if (priv.submitted) {
+    body = <WaitingPanel pub={pub} players={props.players} />;
+  } else if (phase === "prompt") {
+    body = (
+      <PromptPhase
+        key="prompt"
+        sendAction={props.sendAction}
+        clock={{ deadline: pub.deadline, remainingMs: pub.remainingMs }}
+      />
+    );
+  } else if (phase === "drawing") {
+    // Keyed by step: with ≥5 players there are several drawing steps and the
+    // canvas/draft must start fresh each time.
+    body = (
+      <DrawPhase
+        key={`draw-${step}`}
+        sendAction={props.sendAction}
+        clock={{ deadline: pub.deadline, remainingMs: pub.remainingMs }}
+        prev={priv.prevEntry}
+        nameOf={nameOf}
+      />
+    );
+  } else {
+    body = (
+      <WritePhase
+        key={`write-${step}`}
+        sendAction={props.sendAction}
+        clock={{ deadline: pub.deadline, remainingMs: pub.remainingMs }}
+        prev={priv.prevEntry}
+        nameOf={nameOf}
+      />
     );
   }
 
-  // Drawing phase
-  if (phase === "drawing") {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="text-sm font-mono text-(--ink)/60">STEP {step} OF {totalSteps}</div>
-            <div className="slab mt-1 text-2xl" style={{ color: "var(--hue-garticphone)" }}>
-              DRAW
-            </div>
-          </div>
-          <TimerBadge deadline={deadline} />
-        </div>
-
-        {isSubmitted && (
-          <Banner variant="waiting">{submissionProgress}</Banner>
-        )}
-
-        {!isSubmitted && (
-          <div className="space-y-3">
-            {prevEntry && (
-              <Card variant="panel" className="bg-(--panel-raised)">
-                <div className="text-xs font-semibold text-(--ink)/70 mb-2">
-                  PREVIOUS ENTRY
-                </div>
-                {prevEntry.kind === "text" ? (
-                  <div className="font-sans">{prevEntry.text}</div>
-                ) : (
-                  <img src={prevEntry.dataUrl} alt="Previous drawing" className="w-full rounded" />
-                )}
-              </Card>
-            )}
-
-            <div className="rounded-xl border-2 overflow-hidden" style={{ borderColor: "var(--hue-garticphone)", height: "300px", boxShadow: "0 5px 0 #5f3d99" }}>
-              <DrawingCanvas
-                ref={canvasRef}
-                onChange={handleCanvasDrawing}
-                value={drawingData}
-              />
-            </div>
-
-            <Button
-              data-testid="garticphone-submit-drawing"
-              variant="hue"
-              gameType="garticphone"
-              onClick={handleSubmitDrawing}
-              disabled={!drawingData}
-              className="w-full"
-            >
-              SUBMIT DRAWING
-            </Button>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Writing phase
-  if (phase === "writing") {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="text-sm font-mono text-(--ink)/60">STEP {step} OF {totalSteps}</div>
-            <div className="slab mt-1 text-2xl" style={{ color: "var(--hue-garticphone)" }}>
-              DESCRIBE
-            </div>
-          </div>
-          <TimerBadge deadline={deadline} />
-        </div>
-
-        {isSubmitted && (
-          <Banner variant="waiting">{submissionProgress}</Banner>
-        )}
-
-        {!isSubmitted && (
-          <div className="space-y-4">
-            {prevEntry && (
-              <>
-                <div style={{ textAlign: "center", fontSize: "10px", fontWeight: 700, letterSpacing: "0.25em", color: "#b78bff", marginBottom: "12px", textTransform: "uppercase", fontFamily: "'Space Mono'" }}>
-                  {(playerNames.get(prevEntry.author) ?? "SOMEONE").toUpperCase()} DREW THIS… WHAT IS IT?!
-                </div>
-                <div style={{ height: "290px", backgroundColor: "#fff8e7", borderRadius: "16px", border: "3px solid #b78bff", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                  {prevEntry.kind === "text" ? (
-                    <div style={{ padding: "16px", textAlign: "center", color: "#1c1230" }}>{prevEntry.text}</div>
-                  ) : (
-                    <img src={prevEntry.dataUrl} alt="Drawing to describe" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                  )}
-                </div>
-              </>
-            )}
-
-            <div style={{ marginTop: "14px" }}>
-              <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.2em", color: "rgba(255,233,168,.5)", marginBottom: "5px", textTransform: "uppercase" }}>
-                YOUR DESCRIPTION
-              </div>
-              <textarea
-                data-testid="garticphone-description-input"
-                value={descriptionText}
-                onChange={(e) => setDescriptionText(e.target.value)}
-                placeholder="a capybara driving a bus…"
-                style={{ width: "100%", backgroundColor: "#1c1230", border: "2px solid #b78bff", borderRadius: "12px", padding: "12px", fontFamily: "'Space Grotesk', sans-serif", fontSize: "14px", fontWeight: 600, color: "#ffe9a8", boxShadow: "0 0 0 4px rgba(183,139,255,.12)", minHeight: "80px", boxSizing: "border-box" }}
-              />
-            </div>
-
-            <Button
-              data-testid="garticphone-description-submit"
-              variant="hue"
-              gameType="garticphone"
-              onClick={handleSubmitDescription}
-              disabled={!descriptionText.trim()}
-              className="w-full"
-              style={{ background: "linear-gradient(180deg, #c9a4ff, #a678f2)", boxShadow: "0 4px 0 #5f3d99" }}
-            >
-              LOCK IT IN
-            </Button>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Reveal phase
   return (
-    <div className="space-y-4">
-      {chains.length > 0 && revealChain < chains.length && (
-        <>
-          <div style={{ padding: "16px", background: "radial-gradient(ellipse at 50% -10%, rgba(183,139,255,.25), transparent 55%)", borderRadius: "16px", marginBottom: "12px" }}>
-            {/* Chain header */}
-            <div style={{ marginBottom: "12px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-                <div>
-                  <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.3em", color: "#b78bff", marginBottom: "4px", textTransform: "uppercase" }}>
-                    THE REVEAL · CHAIN {revealChain + 1} OF {chains.length}
-                  </div>
-                  <div style={{ fontFamily: "'Alfa Slab One'", fontSize: "17px", color: "#ffe9a8" }}>
-                    {playerNames.get(chains[revealChain]?.starter) ?? "CHAIN"}'S CHAIN
-                  </div>
-                </div>
-                {/* Progress dots */}
-                <div style={{ display: "flex", gap: "4px" }}>
-                  {chains[revealChain]?.entries.map((_, dotIdx) => (
-                    <span
-                      key={dotIdx}
+    <div
+      data-testid="garticphone-root"
+      data-phase={phase}
+      className="mx-auto w-full min-w-0"
+      style={{ maxWidth: phase === "reveal" ? 760 : 560 }}
+    >
+      <HowToPlayModal
+        open={showHowTo}
+        gameType="garticphone"
+        gameName="GARTIC PHONE"
+        stepCount={4}
+        onClose={closeHowTo}
+      />
+      {phase !== "reveal" && (
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <span
+            data-testid="garticphone-step"
+            style={{
+              font: "700 11px var(--font-mono), monospace",
+              letterSpacing: ".15em",
+              color: HUE_INK,
+              background: HUE,
+              borderRadius: 8,
+              padding: "3px 9px",
+            }}
+          >
+            {t("garticphone.step", { n: step + 1, total: pub.totalSteps ?? 1 })}
+          </span>
+          <StepDots step={step} total={pub.totalSteps ?? 1} />
+        </div>
+      )}
+      {body}
+    </div>
+  );
+}
+
+function StepDots({ step, total }: { step: number; total: number }) {
+  return (
+    <div className="flex flex-wrap justify-end gap-1" aria-hidden>
+      {Array.from({ length: total }, (_, i) => (
+        <span
+          key={i}
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 99,
+            background: i <= step ? HUE : "var(--line)",
+            boxShadow: i === step ? `0 0 8px ${HUE}` : "none",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Write / draw / describe phases
+// ---------------------------------------------------------------------------
+
+type SendAction = GameProps["sendAction"];
+
+function PromptPhase({
+  sendAction,
+  clock,
+}: {
+  sendAction: SendAction;
+  clock: StepClock;
+}) {
+  const { t } = useI18n();
+  const [text, setText] = useState("");
+  const submit = () => {
+    const trimmed = text.trim();
+    if (trimmed) sendAction({ action: "submit_prompt", text: trimmed });
+  };
+  useAutoSubmit(clock, text.trim() !== "", submit);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="text-center" style={eyebrow}>
+        {t("garticphone.promptEyebrow")}
+      </div>
+      <div className="slab text-center text-[clamp(20px,5vw,28px)] leading-tight [@media(max-height:520px)]:hidden">
+        {t("garticphone.promptTitle")}
+      </div>
+      <div>
+        <div style={{ ...label, marginBottom: 5 }}>
+          {t("garticphone.promptLabel")}
+        </div>
+        <TextDraft
+          testId="garticphone-prompt-input"
+          value={text}
+          onChange={setText}
+          onSubmit={submit}
+          placeholder={t("garticphone.promptPlaceholder")}
+          autoFocus
+        />
+      </div>
+      <LockButton
+        testId="garticphone-prompt-submit"
+        disabled={!text.trim()}
+        onClick={submit}
+      >
+        {t("garticphone.lockIn")}
+      </LockButton>
+      <AutoHint />
+    </div>
+  );
+}
+
+function AutoHint() {
+  const { t } = useI18n();
+  return (
+    <div
+      className="text-center [@media(max-height:520px)]:hidden"
+      style={{
+        font: "400 10px var(--font-mono), monospace",
+        color: "var(--ink-faint)",
+      }}
+    >
+      {t("garticphone.autoSubmitHint")}
+    </div>
+  );
+}
+
+function DrawPhase({
+  sendAction,
+  clock,
+  prev,
+  nameOf,
+}: {
+  sendAction: SendAction;
+  clock: StepClock;
+  prev?: GarticPhoneEntry;
+  nameOf: (id?: string) => string;
+}) {
+  const { t } = useI18n();
+  const canvasRef = useRef<DrawingCanvasHandle | null>(null);
+  const [hasDrawn, setHasDrawn] = useState(false);
+
+  const onChange = useCallback(() => setHasDrawn(true), []);
+
+  const submit = () => {
+    const canvas = canvasRef.current;
+    if (!canvas || !hasDrawn) return;
+    // ≤640px long side, webp (jpeg fallback), ≤~150KB — server cap is 200KB.
+    const draw =
+      canvas.exportCompressed?.() ?? canvas.toDataURL("image/jpeg", 0.8);
+    sendAction({ action: "submit_drawing", draw });
+  };
+  useAutoSubmit(clock, hasDrawn, submit);
+
+  const prompt = prev?.kind === "text" ? prev.text : undefined;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div
+        className="text-center [@media(max-height:520px)]:hidden"
+        style={eyebrow}
+      >
+        {t("garticphone.drawEyebrow", { name: nameOf(prev?.author) })}
+      </div>
+      <div
+        data-testid="garticphone-draw-prompt"
+        className="mx-auto max-w-full text-center"
+        style={{
+          background: HUE_GRAD,
+          color: HUE_INK,
+          borderRadius: 14,
+          padding: "10px 16px",
+          boxShadow: `0 5px 0 ${HUE_DROP}`,
+          font: "700 clamp(15px,3.6vw,19px) var(--font-sans), sans-serif",
+          overflowWrap: "anywhere",
+        }}
+      >
+        “{prompt ?? "…"}”
+      </div>
+      <DrawingCanvas
+        ref={canvasRef}
+        onChange={onChange}
+        aspect="landscape"
+        hue={HUE_HEX}
+        fitHeight
+        reserveBelow={84}
+      />
+      <LockButton
+        testId="garticphone-submit-drawing"
+        disabled={!hasDrawn}
+        onClick={submit}
+      >
+        {t("garticphone.lockIn")}
+      </LockButton>
+      <AutoHint />
+    </div>
+  );
+}
+
+function WritePhase({
+  sendAction,
+  clock,
+  prev,
+  nameOf,
+}: {
+  sendAction: SendAction;
+  clock: StepClock;
+  prev?: GarticPhoneEntry;
+  nameOf: (id?: string) => string;
+}) {
+  const { t } = useI18n();
+  const [text, setText] = useState("");
+  const submit = () => {
+    const trimmed = text.trim();
+    if (trimmed) sendAction({ action: "submit_description", text: trimmed });
+  };
+  useAutoSubmit(clock, text.trim() !== "", submit);
+
+  const blank = !prev?.dataUrl;
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="text-center" style={eyebrow}>
+        {t("garticphone.describeEyebrow", { name: nameOf(prev?.author) })}
+      </div>
+      <DrawingFrame
+        testId="garticphone-describe-drawing"
+        dataUrl={prev?.dataUrl}
+        alt={t("garticphone.drawingAlt", { name: nameOf(prev?.author) })}
+        blankLabel={t("garticphone.blankDrawingHint")}
+        style={{
+          height: "clamp(150px, calc(100dvh - 380px), 290px)",
+          boxShadow: "0 5px 0 rgba(0,0,0,.35)",
+        }}
+      />
+      <div>
+        <div style={{ ...label, marginBottom: 5 }}>
+          {t("garticphone.descriptionLabel")}
+        </div>
+        <TextDraft
+          testId="garticphone-description-input"
+          value={text}
+          onChange={setText}
+          onSubmit={submit}
+          placeholder={
+            blank
+              ? t("garticphone.blankDescribePlaceholder")
+              : t("garticphone.descriptionPlaceholder")
+          }
+        />
+      </div>
+      <LockButton
+        testId="garticphone-description-submit"
+        disabled={!text.trim()}
+        onClick={submit}
+      >
+        {t("garticphone.lockIn")}
+      </LockButton>
+      <AutoHint />
+    </div>
+  );
+}
+
+function WaitingPanel({
+  pub,
+  players,
+}: {
+  pub: Partial<GarticPhonePublicState>;
+  players: Player[];
+}) {
+  const { t } = useI18n();
+  const roster = pub.turnOrder ?? [];
+  const done = new Set(pub.submitted ?? []);
+  const doneCount = roster.filter((id) => done.has(id)).length;
+  return (
+    <div
+      data-testid="garticphone-waiting"
+      className="flex flex-col items-center gap-4 rounded-2xl px-4 py-6 text-center"
+      style={{ background: "var(--panel)", border: "2px solid var(--line)" }}
+    >
+      <div
+        className="slab animate-slam text-[clamp(22px,6vw,32px)]"
+        style={{ color: HUE }}
+      >
+        {t("garticphone.lockedIn")}
+      </div>
+      <div style={label}>
+        {t("garticphone.waitingCount", {
+          done: doneCount,
+          total: roster.length,
+        })}
+      </div>
+      <div className="flex flex-wrap justify-center gap-3">
+        {roster.map((id) => {
+          const idx = players.findIndex((p) => p.id === id);
+          const player = players[idx];
+          const ok = done.has(id);
+          return (
+            <div
+              key={id}
+              className="flex flex-col items-center gap-1"
+              style={{ opacity: ok ? 1 : 0.45 }}
+            >
+              <div className="relative">
+                <PlayerDot player={player} index={idx} size={40} />
+                {ok && (
+                  <span
+                    className="absolute -right-1 -bottom-1 flex items-center justify-center rounded-full"
+                    style={{
+                      width: 18,
+                      height: 18,
+                      background: HUE,
+                      color: HUE_INK,
+                      font: "700 11px var(--font-sans)",
+                    }}
+                  >
+                    ✓
+                  </span>
+                )}
+              </div>
+              <span
+                className="max-w-16 truncate"
+                style={{
+                  font: "600 11px var(--font-sans)",
+                  color: "var(--ink-dim)",
+                }}
+              >
+                {player?.name ?? "?"}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SpectatorPanel() {
+  const { t } = useI18n();
+  return (
+    <div
+      data-testid="garticphone-spectator"
+      className="flex flex-col items-center gap-2 rounded-2xl px-4 py-8 text-center"
+      style={{ background: "var(--panel)", border: `2px dashed ${HUE}` }}
+    >
+      <div className="slab text-[clamp(20px,5vw,28px)]" style={{ color: HUE }}>
+        {t("garticphone.spectatorTitle")}
+      </div>
+      <div
+        className="max-w-sm"
+        style={{ font: "500 14px var(--font-sans)", color: "var(--ink-dim)" }}
+      >
+        {t("garticphone.spectatorBody")}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The reveal — the money screen
+// ---------------------------------------------------------------------------
+
+function RevealPhase({
+  pub,
+  priv,
+  players,
+  playerId,
+  isAdmin,
+  sendAction,
+  nameOf,
+}: GameProps & {
+  pub: Partial<GarticPhonePublicState>;
+  priv: GarticPhonePrivateState;
+  nameOf: (id?: string) => string;
+}) {
+  const { t } = useI18n();
+  const chains = pub.chains ?? [];
+  const chainIdx = Math.min(
+    pub.revealChain ?? 0,
+    Math.max(0, chains.length - 1),
+  );
+  const chain = chains[chainIdx];
+  const entries = chain?.entries ?? [];
+  const newest = entries.length - 1;
+  const newestKey = `${chainIdx}|${newest}`;
+  const reactions = pub.reactions ?? {};
+  const revealDone =
+    pub.revealDone ??
+    (chainIdx >= chains.length - 1 &&
+      !!chain &&
+      entries.length >= chain.length);
+  const chainDone = !!chain && entries.length >= chain.length;
+
+  // Optimistic local picks so the pill lights up before the state round-trip.
+  const [localPicks, setLocalPicks] = useState<Record<string, string>>({});
+  const picks = { ...localPicks, ...(priv.myReactions ?? {}) };
+  const myPick = picks[newestKey];
+  const newestEntry = entries[newest];
+  const ownEntry = newestEntry?.author === playerId;
+
+  const react = (emoji: Emoji) => {
+    if (newest < 0 || myPick || ownEntry) return;
+    setLocalPicks((prev) => ({ ...prev, [newestKey]: emoji }));
+    playSfx("click");
+    sendAction({ action: "react", chain: chainIdx, entry: newest, emoji });
+  };
+
+  // Keep the newest card and the reaction/host controls in view as the
+  // chain grows (small iframe tiles, phones). Controls win when both don't fit.
+  const newestRef = useRef<HTMLDivElement | null>(null);
+  const controlsRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    newestRef.current?.scrollIntoView({ block: "nearest" });
+    controlsRef.current?.scrollIntoView({ block: "nearest" });
+  }, [newestKey]);
+
+  let nextLabel = t("garticphone.next");
+  if (revealDone) nextLabel = t("garticphone.finish");
+  else if (chainDone) nextLabel = t("garticphone.nextChain");
+
+  return (
+    <div
+      data-testid="garticphone-reveal"
+      data-chain={chainIdx}
+      data-revealed={entries.length}
+      className="rounded-3xl px-3 pt-4 pb-4 sm:px-5"
+      style={{
+        background:
+          "radial-gradient(ellipse at 50% -10%, rgba(183,139,255,.25), transparent 55%)",
+      }}
+    >
+      {/* Chain header */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0" key={chainIdx}>
+          <div style={{ ...eyebrow, fontSize: 10, letterSpacing: ".3em" }}>
+            {t("garticphone.revealEyebrow", {
+              n: chainIdx + 1,
+              total: chains.length,
+            })}
+          </div>
+          <div
+            className="animate-rise truncate"
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(18px,4.5vw,24px)",
+              color: "var(--ink)",
+              textTransform: "uppercase",
+            }}
+          >
+            {t("garticphone.chainOf", { name: nameOf(chain?.starter) })}
+          </div>
+        </div>
+        <div className="flex gap-1" data-testid="garticphone-reveal-dots">
+          {Array.from({ length: chain?.length ?? 0 }, (_, i) => (
+            <span
+              key={i}
+              style={{
+                width: 9,
+                height: 9,
+                borderRadius: 99,
+                background: i <= newest ? HUE : "var(--line)",
+                boxShadow: i === newest ? `0 0 8px ${HUE}` : "none",
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Entries */}
+      <div className="mb-4 flex flex-col gap-3">
+        {entries.map((entry, idx) => {
+          const isLatest = idx === newest;
+          const authorIdx = players.findIndex((p) => p.id === entry.author);
+          const name = nameOf(entry.author);
+          const opacity = isLatest ? 1 : idx === newest - 1 ? 0.8 : 0.6;
+          const key = `${chainIdx}|${idx}`;
+          const counts = reactions[key] ?? {};
+          const total = Object.values(counts).reduce((a, b) => a + b, 0);
+          let caption: string;
+          if (entry.kind === "drawing")
+            caption = t("garticphone.drewIt", { name });
+          else if (idx === 0) caption = t("garticphone.wrote", { name });
+          else caption = t("garticphone.sawAndWrote", { name });
+
+          return (
+            <div
+              key={key}
+              ref={isLatest ? newestRef : undefined}
+              data-testid={isLatest ? "garticphone-reveal-newest" : undefined}
+              className="flex items-start gap-2.5"
+              style={{ opacity, transition: "opacity .3s" }}
+            >
+              <PlayerDot
+                player={players[authorIdx]}
+                index={authorIdx}
+                size={32}
+              />
+              <div className="min-w-0 flex-1">
+                {entry.kind === "text" ? (
+                  <div
+                    style={{
+                      background: isLatest ? HUE_GRAD : "var(--panel)",
+                      border: `2px solid ${isLatest ? "transparent" : "var(--line)"}`,
+                      borderRadius: "4px 14px 14px 14px",
+                      padding: isLatest ? "10px 13px" : "8px 12px",
+                      boxShadow: isLatest ? `0 5px 0 ${HUE_DROP}` : "none",
+                      animation: isLatest ? "rise .45s ease-out both" : "none",
+                    }}
+                  >
+                    <div
                       style={{
-                        width: "8px",
-                        height: "8px",
-                        borderRadius: "99px",
-                        background: dotIdx <= revealPos ? "#b78bff" : "#5a3f7a",
-                        boxShadow: dotIdx === revealPos ? "0 0 8px #b78bff" : "none"
+                        ...label,
+                        fontSize: 10,
+                        color: isLatest
+                          ? "rgba(45,22,80,.65)"
+                          : "var(--ink-faint)",
+                      }}
+                    >
+                      {caption}
+                    </div>
+                    <div
+                      style={{
+                        font: `${isLatest ? 700 : 600} ${isLatest ? "clamp(16px,3.8vw,20px)" : "14px"} var(--font-sans), sans-serif`,
+                        color: isLatest ? HUE_INK : "var(--ink)",
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      “{entry.text}”
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      animation: isLatest ? "rise .45s ease-out both" : "none",
+                    }}
+                  >
+                    <div
+                      style={{
+                        ...label,
+                        fontSize: 10,
+                        color: isLatest ? HUE : "var(--ink-faint)",
+                        marginBottom: 4,
+                      }}
+                    >
+                      {caption}
+                    </div>
+                    <DrawingFrame
+                      dataUrl={entry.dataUrl}
+                      alt={t("garticphone.drawingAlt", { name })}
+                      blankLabel={t("garticphone.blankDrawing")}
+                      border={`${isLatest ? 3 : 2}px solid ${isLatest ? HUE : "var(--line)"}`}
+                      style={{
+                        borderRadius: "4px 14px 14px 14px",
+                        height: isLatest
+                          ? "clamp(170px, calc(100dvh - 330px), 440px)"
+                          : "clamp(90px, 18dvh, 150px)",
+                        maxWidth: isLatest
+                          ? "calc((100dvh - 330px) * 1.1 + 200px)"
+                          : 220,
+                        boxShadow: isLatest
+                          ? `0 5px 0 ${HUE_DROP}, 0 0 24px rgba(183,139,255,.25)`
+                          : "none",
                       }}
                     />
-                  ))}
-                </div>
+                  </div>
+                )}
+                {!isLatest && total > 0 && (
+                  <div
+                    className="mt-1 flex gap-2"
+                    style={{
+                      font: "700 11px var(--font-mono), monospace",
+                      color: "var(--ink-dim)",
+                    }}
+                  >
+                    {EMOJIS.filter((e) => counts[e]).map((e) => (
+                      <span key={e}>
+                        {e} {counts[e]}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
+          );
+        })}
+      </div>
 
-            {/* Chain entries */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "14px" }}>
-              {chains[revealChain]?.entries.slice(0, revealPos + 1).map((entry, idx) => {
-                const key = `${revealChain}|${idx}`;
-                const entryReactions = reactions[key] ?? {};
-                const isLatest = idx === revealPos;
-                const authorName = playerNames.get(entry.author) ?? "Someone";
-                const authorIndex = props.players.findIndex((p) => p.id === entry.author);
-                const authorColor = playerColorFor(authorIndex >= 0 ? authorIndex : 0);
-                const authorPlayer = authorIndex >= 0 ? props.players[authorIndex] : undefined;
-
-                // Graduated opacity: latest 1, previous 0.75, older 0.55
-                const entryOpacity = isLatest ? 1 : idx === revealPos - 1 ? 0.75 : 0.55;
-
-                if (entry.kind === "text") {
-                  return (
-                    <div key={idx} style={{ display: "flex", gap: "10px", alignItems: "flex-start", opacity: entryOpacity }}>
-                      {authorPlayer ? (
-                        <Avatar player={authorPlayer} color={authorColor} size={30} />
-                      ) : (
-                        <div style={{ flex: "none", width: "30px", height: "30px", borderRadius: "99px", backgroundColor: "#fff8e7", border: `2px solid ${authorColor}` }} />
-                      )}
-                      <div style={{ flex: 1, background: isLatest ? "linear-gradient(180deg, #c9a4ff, #a678f2)" : "#2b1a3d", border: `2px solid ${isLatest ? "transparent" : "#5a3f7a"}`, borderRadius: "4px 14px 14px 14px", padding: "9px 12px", boxShadow: isLatest ? "0 5px 0 #5f3d99" : "none", animation: isLatest ? "slam .45s ease-out" : "none" }}>
-                        <div style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.2em", color: isLatest ? "rgba(45,22,80,.6)" : "rgba(255,233,168,.4)", marginBottom: "4px", textTransform: "uppercase", fontFamily: "'Space Mono'" }}>
-                          {authorName} WROTE
-                        </div>
-                        <div style={{ fontSize: isLatest ? "15px" : "13px", fontWeight: isLatest ? 700 : 600, color: isLatest ? "#2d1650" : "#ffe9a8" }}>
-                          "{entry.text}"
-                        </div>
-                      </div>
-                    </div>
-                  );
-                } else {
-                  return (
-                    <div key={idx} style={{ display: "flex", gap: "10px", alignItems: "flex-start", opacity: entryOpacity }}>
-                      {authorPlayer ? (
-                        <Avatar player={authorPlayer} color={authorColor} size={30} />
-                      ) : (
-                        <div style={{ flex: "none", width: "30px", height: "30px", borderRadius: "99px", backgroundColor: "#fff8e7", border: `2px solid ${authorColor}` }} />
-                      )}
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.2em", color: "rgba(255,233,168,.4)", marginBottom: "4px", textTransform: "uppercase", fontFamily: "'Space Mono'" }}>
-                          {authorName} DREW IT
-                        </div>
-                        <div style={{ height: "120px", backgroundColor: "#fff8e7", border: "2px solid #5a3f7a", borderRadius: "4px 14px 14px 14px", overflow: "hidden" }}>
-                          <img src={entry.dataUrl} alt="Drawing" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-              })}
-            </div>
-
-            {/* Emoji reaction pills */}
-            <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginBottom: "14px" }}>
-              {chains[revealChain] && revealPos >= 0 && (
-                <>
-                  {(["😂", "💀", "⭐"] as const).map((emoji) => {
-                    const key = `${revealChain}|${revealPos}`;
-                    const emojiCount = reactions[key]?.[emoji] ?? 0;
-                    const hasReacted = localReacted.has(key);
-
-                    return (
-                      <button
-                        key={emoji}
-                        onClick={() => handleReact(revealChain, revealPos, emoji)}
-                        disabled={hasReacted}
-                        style={{
-                          fontSize: "16px",
-                          background: emoji === "⭐" ? "#2b1a3d" : "#2b1a3d",
-                          border: emoji === "⭐" ? "2px solid #ffd23f" : "2px solid #5a3f7a",
-                          borderRadius: "99px",
-                          padding: "5px 12px",
-                          boxShadow: emoji === "⭐" ? "0 0 12px rgba(255,210,63,.3)" : "none",
-                          cursor: hasReacted ? "not-allowed" : "pointer",
-                          opacity: hasReacted ? 0.5 : 1,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "4px"
-                        }}
-                      >
-                        {emoji}
-                        <span style={{ fontFamily: "'Space Mono'", fontSize: "11px", fontWeight: 700, color: emoji === "⭐" ? "#ffd23f" : "#ffe9a8" }}>
-                          {emojiCount}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </>
-              )}
-            </div>
-
-            <div style={{ display: "flex", gap: "8px", marginBottom: "6px" }}>
-              <div style={{ flex: 1, textAlign: "center", fontSize: "9px", color: "rgba(255,233,168,.4)", padding: "10px 0" }}>
-                REACTIONS = POINTS<br />FOR THE AUTHOR
-              </div>
-              {props.isAdmin && (
-                <Button
-                  data-testid="garticphone-reveal-next"
-                  variant="hue"
-                  gameType="garticphone"
-                  onClick={handleRevealNext}
-                  style={{ background: "linear-gradient(180deg, #c9a4ff, #a678f2)", boxShadow: "0 4px 0 #5f3d99" }}
+      {/* Controls stay pinned to the bottom edge while a long chain scrolls
+          (small iframe tiles, phones). */}
+      <div
+        ref={controlsRef}
+        className="sticky bottom-0 z-10 -mx-3 px-3 pt-2 pb-1 sm:-mx-5 sm:px-5"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(28,18,48,0), var(--bg) 22%)",
+        }}
+      >
+        {/* Reactions on the newest entry */}
+        {newest >= 0 && (
+          <div className="mb-3 flex flex-wrap justify-center gap-2">
+            {EMOJIS.map((emoji) => {
+              const count = reactions[newestKey]?.[emoji] ?? 0;
+              const chosen = myPick === emoji;
+              const disabled = !!myPick || ownEntry;
+              return (
+                <button
+                  key={emoji}
+                  type="button"
+                  data-testid={`garticphone-react-${emoji === "😂" ? "laugh" : emoji === "💀" ? "skull" : "star"}`}
+                  data-chosen={chosen}
+                  aria-label={t("garticphone.react", { emoji })}
+                  aria-pressed={chosen}
+                  onClick={() => react(emoji)}
+                  disabled={disabled}
+                  className="flex items-center gap-1.5 transition-transform enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5"
+                  style={{
+                    fontSize: 20,
+                    background: chosen
+                      ? "rgba(255,210,63,.12)"
+                      : "var(--panel)",
+                    border: `2px solid ${chosen ? "var(--accent)" : "var(--line)"}`,
+                    borderRadius: 99,
+                    padding: "6px 14px",
+                    boxShadow: chosen
+                      ? "0 0 14px rgba(255,210,63,.35)"
+                      : "none",
+                    cursor: disabled ? "default" : "pointer",
+                    opacity: disabled && !chosen ? 0.55 : 1,
+                  }}
                 >
-                  {revealChain >= chains.length ? "FINISH ✓" : "NEXT ▶"}
-                </Button>
-              )}
-            </div>
-            <div style={{ textAlign: "center", fontSize: "8px", color: "rgba(255,233,168,.3)", marginTop: "6px" }}>
-              HOST PACES THE REVEAL · EVERYONE REACTS LIVE
-            </div>
+                  {emoji}
+                  <b
+                    style={{
+                      font: "700 13px var(--font-mono), monospace",
+                      color: chosen ? "var(--accent)" : "var(--ink)",
+                    }}
+                  >
+                    {count}
+                  </b>
+                </button>
+              );
+            })}
           </div>
-        </>
-      )}
+        )}
 
-      {revealChain >= chains.length && (
-        <Banner variant="waiting">
-          {t("garticphone.gameOver")}
-        </Banner>
-      )}
+        {/* Footer: hint + host control */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div
+            className="min-w-[140px] flex-1 text-center"
+            style={{
+              font: "400 11px/1.5 var(--font-mono), monospace",
+              color: "var(--ink-faint)",
+              padding: "6px 0",
+            }}
+          >
+            {ownEntry ? t("garticphone.yourEntry") : t("garticphone.reactHint")}
+          </div>
+          {isAdmin ? (
+            <button
+              type="button"
+              data-testid="garticphone-reveal-next"
+              data-finish={revealDone}
+              className="buzzer flex-none"
+              onClick={() => {
+                playSfx("buzzer");
+                // Names the cursor it advances, so a double tap is ignored
+                // instead of skipping the next entry.
+                sendAction({
+                  action: "reveal_next",
+                  chain: pub.revealChain ?? chainIdx,
+                  pos: pub.revealPos ?? entries.length,
+                });
+              }}
+              style={{
+                fontSize: 15,
+                color: HUE_INK,
+                background: HUE_GRAD,
+                padding: "12px 20px",
+                ["--buzzer-drop" as string]: HUE_DROP,
+              }}
+            >
+              {nextLabel}
+            </button>
+          ) : (
+            <div
+              className="flex-none"
+              style={{ ...label, color: HUE, padding: "6px 0" }}
+            >
+              {t("garticphone.waitingHost")}
+            </div>
+          )}
+        </div>
+        <div
+          className="mt-2 text-center [@media(max-height:520px)]:hidden"
+          style={{
+            font: "400 10px var(--font-mono), monospace",
+            color: "rgba(255,233,168,.3)",
+          }}
+        >
+          {t("garticphone.hostPaces")}
+        </div>
+      </div>
     </div>
   );
 }

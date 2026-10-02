@@ -10,6 +10,8 @@ type roomEnvelope struct {
 	Room       json.RawMessage   `json:"room"`
 	Password   string            `json:"pw"`
 	SessionIDs map[string]string `json:"sids"` // playerID -> sessionID
+	External   string            `json:"ext,omitempty"`
+	Decks      json.RawMessage   `json:"decks,omitempty"` // custom CAH decks
 }
 
 // MarshalState returns the full persistable state of the room, including the
@@ -25,7 +27,11 @@ func (r *Room) MarshalState() ([]byte, error) {
 	for id, p := range r.Players {
 		sids[id] = p.SessionID
 	}
-	return json.Marshal(roomEnvelope{Room: roomJSON, Password: r.Password, SessionIDs: sids})
+	env := roomEnvelope{Room: roomJSON, Password: r.Password, SessionIDs: sids, External: r.ExternalKey}
+	if len(r.customDecks) > 0 {
+		env.Decks = r.customDecks
+	}
+	return json.Marshal(env)
 }
 
 // RoomFromState reconstructs a Room from MarshalState output, re-injecting the
@@ -40,6 +46,10 @@ func RoomFromState(b []byte) (*Room, error) {
 		return nil, err
 	}
 	room.Password = env.Password
+	room.ExternalKey = env.External
+	if len(env.Decks) > 0 {
+		room.customDecks = env.Decks
+	}
 	if room.Players == nil {
 		room.Players = make(map[string]Player)
 	}

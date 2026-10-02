@@ -1,6 +1,6 @@
 export { Button } from "./Button";
 export { Card } from "./Card";
-export { CodePill } from "./Pill";
+export { CodePill, PasswordPill } from "./Pill";
 export { Bulbs } from "./Bulbs";
 export { Marquee } from "./Marquee";
 export { TimerBadge } from "./Timer";

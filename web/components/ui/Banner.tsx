@@ -15,6 +15,8 @@ export function Banner({
   if (variant === "reconnecting") {
     return (
       <div
+        data-testid="banner-reconnecting"
+        role="status"
         className={`flex items-center gap-2.5 rounded-xl border-2 border-(--warn) bg-[#3d2314] px-3.5 py-2.5 ${className}`}
       >
         <span

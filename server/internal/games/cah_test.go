@@ -568,46 +568,210 @@ func TestCahPlayerLeaveClears(t *testing.T) {
 	}
 }
 
-func TestCahPlayerJoinDealedNextRound(t *testing.T) {
-	room := &fakeRoom{players: []string{"p1", "p2"}, admin: "p1"}
+// A player joining mid-round is dealt in immediately and can answer the
+// current prompt; the round then waits for them like everyone else.
+func TestCahPlayerJoinDealtImmediately(t *testing.T) {
+	room := &fakeRoom{players: []string{"p1", "p2", "p3"}, admin: "p1"}
 	game := &CahGame{}
 	game.Start("room-1", Options{Room: room})
-
 	game.blackCard = cahBlackCard{Text: "____", Pick: 1}
 
-	// p3 joins mid-game - add to room first
-	room.players = append(room.players, "p3")
-	game.OnPlayerJoin("p3")
-
-	// p3 shouldn't have cards yet
-	if len(game.hands["p3"]) > 0 {
-		t.Fatalf("expected p3 to not have cards until next round")
+	room.players = append(room.players, "p4")
+	game.OnPlayerJoin("p4")
+	if len(game.hands["p4"]) != CahHandSize {
+		t.Fatalf("expected joiner to be dealt %d cards, got %d", CahHandSize, len(game.hands["p4"]))
+	}
+	if _, ok := game.scores["p4"]; !ok {
+		t.Fatalf("expected joiner on the scoreboard")
+	}
+	inOrder := false
+	for _, id := range game.judgeOrder {
+		inOrder = inOrder || id == "p4"
+	}
+	if !inOrder {
+		t.Fatalf("expected joiner in the judge rotation")
 	}
 
-	// Advance to next round - have all non-judge players submit
-	connected := []string{"p1", "p2", "p3"}
-	for _, id := range connected {
+	for _, id := range []string{"p1", "p2", "p3"} {
 		if id != game.judge {
-			game.OnAction(id, map[string]any{"action": "submit", "cards": []any{float64(0)}})
+			_ = game.OnAction(id, map[string]any{"action": "submit", "cards": []any{float64(0)}})
 		}
 	}
-
-	// If still in answering phase, trigger timer to advance
-	if game.phase == "answering" {
-		game.OnTimer("answers")
+	if game.phase != "answering" {
+		t.Fatalf("expected the round to wait for the joiner, got %s", game.phase)
 	}
-
-	if game.phase == "judging" {
-		game.OnAction(game.judge, map[string]any{"action": "pick_winner", "index": float64(0)})
+	if got := game.PublicState()["expectedCount"]; got != 3 {
+		t.Fatalf("expected 3 expected submitters, got %v", got)
 	}
-
-	// Trigger next round
-	game.OnTimer("next")
-
-	// Now p3 should have cards
-	if len(game.hands["p3"]) != CahHandSize {
-		t.Fatalf("expected p3 to be dealt %d cards in new round, got %d", CahHandSize, len(game.hands["p3"]))
+	if err := game.OnAction("p4", map[string]any{"action": "submit", "cards": []any{float64(0)}}); err != nil {
+		t.Fatalf("joiner submit rejected: %v", err)
 	}
+	if game.phase != "judging" || len(game.shuffledSubs) != 3 {
+		t.Fatalf("expected judging with 3 submissions, got %s / %d", game.phase, len(game.shuffledSubs))
+	}
+}
+
+// Leaving returns the hand to the discard pile instead of deleting cards.
+func TestCahLeaveDiscardsHand(t *testing.T) {
+	room := &fakeRoom{players: []string{"p1", "p2", "p3", "p4"}, admin: "p1"}
+	game := &CahGame{}
+	game.Start("room-1", Options{Room: room})
+	var leaver string
+	for _, id := range room.players {
+		if id != game.judge {
+			leaver = id
+			break
+		}
+	}
+	hand := append([]string(nil), game.hands[leaver]...)
+	before := len(game.whiteDiscard)
+	room.players = cahWithout(room.players, leaver)
+	game.OnPlayerLeave(leaver)
+	if len(game.whiteDiscard) != before+len(hand) {
+		t.Fatalf("expected %d cards discarded, got %d", len(hand), len(game.whiteDiscard)-before)
+	}
+}
+
+// The judge leaving mid-judging must not hand the role to a submitter (who
+// could pick their own card): the round is decided at random instead.
+func TestCahJudgeLeavesDuringJudgingAutoPicks(t *testing.T) {
+	room := &fakeRoom{players: []string{"p1", "p2", "p3"}, admin: "p1"}
+	game := &CahGame{}
+	game.Start("room-1", Options{Room: room})
+	game.blackCard = cahBlackCard{Text: "____", Pick: 1}
+	judge := game.judge
+	for _, id := range room.players {
+		if id != judge {
+			_ = game.OnAction(id, map[string]any{"action": "submit", "cards": []any{float64(0)}})
+		}
+	}
+	if game.phase != "judging" {
+		t.Fatalf("expected judging, got %s", game.phase)
+	}
+	room.players = cahWithout(room.players, judge)
+	game.OnPlayerLeave(judge)
+	if game.phase != "roundResults" {
+		t.Fatalf("expected roundResults after judge left, got %s", game.phase)
+	}
+	if game.roundWinner == "" || game.roundWinner == judge {
+		t.Fatalf("expected a random submitter to win, got %q", game.roundWinner)
+	}
+}
+
+func TestCahJudgeCannotPickOwnCard(t *testing.T) {
+	room := &fakeRoom{players: []string{"p1", "p2", "p3"}, admin: "p1"}
+	game := &CahGame{}
+	game.Start("room-1", Options{Room: room})
+	game.blackCard = cahBlackCard{Text: "____", Pick: 1}
+	for _, id := range room.players {
+		if id != game.judge {
+			_ = game.OnAction(id, map[string]any{"action": "submit", "cards": []any{float64(0)}})
+		}
+	}
+	// Force the pathological state: the judge's own card is in the pool.
+	game.subOrder[0] = game.judge
+	if err := game.OnAction(game.judge, map[string]any{"action": "pick_winner", "index": float64(0)}); err == nil {
+		t.Fatalf("expected judge picking their own card to be rejected")
+	}
+	if game.phase != "judging" {
+		t.Fatalf("expected judging to continue, got %s", game.phase)
+	}
+}
+
+// A judge that disconnected during answering must not freeze judging for the
+// whole judge timer.
+func TestCahJudgeDisconnectedBeforeJudgingAutoPicks(t *testing.T) {
+	room := &fakeRoom{players: []string{"p1", "p2", "p3", "p4"}, admin: "p1"}
+	game := &CahGame{}
+	game.Start("room-1", Options{Room: room})
+	game.blackCard = cahBlackCard{Text: "____", Pick: 1}
+	judge := game.judge
+	room.players = cahWithout(room.players, judge)
+	game.OnRoomChange()
+	for _, id := range room.players {
+		_ = game.OnAction(id, map[string]any{"action": "submit", "cards": []any{float64(0)}})
+	}
+	if game.phase != "roundResults" || game.roundWinner == "" {
+		t.Fatalf("expected an immediate random pick, got phase %s winner %q", game.phase, game.roundWinner)
+	}
+}
+
+// Players without enough cards for the prompt aren't waited on.
+func TestCahShortHandedPlayerSkipped(t *testing.T) {
+	room := &fakeRoom{players: []string{"p1", "p2", "p3"}, admin: "p1"}
+	game := &CahGame{}
+	game.Start("room-1", Options{Room: room})
+	game.blackCard = cahBlackCard{Text: "____ and ____", Pick: 2}
+	others := cahWithout(room.players, game.judge)
+	game.hands[others[1]] = game.hands[others[1]][:1]
+	if err := game.OnAction(others[0], map[string]any{"action": "submit", "cards": []any{float64(0), float64(1)}}); err != nil {
+		t.Fatalf("submit rejected: %v", err)
+	}
+	if game.phase != "judging" {
+		t.Fatalf("expected judging without waiting on the short-handed player, got %s", game.phase)
+	}
+}
+
+// A tiny selected deck is topped up from the base deck so a full table gets
+// full hands every round.
+func TestCahSmallDeckToppedUpForBigTable(t *testing.T) {
+	players := make([]string, 16)
+	for i := range players {
+		players[i] = "p" + string(rune('a'+i))
+	}
+	room := &fakeRoom{players: players, admin: players[0]}
+	tiny, err := ParseDeck([]byte(`{"name":"Tiny","black":[{"text":"Q?","pick":1}],"white":["a","b","c","d","e","f","g","h","i","j"]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	game := &CahGame{}
+	game.Start("room-1", Options{Room: room, Locale: "en", Decks: []Deck{tiny}})
+	for round := 0; round < CahTotalRounds; round++ {
+		if game.finished {
+			break
+		}
+		for _, id := range players {
+			if len(game.hands[id]) != CahHandSize {
+				t.Fatalf("round %d: %s has %d cards", game.round, id, len(game.hands[id]))
+			}
+		}
+		for _, id := range players {
+			if id != game.judge && len(game.hands[id]) >= game.blackCard.Pick {
+				idx := []any{}
+				for i := 0; i < game.blackCard.Pick; i++ {
+					idx = append(idx, float64(i))
+				}
+				_ = game.OnAction(id, map[string]any{"action": "submit", "cards": idx})
+			}
+		}
+		if game.phase != "judging" {
+			t.Fatalf("round %d: expected judging once everyone played, got %s", game.round, game.phase)
+		}
+		game.OnTimer("judge")
+		game.OnTimer("next")
+	}
+	if len(game.blackDeck)+len(game.blackDiscard) < CahTotalRounds {
+		t.Fatalf("expected black pile topped up to at least %d prompts", CahTotalRounds)
+	}
+}
+
+func TestCahUnknownActionErrors(t *testing.T) {
+	room := &fakeRoom{players: []string{"p1", "p2", "p3"}, admin: "p1"}
+	game := &CahGame{}
+	game.Start("room-1", Options{Room: room})
+	if err := game.OnAction("p1", map[string]any{"action": "dance"}); err == nil {
+		t.Fatalf("expected an error for an unknown action")
+	}
+}
+
+func cahWithout(ids []string, drop string) []string {
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if id != drop {
+			out = append(out, id)
+		}
+	}
+	return out
 }
 
 func TestBuiltinDecksValid(t *testing.T) {
@@ -621,7 +785,7 @@ func TestBuiltinDecksValid(t *testing.T) {
 		if !ok {
 			t.Fatalf("missing built-in deck %s", want)
 		}
-		if len(d.Black) < 20 || len(d.White) < 60 {
+		if len(d.Black) < 40 || len(d.White) < 120 {
 			t.Fatalf("%s should be a full base deck, got %d black / %d white", want, len(d.Black), len(d.White))
 		}
 	}
@@ -651,9 +815,10 @@ func TestCahMergesSelectedDecks(t *testing.T) {
 	party, _ := BuiltinDeck("party_en")
 	game := &CahGame{}
 	game.Start("room-1", Options{Room: room, Locale: "en", Decks: []Deck{base, party}})
-	// Round 1 already drew one black card and dealt 3 hands of CahHandSize.
-	wantBlack := len(base.Black) + len(party.Black) - 1
-	wantWhite := len(base.White) + len(party.White) - 3*CahHandSize
+	// Round 1 already drew one black card and dealt 3 hands of CahHandSize;
+	// cards shared by both decks are only in the pile once.
+	wantBlack := len(dedupeBlack(append(append([]cahBlackCard{}, base.Black...), party.Black...))) - 1
+	wantWhite := len(dedupeWhite(append(append([]string{}, base.White...), party.White...))) - 3*CahHandSize
 	if len(game.blackDeck) != wantBlack {
 		t.Fatalf("expected merged black pile %d, got %d", wantBlack, len(game.blackDeck))
 	}
@@ -663,10 +828,20 @@ func TestCahMergesSelectedDecks(t *testing.T) {
 }
 
 func TestParseDeckRejectsBad(t *testing.T) {
+	ten := `"white":["a","b","c","d","e","f","g","h","i","j"]`
+	long := strings.Repeat("x", DeckMaxCardLen+1)
 	bad := [][]byte{
-		[]byte(`{"name":"x","black":[{"text":"a ____ b ____","pick":1}],"white":["a","b","c","d","e","f","g","h"]}`),
-		[]byte(`{"name":"x","black":[{"text":"nope","pick":3}],"white":["a","b","c","d","e","f","g","h"]}`),
+		[]byte(`{"name":"x","black":[{"text":"a ____ b ____","pick":1}],` + ten + `}`),
+		[]byte(`{"name":"x","black":[{"text":"nope","pick":3}],` + ten + `}`),
 		[]byte(`{"name":"x","black":[{"text":"a","pick":1}],"white":["a"]}`),
+		[]byte(`{"name":"x","black":[],` + ten + `}`),
+		[]byte(`{"name":"x","black":[{"text":"   ","pick":1}],` + ten + `}`),
+		[]byte(`{"name":"x","black":[{"text":"Q?","pick":1}],"white":["a","b","c","d","e","f","g","h","i"," "]}`),
+		// 10 whites, but only 9 different ones.
+		[]byte(`{"name":"x","black":[{"text":"Q?","pick":1}],"white":["a","b","c","d","e","f","g","h","i","A "]}`),
+		[]byte(`{"name":"x","black":[{"text":"` + long + `","pick":1}],` + ten + `}`),
+		[]byte(`{"name":"` + strings.Repeat("n", DeckMaxNameLen+1) + `","black":[{"text":"Q?","pick":1}],` + ten + `}`),
+		[]byte(`{"name":"   ","black":[{"text":"Q?","pick":1}],` + ten + `}`),
 		[]byte(`not json`),
 	}
 	for i, raw := range bad {
@@ -674,13 +849,32 @@ func TestParseDeckRejectsBad(t *testing.T) {
 			t.Fatalf("bad deck %d should have been rejected", i)
 		}
 	}
-	good := []byte(`{"name":"Mine","locale":"en","black":[{"text":"Q?","pick":1},{"text":"a ____","pick":1},{"text":"____ and ____","pick":2}],"white":["a","b","c","d","e","f","g","h"]}`)
+	good := []byte(`{"name":"  Mine  ","locale":"en","black":[{"text":"Q?","pick":1},{"text":" a ________ ","pick":0},{"text":"___ and ___","pick":2},{"text":"Q?","pick":1}],"white":["a","b","c","d","e","f","g","h","i","j"," j "]}`)
 	d, err := ParseDeck(good)
 	if err != nil {
 		t.Fatalf("good deck rejected: %v", err)
 	}
-	if len(d.Black) != 3 || len(d.White) != 8 {
-		t.Fatalf("unexpected parsed deck size")
+	if d.Name != "Mine" || len(d.Black) != 3 || len(d.White) != 10 {
+		t.Fatalf("unexpected parsed deck: name %q, %d black, %d white", d.Name, len(d.Black), len(d.White))
+	}
+	if d.Black[1].Text != "a ____" || d.Black[1].Pick != 1 || d.Black[2].Text != "____ and ____" {
+		t.Fatalf("expected blanks normalized and pick inferred, got %+v", d.Black)
+	}
+}
+
+func TestCustomDeckIDUnambiguous(t *testing.T) {
+	a, b := CustomDeckID("A b"), CustomDeckID("a_b")
+	if a == b {
+		t.Fatalf("distinct names must get distinct ids, both %q", a)
+	}
+	if CustomDeckID("My  Deck") != CustomDeckID("My Deck") {
+		t.Fatalf("same (normalized) name should keep its id so re-uploads replace")
+	}
+	if !strings.HasPrefix(a, "custom:a_b-") {
+		t.Fatalf("expected a readable namespaced id, got %q", a)
+	}
+	if _, ok := BuiltinDeck(CustomDeckID("base_en")); ok {
+		t.Fatalf("custom ids must not shadow built-ins")
 	}
 }
 

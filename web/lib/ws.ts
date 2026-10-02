@@ -9,6 +9,16 @@ export const createRequestId = () =>
     ? crypto.randomUUID()
     : `req-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
+// While the socket is down only control messages are queued for replay.
+// Game actions and canvas strokes are moment-bound: replaying a stale guess or
+// a half-minute-old stroke after a reconnect does more harm than dropping it.
+// Joins and creates aren't queued either: the room store owns them (it keeps
+// the one pending request and re-sends it itself from its open listener), so
+// a queued copy would go out twice, or after the store already gave up on it.
+const isUnqueued = (type: string) =>
+  type === "game.action" || type === "game.stream" || type === "room.join" || type === "room.create";
+const MAX_QUEUE = 50;
+
 export class WSClient {
   private socket: WebSocket | null = null;
   private listeners = new Set<Listener>();
@@ -25,10 +35,18 @@ export class WSClient {
     this.open();
   }
 
+  /** True when the socket is open right now (listeners added late use this
+   *  instead of waiting for an `open` event that already fired). */
+  isOpen() {
+    return !!this.socket && this.socket.readyState === WebSocket.OPEN;
+  }
+
   private open() {
     this.socket = new WebSocket(WS_URL);
     this.socket.addEventListener("open", () => {
       this.reconnectAttempt = 0;
+      // Listeners first: the room store's (re)join goes out before queued
+      // control messages that only make sense once we're back in the room.
       this.openListeners.forEach((handler) => handler());
       const pending = this.queue;
       this.queue = [];
@@ -88,12 +106,24 @@ export class WSClient {
     return () => this.closeListeners.delete(handler);
   }
 
-  send(message: Envelope) {
+  /**
+   * Sends now when the socket is open and returns true. Otherwise returns
+   * false: control messages are queued for the next open, while game
+   * actions/strokes and joins/creates are dropped (see isUnqueued).
+   */
+  send(message: Envelope): boolean {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      if (isUnqueued(message.type)) return false;
       this.queue.push(message);
-      return;
+      if (this.queue.length > MAX_QUEUE) this.queue.splice(0, this.queue.length - MAX_QUEUE);
+      return false;
     }
-    this.socket.send(JSON.stringify(message));
+    try {
+      this.socket.send(JSON.stringify(message));
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

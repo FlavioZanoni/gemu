@@ -1,133 +1,154 @@
 "use client";
 
-import { Volume2, Repeat, ArrowRight } from "lucide-react";
+import { Volume2, Repeat, ArrowRight, Trophy, Users } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { GameResult, Player } from "@/lib/protocol";
-import { Button } from "@/components/ui";
+import { gamesCatalog, gameLabel } from "@/lib/games";
 import { Avatar } from "@/components/ui/PlayerChip";
 import { playerColorFor } from "@/components/ui/gameHues";
 
+/** Game results (Gemu Screens · 5): this game's standings with the session
+ *  points each place earned; the host picks what's next. */
 export function ResultsScreen({
   gameResult,
   players,
+  playerId,
   isAdmin,
   onPlayAgain,
   onVoteNext,
-  onEndSession,
+  onOpenBoard,
+  onManage,
 }: {
   gameResult: GameResult;
   players: Player[];
+  playerId: string | null;
   isAdmin: boolean;
   onPlayAgain: () => void;
   onVoteNext: () => void;
-  onEndSession: () => void;
+  onOpenBoard: () => void;
+  onManage?: () => void;
 }) {
   const { t } = useI18n();
-
-  const getPlayerName = (id: string) =>
-    players.find((p) => p.id === id)?.name ?? "Unknown";
+  const game = gamesCatalog.find((g) => g.type === gameResult.gameType);
+  const name = (game ? gameLabel(game.type, t, game.name) : gameResult.gameName).toUpperCase();
+  const rows = gameResult.standings;
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-6 px-6 py-12">
-      {/* Header */}
-      <div className="text-center mb-6">
-        <div className="mono-caption mb-2 flex items-center justify-center gap-2">
-          <Volume2 size={14} strokeWidth={2.5} /> Game Over
+    <div className="mx-auto flex w-full max-w-[560px] flex-1 flex-col items-center justify-center gap-5 py-8" data-testid="results-screen">
+      <div className="text-center">
+        <div className="mb-1 flex items-center justify-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.4em] text-(--accent-2)">
+          {t("results.gameOver")} <Volume2 size={14} strokeWidth={2.5} aria-hidden />
         </div>
-        <h1 className="slab text-5xl">{t("results.title")}</h1>
+        <h1 className="slab text-[clamp(28px,7vw,40px)] uppercase leading-tight" style={{ textShadow: "0 5px 0 var(--drop)" }}>
+          {t("results.standingsTitle", { game: name })}
+        </h1>
       </div>
 
-      {/* Standings */}
-      <div className="flex flex-col gap-3 w-full max-w-2xl mb-8">
-        {gameResult.standings.map((standing, idx) => {
+      <ol className="flex w-full flex-col gap-2.5">
+        {rows.map((standing, idx) => {
           const isWinner = idx === 0;
           const playerIdx = players.findIndex((p) => p.id === standing.playerId);
           const player = players[playerIdx];
+          const you = standing.playerId === playerId;
+          const ink = isWinner ? "var(--dark-ink)" : "var(--ink)";
           return (
-            <div
+            <li
               key={standing.playerId}
-              className={`animate-rise rounded-2xl p-3 flex items-center justify-between flex-wrap gap-3 ${
-                isWinner
-                  ? "border-2 border-[#ffd23f]"
-                  : "border-2 border-(--line) bg-(--panel)"
-              }`}
+              className="animate-rise flex min-w-0 items-center gap-3 rounded-2xl px-3 py-2.5 sm:px-4"
               style={{
-                animationDelay: `${idx * 0.1}s`,
-                ...(isWinner
-                  ? {
-                      background: "linear-gradient(180deg,#ffd23f,#f5b32a)",
-                      boxShadow: "0 5px 0 #c2452d",
-                      color: "#3d1f0e",
-                    }
-                  : {}),
+                // Rows land bottom-up: last place first, the winner last.
+                animationDelay: `${0.15 * (rows.length - 1 - idx)}s`,
+                background: isWinner ? "linear-gradient(180deg,#ffd23f,#f5b32a)" : "var(--panel)",
+                border: isWinner ? "none" : "2px solid var(--line)",
+                boxShadow: isWinner ? "0 5px 0 var(--drop)" : undefined,
               }}
             >
-              <div className="flex items-center gap-4">
-                <div
-                  className="slab text-2xl w-8 text-center"
-                  style={{ color: isWinner ? "#3d1f0e" : "var(--accent)" }}
-                >
-                  {standing.place}
+              <span
+                className="w-6 flex-none text-center font-display text-[19px]"
+                style={{ color: isWinner ? "var(--dark-ink)" : "rgba(255,233,168,.6)" }}
+              >
+                {standing.place}
+              </span>
+              {player ? (
+                <Avatar player={player} color={playerColorFor(playerIdx)} size={42} />
+              ) : (
+                <span className="flex h-[42px] w-[42px] flex-none items-center justify-center rounded-full border-2 border-(--line) bg-[#fff8e7] font-display text-sm text-(--dark-ink)">
+                  {standing.name.slice(0, 1).toUpperCase()}
+                </span>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[15px] font-bold" style={{ color: ink }}>
+                  {standing.name}
+                  {you ? ` ${t("shell.youSuffix")}` : ""}
                 </div>
-                {player ? (
-                  <Avatar player={player} color={playerColorFor(playerIdx)} size={48} />
-                ) : (
-                  <div className="flex-1 w-12 h-12 rounded-full bg-(--panel-raised) border-2 border-(--line) flex items-center justify-center text-xs text-(--ink)/60">
-                    ?
-                  </div>
-                )}
-                <div>
-                  <div
-                    className="font-bold"
-                    style={{ color: isWinner ? "#3d1f0e" : "var(--ink)" }}
-                  >
-                    {standing.name}
-                  </div>
-                  <div
-                    className="text-xs"
-                    style={
-                      isWinner
-                        ? { color: "rgba(61, 31, 14, 0.7)" }
-                        : { color: "var(--ink-60)" }
-                    }
-                  >
-                    {standing.score} pts in game
-                  </div>
+                <div
+                  className="font-mono text-[11px] font-semibold uppercase"
+                  style={{ color: isWinner ? "rgba(61,31,14,.7)" : "var(--ink-dim)" }}
+                >
+                  {t("results.ptsInGame", { n: standing.score })}
                 </div>
               </div>
-              <div
-                className="slab text-2xl"
-                style={
-                  isWinner
-                    ? { color: "#3d1f0e" }
-                    : { color: "var(--accent-2)" }
-                }
+              <span
+                className="flex-none font-display text-2xl"
+                style={{ color: isWinner ? "var(--dark-ink)" : "var(--accent-2)" }}
               >
                 +{standing.points}
-              </div>
-            </div>
+              </span>
+            </li>
           );
         })}
-      </div>
+      </ol>
 
-      {/* Admin actions */}
       {isAdmin ? (
-        <div className="flex gap-3 flex-wrap justify-center">
-          <Button variant="secondary" onClick={onPlayAgain} data-testid="results-play-again" className="flex items-center gap-2">
-            <Repeat size={16} strokeWidth={2.5} /> Play again
-          </Button>
-          <Button variant="primary" onClick={onVoteNext} data-testid="results-vote-next" className="flex items-center gap-2">
-            Vote on the next game <ArrowRight size={16} strokeWidth={2.5} />
-          </Button>
-          <Button variant="danger" onClick={onEndSession} data-testid="results-end-night">
-            {t("results.endTheNight")}
-          </Button>
+        <div className="flex w-full flex-col items-center gap-2">
+          <div className="flex flex-wrap justify-center gap-3">
+            <button
+              type="button"
+              onClick={onPlayAgain}
+              data-testid="results-play-again"
+              className="buzzer flex items-center gap-2 rounded-[14px] border-2 border-(--ink) bg-(--panel) px-5 py-3.5 text-sm uppercase text-(--ink)"
+              style={{ ["--buzzer-drop" as string]: "rgba(0,0,0,.4)" }}
+            >
+              <Repeat size={16} strokeWidth={2.5} aria-hidden /> {t("results.playAgain", { game: name })}
+            </button>
+            <button
+              type="button"
+              onClick={onVoteNext}
+              data-testid="results-vote-next"
+              className="buzzer flex items-center gap-2 rounded-[14px] px-5 py-3.5 text-sm uppercase"
+              style={{ background: "linear-gradient(180deg,#ffd23f,#f5b32a)", color: "var(--dark-ink)" }}
+            >
+              {t("results.voteNext")} <ArrowRight size={16} strokeWidth={2.5} aria-hidden />
+            </button>
+          </div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-(--ink)/40">{t("results.repeatsAllowed")}</p>
         </div>
       ) : (
-        <div className="text-center py-8 text-(--ink)/60">
+        <p className="py-2 text-center font-mono text-xs uppercase tracking-[0.15em] text-(--ink)/60">
           {t("results.waiting")}
-        </div>
+        </p>
       )}
+
+      <div className="flex flex-wrap justify-center gap-2.5">
+        <button
+          type="button"
+          onClick={onOpenBoard}
+          data-testid="results-board"
+          className="flex items-center gap-1.5 rounded-full border-2 border-(--accent) px-4 py-2 font-sans text-[13px] font-bold text-(--accent) hover:bg-(--accent)/10"
+        >
+          <Trophy size={14} strokeWidth={2.5} aria-hidden /> {isAdmin ? t("results.boardAndEnd") : t("board.title")}
+        </button>
+        {isAdmin && onManage ? (
+          <button
+            type="button"
+            data-testid="manage-room"
+            onClick={onManage}
+            className="flex items-center gap-1.5 rounded-full border-2 border-(--accent-2) px-4 py-2 font-sans text-[13px] font-bold text-(--accent-2) hover:bg-(--accent-2)/10"
+          >
+            <Users size={14} strokeWidth={2.5} aria-hidden /> {t("manage.title")}
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }

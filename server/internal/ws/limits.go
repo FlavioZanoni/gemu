@@ -24,6 +24,10 @@ var (
 	// spoof XFF: "127.0.0.1" and bypass every per-IP limit via the loopback
 	// exemption. When off, the real TCP peer (RemoteAddr) is used.
 	trustProxy = envBool("GEMU_TRUST_PROXY", false)
+	// proxyHops is how many trusted proxies append to X-Forwarded-For (1 =
+	// a single reverse proxy). The client address is the entry that many
+	// places from the right: everything left of it is client-supplied.
+	proxyHops = envInt("GEMU_PROXY_HOPS", 1)
 )
 
 func envBool(key string, def bool) bool {
@@ -43,6 +47,12 @@ const (
 	// Per-IP room.create calls (bucket refills ~1 every 6s, short bursts ok).
 	roomCreateRatePerSec rate.Limit = 1.0 / 6.0
 	roomCreateBurst                 = 5
+	// Per-IP FAILED room.join attempts (unknown room/code, wrong password):
+	// ~1 every 5s after a burst of 20, so codes and passwords can't be
+	// brute-forced, while a household behind one NAT reconnecting after a
+	// wifi blip (successful joins) is never throttled.
+	joinFailRatePerSec rate.Limit = 1.0 / 5.0
+	joinFailBurst                 = 20
 )
 
 func envInt(key string, def int) int {
@@ -94,6 +104,14 @@ func (l *ipLimiters) allow(ip string) bool {
 	return lim.Allow()
 }
 
+// exhausted reports whether ip has no token left, without consuming one.
+func (l *ipLimiters) exhausted(ip string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	lim, ok := l.lim[ip]
+	return ok && lim.Tokens() < 1
+}
+
 // isLoopback reports whether ip is a local address. Loopback traffic is your
 // own tooling/health-checks/proxy on the same host, so it skips the per-IP rate
 // limits — real users arrive via the proxy carrying X-Forwarded-For, and the
@@ -105,15 +123,15 @@ func isLoopback(ip string) bool {
 
 // clientIP extracts the caller's address. X-Forwarded-For is client-controlled
 // and spoofable, so it is only honored when trustProxy is set (i.e. a proxy you
-// control sets/strips it). Otherwise the real TCP peer is used, which a client
-// cannot forge.
+// control appends to it), and then only the entry proxyHops from the right —
+// the address the outermost trusted proxy actually saw. Entries further left
+// are whatever the client sent. A header-derived loopback address is never
+// returned as-is, so it can't claim the loopback rate-limit exemption.
+// Otherwise the real TCP peer is used, which a client cannot forge.
 func clientIP(r *http.Request) string {
 	if trustProxy {
-		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-			if i := strings.IndexByte(xff, ','); i >= 0 {
-				return strings.TrimSpace(xff[:i])
-			}
-			return strings.TrimSpace(xff)
+		if ip, ok := forwardedIP(r.Header.Values("X-Forwarded-For")); ok {
+			return ip
 		}
 	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
@@ -121,4 +139,27 @@ func clientIP(r *http.Request) string {
 		return r.RemoteAddr
 	}
 	return host
+}
+
+func forwardedIP(headers []string) (string, bool) {
+	var parts []string
+	for _, h := range headers {
+		for _, p := range strings.Split(h, ",") {
+			if p = strings.TrimSpace(p); p != "" {
+				parts = append(parts, p)
+			}
+		}
+	}
+	hops := proxyHops
+	if hops < 1 {
+		hops = 1
+	}
+	if len(parts) < hops {
+		return "", false
+	}
+	ip := parts[len(parts)-hops]
+	if isLoopback(ip) {
+		return "forwarded:" + ip, true
+	}
+	return ip, true
 }

@@ -83,6 +83,106 @@
     {
       "text": "A pior combinação possível: ____ acompanhado de ____.",
       "pick": 2
+    },
+    {
+      "text": "O grupo da família entrou em guerra por causa de ____.",
+      "pick": 1
+    },
+    {
+      "text": "O segredo da feijoada da vó sempre foi ____.",
+      "pick": 1
+    },
+    {
+      "text": "O que me tira o sono às 3 da manhã?",
+      "pick": 1
+    },
+    {
+      "text": "Estreia na próxima novela das nove: ____, o musical.",
+      "pick": 1
+    },
+    {
+      "text": "Meu síndico mandou no grupo do prédio uma foto de ____. Sem legenda.",
+      "pick": 1
+    },
+    {
+      "text": "O que os arqueólogos vão achar na minha gaveta de bagunça?",
+      "pick": 1
+    },
+    {
+      "text": "Cientistas estão perplexos: as baleias começaram a cantar sobre ____.",
+      "pick": 1
+    },
+    {
+      "text": "O casamento ia muito bem até o padrinho mencionar ____.",
+      "pick": 1
+    },
+    {
+      "text": "O motorista do aplicativo puxou assunto sobre ____ e não parou mais.",
+      "pick": 1
+    },
+    {
+      "text": "O que tem na caixa escrito NÃO ABRA?",
+      "pick": 1
+    },
+    {
+      "text": "Meu horóscopo diz que a semana vai ser marcada por ____.",
+      "pick": 1
+    },
+    {
+      "text": "O chefão final da vida adulta é ____.",
+      "pick": 1
+    },
+    {
+      "text": "O que mais confundiria um alienígena no Brasil?",
+      "pick": 1
+    },
+    {
+      "text": "A reunião de hoje foi cancelada por causa de ____.",
+      "pick": 1
+    },
+    {
+      "text": "Meu gato me trouxe ____ de presente e eu fiquei emocionado.",
+      "pick": 1
+    },
+    {
+      "text": "A nova atração do museu: mil anos de ____.",
+      "pick": 1
+    },
+    {
+      "text": "Qual foi o verdadeiro motivo da extinção dos dinossauros?",
+      "pick": 1
+    },
+    {
+      "text": "O livro de autoajuda que mudou minha vida: O Poder de ____.",
+      "pick": 1
+    },
+    {
+      "text": "Na quermesse da paróquia, a barraca mais disputada é a de ____.",
+      "pick": 1
+    },
+    {
+      "text": "Passo um: ____. Passo dois: ____. Passo três: lucro.",
+      "pick": 2
+    },
+    {
+      "text": "Em minha defesa, ____ me mandou fazer ____.",
+      "pick": 2
+    },
+    {
+      "text": "No meu perfil de namoro diz que eu amo ____, mas no fundo eu só amo ____.",
+      "pick": 2
+    },
+    {
+      "text": "O comitê olímpico trocou ____ por ____.",
+      "pick": 2
+    },
+    {
+      "text": "Ninguém me avisou que a vida adulta é basicamente ____ e ____.",
+      "pick": 2
+    },
+    {
+      "text": "Hoje no Globo Repórter: ____ caçando ____.",
+      "pick": 2
     }
   ],
   "white": [
@@ -95,7 +195,7 @@
     "a piada mais cruel do universo",
     "um burrito morno",
     "contato visual agressivo",
-    "a capacidade de ver sabores em cores",
+    "a capacidade de sentir o gosto das cores",
     "karaokê lamentável",
     "ansiedade não tratada",
     "teorias da conspiração",
@@ -120,14 +220,14 @@
     "uma confiança quebrada",
     "ficar preso no trânsito para sempre",
     "uma sala cheia de pessoas mutadas",
-    "gremlin pequeninos e bravos",
+    "gremlins pequeninos e bravos",
     "um duelo de olhares com um gato",
     "o amigo que traz salada de batata",
     "um espelho muito honesto",
     "o remorso em forma sólida",
     "o Efeito Mandela",
     "um chatbot de IA muito ruim",
-    "ser lido seus direitos em uma mercearia",
+    "ouvir seus direitos sendo lidos numa padaria",
     "o senso de humor do algoritmo",
     "uma planilha viva e respirante",
     "o caos que criei",
@@ -146,6 +246,71 @@
     "o peso das expectativas",
     "uma mentira bonita",
     "a conspiração contra mim",
-    "cada bandeira vermelha que ignorei"
+    "cada bandeira vermelha que ignorei",
+    "um pombo que já viu de tudo",
+    "o único que trabalhou no trabalho em grupo",
+    "a declaração do imposto de renda feita de giz de cera",
+    "um cacto de apoio emocional",
+    "um guaxinim de sobretudo fingindo ser três crianças",
+    "o último carregador que funciona na casa",
+    "um áudio de 7 minutos da tia",
+    "um misto-quente agressivamente medíocre",
+    "o bolo de aniversário proibido do escritório",
+    "a opinião do meu tio sobre criptomoedas",
+    "cochilo competitivo",
+    "uma meia com personalidade forte",
+    "a musiquinha de espera do SAC",
+    "um ganso com sede de vingança",
+    "uma batata frita perfeita",
+    "responder sem querer pra todo mundo",
+    "um discurso motivacional de um peixinho dourado",
+    "o rodízio de sushi suspeitamente barato",
+    "o suspiro dramático de um adolescente",
+    "termos e condições que ninguém leu",
+    "o alarme de incêndio apitando às 4 da manhã",
+    "o boneco de posto com um sonho",
+    "as migalhas no fundo do pacote de biscoito",
+    "uma planilha com 47 abas",
+    "o GPS que só diz 'boa sorte'",
+    "o cara que bate palma quando o avião pousa",
+    "um mago que só faz imposto de renda",
+    "uma planta que eu estou matando devagar",
+    "os parafusos que sobraram do móvel montado",
+    "uma criança de três anos extremamente confiante",
+    "a tela de 'Você ainda está assistindo?'",
+    "uma herança de família amaldiçoada",
+    "um pato que sabe dos meus segredos",
+    "quem esquenta peixe no micro-ondas do escritório",
+    "uma leitura dramática da minha lista de mercado",
+    "o silêncio constrangedor depois de uma piada do tiozão",
+    "a seção de comentários do portal de notícias",
+    "um quebra-cabeça sem a última peça",
+    "um toca-aqui que virou aperto de mão",
+    "o teste grátis que eu esqueci de cancelar",
+    "uma lhama formada em Direito",
+    "um estagiário com poder demais",
+    "a máquina de salgadinho que engole sonhos",
+    "a vergonha de um pedido de desculpas no grupo errado",
+    "o fantasma do meu celular de flip",
+    "o hino nacional no karaokê",
+    "uma Kombi bege com um passado sombrio",
+    "pirâmide financeira de óleos essenciais",
+    "um gato derrubando coisas da mesa de propósito",
+    "um solo de apito na pior hora possível",
+    "a confiança de um cara que tem podcast",
+    "o vendedor de mate na praia",
+    "a fila do banco numa segunda-feira",
+    "o pastel de vento da feira",
+    "o tiozão do churrasco que domina a churrasqueira",
+    "o 'Parabéns pra Você' com 'É pique, é pique' no final",
+    "um cachorro caramelo com cargo público",
+    "a pochete do turista",
+    "o carro do ovo passando às 7 da manhã",
+    "a vizinha que sabe da vida de todo mundo",
+    "uma chinelada de mãe à distância",
+    "o pão de queijo dormido da rodoviária",
+    "a dancinha do TikTok que ninguém pediu",
+    "o Wi-Fi da casa da sogra",
+    "um ventilador de teto girando no máximo"
   ]
 }

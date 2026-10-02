@@ -83,6 +83,106 @@
     {
       "text": "The worst possible combination: ____ with a side of ____.",
       "pick": 2
+    },
+    {
+      "text": "My landlord just texted me a photo of ____. No caption.",
+      "pick": 1
+    },
+    {
+      "text": "The secret ingredient in Grandma's lasagna was ____ all along.",
+      "pick": 1
+    },
+    {
+      "text": "What's keeping me up at 3 a.m.?",
+      "pick": 1
+    },
+    {
+      "text": "Coming this fall to a streaming service near you: ____: The Musical.",
+      "pick": 1
+    },
+    {
+      "text": "My LinkedIn headline now just says ____.",
+      "pick": 1
+    },
+    {
+      "text": "What did the archaeologists find in my junk drawer?",
+      "pick": 1
+    },
+    {
+      "text": "Scientists are baffled: whales have started singing about ____.",
+      "pick": 1
+    },
+    {
+      "text": "The wedding was going great until the best man brought up ____.",
+      "pick": 1
+    },
+    {
+      "text": "New from IKEA: ____, some assembly required.",
+      "pick": 1
+    },
+    {
+      "text": "What's in the box that says DO NOT OPEN?",
+      "pick": 1
+    },
+    {
+      "text": "I was promised ____ and all I got was this lousy T-shirt.",
+      "pick": 1
+    },
+    {
+      "text": "My horoscope says this week is all about ____.",
+      "pick": 1
+    },
+    {
+      "text": "The final boss of adulthood is ____.",
+      "pick": 1
+    },
+    {
+      "text": "What will the aliens find most confusing about us?",
+      "pick": 1
+    },
+    {
+      "text": "Today's meeting has been rescheduled due to ____.",
+      "pick": 1
+    },
+    {
+      "text": "My cat brought me ____ as a gift, and honestly I'm touched.",
+      "pick": 1
+    },
+    {
+      "text": "The museum's newest exhibit: a thousand years of ____.",
+      "pick": 1
+    },
+    {
+      "text": "What's the real reason the dinosaurs went extinct?",
+      "pick": 1
+    },
+    {
+      "text": "The self-help book that changed my life: Unlocking the Power of ____.",
+      "pick": 1
+    },
+    {
+      "text": "Step one: ____. Step two: ____. Step three: profit.",
+      "pick": 2
+    },
+    {
+      "text": "In my defense, ____ told me to do ____.",
+      "pick": 2
+    },
+    {
+      "text": "My dating profile says I love ____ but I really just love ____.",
+      "pick": 2
+    },
+    {
+      "text": "The Olympic committee has replaced ____ with ____.",
+      "pick": 2
+    },
+    {
+      "text": "Nobody warned me that adulthood is mostly ____ and ____.",
+      "pick": 2
+    },
+    {
+      "text": "Tonight on the nature channel: ____ hunts ____.",
+      "pick": 2
     }
   ],
   "white": [
@@ -132,7 +232,7 @@
     "a living, breathing spreadsheet",
     "the chaos I have created",
     "a documentary about my mistakes",
-    "the narrator from a TrueTrue crime podcast",
+    "the narrator from a true crime podcast",
     "every bad decision I've made",
     "the collective unconscious",
     "a sentient procrastination",
@@ -146,6 +246,71 @@
     "the weight of expectations",
     "a beautiful lie",
     "the conspiracy against me",
-    "every red flag I ignored"
+    "every red flag I ignored",
+    "a pigeon who has seen things",
+    "the group project's one hard worker",
+    "a tax return written in crayon",
+    "an emotional support cactus",
+    "a raccoon in a trench coat pretending to be three kids",
+    "the last working phone charger in the house",
+    "a voicemail from 2009",
+    "an aggressively mediocre sandwich",
+    "the forbidden office birthday cake",
+    "a lifetime supply of expired coupons",
+    "my uncle's opinion on cryptocurrency",
+    "competitive napping",
+    "a sock with a strong personality",
+    "the hold music from customer service",
+    "a goose with a vendetta",
+    "a single, perfect french fry",
+    "accidentally replying all",
+    "a motivational speech from a goldfish",
+    "the stairs I tripped on in 2014",
+    "a suspiciously cheap sushi buffet",
+    "the dramatic sigh of a teenager",
+    "an unread terms and conditions agreement",
+    "a smoke detector chirping at 4 a.m.",
+    "my alarm clock's betrayal",
+    "an inflatable tube man with a dream",
+    "the crumbs at the bottom of the bag",
+    "a spreadsheet with 47 tabs",
+    "a GPS that just says 'good luck'",
+    "the guy who claps when the plane lands",
+    "a wizard who only does taxes",
+    "a houseplant I'm slowly murdering",
+    "the leftover screws from IKEA furniture",
+    "a parking ticket from a parallel universe",
+    "an extremely confident toddler",
+    "the 'Are you still watching?' screen",
+    "a slow clap that never catches on",
+    "a cursed family heirloom",
+    "the Wi-Fi in a dentist's waiting room",
+    "a duck that knows my secrets",
+    "the person who microwaves fish at work",
+    "a dramatic reading of my grocery list",
+    "a 12-step plan to avoid responsibility",
+    "the unsettling silence after a dad joke",
+    "a bear who just wants a hug",
+    "the comment section",
+    "a jigsaw puzzle missing the last piece",
+    "four raccoons in a single raincoat",
+    "an awkward high-five that became a handshake",
+    "the free trial I forgot to cancel",
+    "a moth who is obsessed with my lamp",
+    "my chaotic search history",
+    "the one sock that survived the washing machine",
+    "a llama with a law degree",
+    "a fully charged battery and nowhere to go",
+    "an intern with too much power",
+    "a vending machine that eats dreams",
+    "the shame of a 'reply all' apology",
+    "an unreasonably large wheel of cheese",
+    "the ghost of my old flip phone",
+    "a karaoke rendition of a national anthem",
+    "a beige minivan with a secret past",
+    "a pyramid scheme selling essential oils",
+    "a cat knocking things off the counter on purpose",
+    "a kazoo solo at the worst possible moment",
+    "the confidence of a guy with a podcast"
   ]
 }

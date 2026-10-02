@@ -1,7 +1,10 @@
 package games
 
 import (
+	"errors"
 	"math/rand"
+	"sort"
+	"strings"
 	"time"
 )
 
@@ -11,6 +14,16 @@ const (
 	StopGraceSeconds       = 5
 	StopValidationSeconds  = 60
 	StopCategoriesPerRound = 8
+	// StopFinalResultsSeconds is how long the last round's results stay up
+	// before the game reports finished and the session results take over.
+	StopFinalResultsSeconds = 10
+	stopMaxAnswerRunes      = 60
+)
+
+var (
+	errStopUnknownAction = errors.New("unknown action")
+	errStopIncomplete    = errors.New("fill every category")
+	errStopBadVote       = errors.New("invalid vote")
 )
 
 // Category pools for each locale
@@ -48,20 +61,23 @@ type StopGame struct {
 	categories   []string
 	usedLetters  map[string]bool
 	answers      map[string]map[string]string // playerID -> category -> answer
-	stopped   bool
-	stoppedBy string
-	deadline  time.Time
+	roster       map[string]bool              // players taking part in this round
+	stopped      bool
+	stoppedBy    string
+	deadline     time.Time
 	deadlineName string
 	finished     bool
 
 	// Validation state
-	validations      map[string]map[string]bool // playerID -> "category|playerID" -> rejected
+	validations      map[string]map[string]bool // voterID -> "category|authorID" -> rejected
 	validatedPlayers map[string]bool
 	autoInvalid      map[string]map[string]bool // category -> playerID -> is auto invalid
+	judgeable        map[string]string          // "category|authorID" -> authorID (answers open to a vote)
 
-	// Scoring
-	roundScores map[string]int // playerID -> points this round
-	totalScores map[string]int // playerID -> cumulative points
+	// Scoring (frozen once the round is scored)
+	results     map[string][]map[string]any // category -> per-answer verdicts
+	roundScores map[string]int              // playerID -> points this round
+	totalScores map[string]int              // playerID -> cumulative points
 }
 
 func NewStopFactory() Factory {
@@ -73,7 +89,6 @@ func NewStopFactory() Factory {
 		},
 	}
 }
-
 
 func (g *StopGame) Start(roomID string, opts Options) {
 	g.room = opts.Room
@@ -91,13 +106,6 @@ func (g *StopGame) Start(roomID string, opts Options) {
 	g.totalRounds = SettingInt(opts.Settings, "rounds", StopTotalRounds, 1, 10)
 	g.answerSeconds = SettingInt(opts.Settings, "answerSeconds", StopAnswerSeconds, 30, 300)
 	g.usedLetters = make(map[string]bool)
-	g.answers = make(map[string]map[string]string)
-	g.stopped = false
-	g.stoppedBy = ""
-	g.validations = make(map[string]map[string]bool)
-	g.validatedPlayers = make(map[string]bool)
-	g.autoInvalid = make(map[string]map[string]bool)
-	g.roundScores = make(map[string]int)
 	g.totalScores = make(map[string]int)
 	g.finished = false
 
@@ -127,11 +135,19 @@ func (g *StopGame) startRound() {
 
 	// Clear round state
 	g.answers = make(map[string]map[string]string)
+	g.roster = make(map[string]bool)
+	if g.room != nil {
+		for _, id := range g.room.ConnectedPlayerIDs() {
+			g.roster[id] = true
+		}
+	}
 	g.stopped = false
 	g.stoppedBy = ""
 	g.validations = make(map[string]map[string]bool)
 	g.validatedPlayers = make(map[string]bool)
 	g.autoInvalid = make(map[string]map[string]bool)
+	g.judgeable = make(map[string]string)
+	g.results = nil
 	g.roundScores = make(map[string]int)
 
 	// Enter answering phase
@@ -145,131 +161,156 @@ func (g *StopGame) OnPlayerJoin(playerID string) {
 }
 
 func (g *StopGame) OnPlayerLeave(playerID string) {
-	// Delete player's current-round answers and validation, but keep their
-	// cumulative totalScores entry so a disconnect mid-round doesn't wipe
-	// points earned in earlier rounds.
-	delete(g.answers, playerID)
-	delete(g.validations, playerID)
-	delete(g.validatedPlayers, playerID)
-
-	// Re-check if everyone has validated
-	if g.phase == "validating" {
+	// A permanent leave. totalScores stay (earlier rounds were earned).
+	switch g.phase {
+	case "answering":
+		// Their half-filled form never reaches the vote.
+		delete(g.answers, playerID)
+		delete(g.roster, playerID)
+	case "validating":
+		// Answers already up for a vote stay (others may be mid-judgement);
+		// they just stop being someone the gate waits for.
+		delete(g.roster, playerID)
 		g.checkAllValidated()
 	}
+	// roundResults: results are frozen; nothing to recompute.
 }
 
 func (g *StopGame) OnRoomChange() {
-	// Re-check if everyone has validated
 	if g.phase == "validating" {
 		g.checkAllValidated()
 	}
 }
 
 func (g *StopGame) OnAction(playerID string, payload map[string]any) error {
+	action, _ := payload["action"].(string)
+	switch action {
+	case "set_answers", "stop", "vote", "validate", "next_round":
+	default:
+		return errStopUnknownAction
+	}
 	if g.finished {
 		return nil
 	}
 
-	switch g.phase {
-	case "answering":
-		action, _ := payload["action"].(string)
-		switch action {
-		case "set_answers":
-			answersRaw, ok := payload["answers"].(map[string]any)
-			if !ok {
-				return nil
-			}
-			if _, ok := g.answers[playerID]; !ok {
-				g.answers[playerID] = make(map[string]string)
-			}
-			for _, cat := range g.categories {
-				if val, ok := answersRaw[cat]; ok {
-					if str, ok := val.(string); ok {
-						runes := []rune(str)
-						if len(runes) > 60 {
-							runes = runes[:60]
-						}
-						g.answers[playerID][cat] = string(runes)
-					}
-				}
-			}
-			return nil
-
-		case "stop":
-			// Check if player has a non-empty answer for every category
-			playerAnswers := g.answers[playerID]
-			for _, cat := range g.categories {
-				if playerAnswers[cat] == "" {
-					return nil
-				}
-			}
-			// Valid stop
-			if !g.stopped {
-				g.stopped = true
-				g.stoppedBy = playerID
-				newDeadline := time.Now().Add(StopGraceSeconds * time.Second)
-				if newDeadline.Before(g.deadline) {
-					g.deadline = newDeadline
-				}
-			}
+	switch action {
+	case "set_answers":
+		// Accepted through the STOP grace window too (phase stays answering).
+		if g.phase != "answering" {
 			return nil
 		}
+		answersRaw, ok := payload["answers"].(map[string]any)
+		if !ok {
+			return errors.New("answers must be an object")
+		}
+		g.roster[playerID] = true
+		if _, ok := g.answers[playerID]; !ok {
+			g.answers[playerID] = make(map[string]string)
+		}
+		for _, cat := range g.categories {
+			if str, ok := answersRaw[cat].(string); ok {
+				runes := []rune(str)
+				if len(runes) > stopMaxAnswerRunes {
+					runes = runes[:stopMaxAnswerRunes]
+				}
+				g.answers[playerID][cat] = string(runes)
+			}
+		}
+		return nil
 
-	case "validating":
-		action, _ := payload["action"].(string)
-		if action == "validate" {
-			rejectedRaw, ok := payload["rejected"].([]any)
+	case "stop":
+		if g.phase != "answering" || g.stopped {
+			return nil
+		}
+		playerAnswers := g.answers[playerID]
+		for _, cat := range g.categories {
+			if strings.TrimSpace(playerAnswers[cat]) == "" {
+				return errStopIncomplete
+			}
+		}
+		g.stopped = true
+		g.stoppedBy = playerID
+		newDeadline := time.Now().Add(StopGraceSeconds * time.Second)
+		if newDeadline.Before(g.deadline) {
+			g.deadline = newDeadline
+		}
+		return nil
+
+	case "vote":
+		if g.phase != "validating" || g.validatedPlayers[playerID] {
+			return nil
+		}
+		if !g.roster[playerID] {
+			return errStopBadVote
+		}
+		key, _ := payload["key"].(string)
+		author, ok := g.judgeable[key]
+		if !ok || author == playerID {
+			return errStopBadVote
+		}
+		valid, ok := payload["valid"].(bool)
+		if !ok {
+			return errStopBadVote
+		}
+		if g.validations[playerID] == nil {
+			g.validations[playerID] = make(map[string]bool)
+		}
+		g.validations[playerID][key] = !valid
+		return nil
+
+	case "validate":
+		if g.phase != "validating" || g.validatedPlayers[playerID] {
+			return nil
+		}
+		if !g.roster[playerID] {
+			return errStopBadVote
+		}
+		votes := g.validations[playerID]
+		if votes == nil {
+			votes = make(map[string]bool)
+		}
+		// Optional bulk list of rejected keys. Only keys of this round's
+		// judgeable answers by someone else count; the scan is capped.
+		rejectedRaw, _ := payload["rejected"].([]any)
+		limit := len(g.judgeable)
+		for i, item := range rejectedRaw {
+			if i >= limit {
+				break
+			}
+			key, ok := item.(string)
 			if !ok {
-				return nil
+				continue
 			}
-
-			validation := make(map[string]bool)
-			for _, item := range rejectedRaw {
-				if key, ok := item.(string); ok {
-					// Parse "category|playerID"
-					idx := -1
-					for i := len(key) - 1; i >= 0; i-- {
-						if key[i] == '|' {
-							idx = i
-							break
-						}
-					}
-					if idx <= 0 || idx >= len(key)-1 {
-						continue
-					}
-					cat := key[:idx]
-					targetPlayerID := key[idx+1:]
-
-					// Filter out auto-invalid or self-answers
-					if g.autoInvalid[cat][targetPlayerID] {
-						continue
-					}
-					if targetPlayerID == playerID {
-						continue
-					}
-					validation[key] = true
-				}
-			}
-
-			g.validations[playerID] = validation
-			g.validatedPlayers[playerID] = true
-			g.checkAllValidated()
-		}
-
-	case "roundResults":
-		action, _ := payload["action"].(string)
-		if action == "next_round" {
-			if g.room != nil && g.room.IsAdmin(playerID) {
-				if g.round < g.totalRounds {
-					g.round++
-					g.startRound()
-				} else {
-					g.finished = true
-				}
+			if author, ok := g.judgeable[key]; ok && author != playerID {
+				votes[key] = true
 			}
 		}
+		// Anything left unjudged counts as a VALID vote.
+		for key, author := range g.judgeable {
+			if author == playerID {
+				continue
+			}
+			if _, voted := votes[key]; !voted {
+				votes[key] = false
+			}
+		}
+		g.validations[playerID] = votes
+		g.validatedPlayers[playerID] = true
+		g.checkAllValidated()
+		return nil
+
+	case "next_round":
+		if g.phase != "roundResults" || g.room == nil || !g.room.IsAdmin(playerID) {
+			return nil
+		}
+		if g.round < g.totalRounds {
+			g.round++
+			g.startRound()
+		} else {
+			g.finished = true
+		}
+		return nil
 	}
-
 	return nil
 }
 
@@ -282,126 +323,175 @@ func (g *StopGame) OnTimer(name string) {
 	case "answering":
 		g.enterValidating()
 	case "validating":
-		g.scoreRound()
-		if g.round < g.totalRounds {
-			g.phase = "roundResults"
-		} else {
+		g.endRound()
+	case "roundResults":
+		if g.round >= g.totalRounds {
 			g.finished = true
 		}
+	}
+	// Every branch above moves to a phase with a fresh (or no) deadline; this
+	// guard keeps it that way, since a deadline left in the past would make
+	// the hub re-fire OnTimer in a hot loop.
+	if _, at, ok := g.NextDeadline(); ok && !at.After(time.Now()) {
+		g.deadline = time.Now().Add(StopGraceSeconds * time.Second)
 	}
 }
 
 func (g *StopGame) enterValidating() {
 	g.phase = "validating"
 
-	// Compute autoInvalid
+	// Compute autoInvalid and the set of answers open to a vote.
 	for _, cat := range g.categories {
 		if _, ok := g.autoInvalid[cat]; !ok {
 			g.autoInvalid[cat] = make(map[string]bool)
 		}
 		for playerID, playerAnswers := range g.answers {
 			answer := playerAnswers[cat]
-			if answer == "" || !StartsWithLetter(answer, g.letter) {
-				g.autoInvalid[cat][playerID] = true
+			if strings.TrimSpace(answer) == "" {
+				continue
 			}
+			if !StartsWithLetter(answer, g.letter) {
+				g.autoInvalid[cat][playerID] = true
+				continue
+			}
+			g.judgeable[cat+"|"+playerID] = playerID
 		}
 	}
 
 	g.validatedPlayers = make(map[string]bool)
 	g.deadline = time.Now().Add(StopValidationSeconds * time.Second)
 	g.deadlineName = "validation"
+
+	// Nobody may have anything to judge (e.g. every answer auto-invalid).
+	g.checkAllValidated()
+}
+
+// hasSomethingToJudge reports whether playerID has at least one answer by
+// someone else to vote on.
+func (g *StopGame) hasSomethingToJudge(playerID string) bool {
+	for _, author := range g.judgeable {
+		if author != playerID {
+			return true
+		}
+	}
+	return false
 }
 
 func (g *StopGame) checkAllValidated() {
-	if g.room == nil {
+	if g.phase != "validating" {
 		return
 	}
-
-	connected := g.room.ConnectedPlayerIDs()
-	for _, playerID := range connected {
-		if _, ok := g.answers[playerID]; ok && !g.validatedPlayers[playerID] {
+	if g.room == nil {
+		// No room view (unit tests): only advance when nothing is judgeable.
+		if len(g.judgeable) == 0 {
+			g.endRound()
+		}
+		return
+	}
+	for _, playerID := range g.room.ConnectedPlayerIDs() {
+		if !g.roster[playerID] || g.validatedPlayers[playerID] {
+			continue
+		}
+		if g.hasSomethingToJudge(playerID) {
 			return
 		}
 	}
+	g.endRound()
+}
 
-	// Everyone has validated
+// endRound scores the round, freezes its results and shows them. After the
+// last round the results stay up for StopFinalResultsSeconds, then finish.
+func (g *StopGame) endRound() {
 	g.scoreRound()
-	if g.round < g.totalRounds {
-		g.phase = "roundResults"
+	g.phase = "roundResults"
+	if g.round >= g.totalRounds {
+		g.deadline = time.Now().Add(StopFinalResultsSeconds * time.Second)
+		g.deadlineName = "final"
 	} else {
-		g.finished = true
+		g.deadlineName = ""
 	}
 }
 
-func (g *StopGame) scoreRound() {
-	// Collect all players who validated
-	validators := make(map[string]bool)
-	for playerID := range g.validations {
-		validators[playerID] = true
+// rejected reports whether a strict majority of the players who voted on key
+// (the author never votes on their own answer) called it nonsense.
+func (g *StopGame) rejected(key string) bool {
+	voters, rejections := 0, 0
+	for _, votes := range g.validations {
+		rejected, ok := votes[key]
+		if !ok {
+			continue
+		}
+		voters++
+		if rejected {
+			rejections++
+		}
 	}
-	validatorCount := len(validators)
+	return voters > 0 && rejections*2 > voters
+}
 
-	// Score each category
+func (g *StopGame) scoreRound() {
+	results := make(map[string][]map[string]any, len(g.categories))
 	for _, cat := range g.categories {
-		// First, determine which answers are valid (not auto-invalid and not majority-rejected)
-		validAnswers := make(map[string]bool) // playerID -> is valid
+		// Valid = typed, starts with the letter, not majority-rejected.
+		valid := make(map[string]string) // playerID -> normalized answer
+		groups := make(map[string]int)   // normalized -> count
 		for playerID, playerAnswers := range g.answers {
 			answer := playerAnswers[cat]
-			if answer == "" {
+			if strings.TrimSpace(answer) == "" || g.autoInvalid[cat][playerID] {
 				continue
 			}
-
-			if g.autoInvalid[cat][playerID] {
+			if g.rejected(cat + "|" + playerID) {
 				continue
 			}
-
-			// Count rejections for this answer
-			rejectionCount := 0
-			for _, rejectedKeys := range g.validations {
-				key := cat + "|" + playerID
-				if rejectedKeys[key] {
-					rejectionCount++
-				}
-			}
-
-			// Check if majority rejected
-			if validatorCount > 0 && rejectionCount*2 > validatorCount {
-				continue
-			}
-
-			validAnswers[playerID] = true
+			n := NormalizeAnswer(answer)
+			valid[playerID] = n
+			groups[n]++
 		}
 
-		// Now, group valid answers by normalized form to find duplicates
-		normalizedGroups := make(map[string][]string) // normalized -> list of playerIDs
-		for playerID := range validAnswers {
-			if answer, ok := g.answers[playerID][cat]; ok {
-				normalized := NormalizeAnswer(answer)
-				normalizedGroups[normalized] = append(normalizedGroups[normalized], playerID)
-			}
+		ids := make([]string, 0, len(g.answers))
+		for playerID := range g.answers {
+			ids = append(ids, playerID)
 		}
+		sort.Strings(ids)
 
-		// Assign points
-		for playerID := range validAnswers {
-			if answer, ok := g.answers[playerID][cat]; ok {
-				normalized := NormalizeAnswer(answer)
-				if len(normalizedGroups[normalized]) > 1 {
-					// Duplicate
-					g.roundScores[playerID] += 5
+		entries := make([]map[string]any, 0, len(ids))
+		for _, playerID := range ids {
+			answer := g.answers[playerID][cat]
+			if strings.TrimSpace(answer) == "" {
+				continue
+			}
+			verdict, points := "invalid", 0
+			if n, ok := valid[playerID]; ok {
+				if groups[n] > 1 {
+					verdict, points = "duplicate", 5
 				} else {
-					// Unique
-					g.roundScores[playerID] += 10
+					verdict, points = "unique", 10
 				}
 			}
+			g.roundScores[playerID] += points
+			entries = append(entries, map[string]any{
+				"playerId": playerID,
+				"answer":   answer,
+				"verdict":  verdict,
+				"points":   points,
+			})
 		}
+		results[cat] = entries
 	}
+	g.results = results
 
-	// Accumulate round scores to total scores
 	for playerID, points := range g.roundScores {
 		g.totalScores[playerID] += points
 	}
-
-	// Ensure all connected players have entries
+	// Everyone who took part shows up on the board, even with 0.
+	for playerID := range g.roster {
+		if _, ok := g.totalScores[playerID]; !ok {
+			g.totalScores[playerID] = 0
+		}
+		if _, ok := g.roundScores[playerID]; !ok {
+			g.roundScores[playerID] = 0
+		}
+	}
 	if g.room != nil {
 		for _, playerID := range g.room.ConnectedPlayerIDs() {
 			if _, ok := g.totalScores[playerID]; !ok {
@@ -412,10 +502,18 @@ func (g *StopGame) scoreRound() {
 }
 
 func (g *StopGame) NextDeadline() (string, time.Time, bool) {
-	if g.finished || (g.phase != "answering" && g.phase != "validating") {
+	if g.finished || g.deadlineName == "" {
 		return "", time.Time{}, false
 	}
-	return g.deadlineName, g.deadline, true
+	switch g.phase {
+	case "answering", "validating":
+		return g.deadlineName, g.deadline, true
+	case "roundResults":
+		if g.deadlineName == "final" {
+			return g.deadlineName, g.deadline, true
+		}
+	}
+	return "", time.Time{}, false
 }
 
 func (g *StopGame) Status() Status {
@@ -439,8 +537,12 @@ func (g *StopGame) PublicState() map[string]any {
 		"totalScores": g.totalScores,
 	}
 
-	if g.phase == "answering" {
+	switch g.phase {
+	case "answering":
 		state["deadline"] = g.deadline.UnixMilli()
+		// Skew-free form of deadline: the client anchors it to its own clock
+		// to flush unsent answers just before the round closes.
+		state["remainingMs"] = max(0, time.Until(g.deadline).Milliseconds())
 		state["stopped"] = g.stopped
 		if g.stopped {
 			state["stoppedBy"] = g.stoppedBy
@@ -448,110 +550,74 @@ func (g *StopGame) PublicState() map[string]any {
 		answersFilled := make(map[string]int)
 		for playerID, playerAnswers := range g.answers {
 			count := 0
-			for _, answer := range playerAnswers {
-				if answer != "" {
+			for _, cat := range g.categories {
+				if strings.TrimSpace(playerAnswers[cat]) != "" {
 					count++
 				}
 			}
 			answersFilled[playerID] = count
 		}
 		state["answersFilled"] = answersFilled
-	}
 
-	if g.phase == "validating" {
+	case "validating":
 		state["deadline"] = g.deadline.UnixMilli()
+		ids := make([]string, 0, len(g.answers))
+		for playerID := range g.answers {
+			ids = append(ids, playerID)
+		}
+		sort.Strings(ids)
 		answersState := make(map[string][]map[string]any)
+		tally := make(map[string]map[string]int, len(g.judgeable))
 		for _, cat := range g.categories {
 			answersState[cat] = make([]map[string]any, 0)
-			for playerID, playerAnswers := range g.answers {
-				if answer, ok := playerAnswers[cat]; ok && answer != "" {
-					answersState[cat] = append(answersState[cat], map[string]any{
-						"playerId":    playerID,
-						"answer":      answer,
-						"autoInvalid": g.autoInvalid[cat][playerID],
-					})
+			for _, playerID := range ids {
+				answer := g.answers[playerID][cat]
+				if strings.TrimSpace(answer) == "" {
+					continue
+				}
+				answersState[cat] = append(answersState[cat], map[string]any{
+					"playerId":    playerID,
+					"answer":      answer,
+					"autoInvalid": g.autoInvalid[cat][playerID],
+				})
+			}
+		}
+		for key := range g.judgeable {
+			tally[key] = map[string]int{"valid": 0, "nope": 0}
+		}
+		for _, votes := range g.validations {
+			for key, rejected := range votes {
+				t, ok := tally[key]
+				if !ok {
+					continue
+				}
+				if rejected {
+					t["nope"]++
+				} else {
+					t["valid"]++
+				}
+			}
+		}
+		required := 0
+		if g.room != nil {
+			for _, playerID := range g.room.ConnectedPlayerIDs() {
+				if g.roster[playerID] && g.hasSomethingToJudge(playerID) {
+					required++
 				}
 			}
 		}
 		state["answers"] = answersState
+		state["tally"] = tally
 		state["validatedCount"] = len(g.validatedPlayers)
-	}
+		state["requiredCount"] = required
 
-	if g.phase == "roundResults" {
-		// Collect validators count
-		validatorCount := len(g.validations)
-
-		resultsState := make(map[string][]map[string]any)
-		for _, cat := range g.categories {
-			resultsState[cat] = make([]map[string]any, 0)
-			for playerID, playerAnswers := range g.answers {
-				answer, ok := playerAnswers[cat]
-				if !ok || answer == "" {
-					continue
-				}
-
-				verdict := "invalid"
-				if !g.autoInvalid[cat][playerID] {
-					rejectionCount := 0
-					for _, rejectedKeys := range g.validations {
-						key := cat + "|" + playerID
-						if rejectedKeys[key] {
-							rejectionCount++
-						}
-					}
-					isMajorityRejected := validatorCount > 0 && rejectionCount*2 > validatorCount
-					if !isMajorityRejected {
-						// Check if unique or duplicate
-						normalizedAnswers := make(map[string]int)
-						for otherPlayerID, otherPlayerAnswers := range g.answers {
-							otherAnswer := otherPlayerAnswers[cat]
-							if otherAnswer == "" || otherPlayerID == playerID {
-								continue
-							}
-							if g.autoInvalid[cat][otherPlayerID] {
-								continue
-							}
-							otherRejectionCount := 0
-							for _, rejectedKeys := range g.validations {
-								otherKey := cat + "|" + otherPlayerID
-								if rejectedKeys[otherKey] {
-									otherRejectionCount++
-								}
-							}
-							otherIsMajorityRejected := validatorCount > 0 && otherRejectionCount*2 > validatorCount
-							if otherIsMajorityRejected {
-								continue
-							}
-							normalizedOther := NormalizeAnswer(otherAnswer)
-							normalizedAnswers[normalizedOther]++
-						}
-
-						normalizedThis := NormalizeAnswer(answer)
-						if normalizedAnswers[normalizedThis] > 0 {
-							verdict = "duplicate"
-						} else {
-							verdict = "unique"
-						}
-					}
-				}
-
-				points := 0
-				switch verdict {
-				case "unique":
-					points = 10
-				case "duplicate":
-					points = 5
-				}
-				resultsState[cat] = append(resultsState[cat], map[string]any{
-					"playerId": playerID,
-					"answer":   answer,
-					"verdict":  verdict,
-					"points":   points,
-				})
-			}
-		}
-		state["results"] = resultsState
+	case "roundResults":
+		state["results"] = g.results
 		state["roundScores"] = g.roundScores
+		state["final"] = g.round >= g.totalRounds
+		if g.round >= g.totalRounds {
+			state["deadline"] = g.deadline.UnixMilli()
+		}
 	}
 
 	return state
@@ -564,16 +630,26 @@ func (g *StopGame) PrivateState(playerID string) map[string]any {
 	}
 
 	rejectedList := make([]string, 0)
-	if validations, ok := g.validations[playerID]; ok {
-		for key := range validations {
+	votes := make(map[string]string)
+	for key, rejected := range g.validations[playerID] {
+		if rejected {
 			rejectedList = append(rejectedList, key)
+			votes[key] = "nonsense"
+		} else {
+			votes[key] = "valid"
 		}
 	}
+	sort.Strings(rejectedList)
 
 	return map[string]any{
+		// round lets the client ignore a stale private state that arrives
+		// before (or after) the public state of a new round.
+		"round":     g.round,
 		"answers":   playerAnswers,
 		"validated": g.validatedPlayers[playerID],
 		"rejected":  rejectedList,
+		"votes":     votes,
+		"judge":     g.roster[playerID],
 	}
 }
 

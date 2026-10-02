@@ -4,16 +4,16 @@ import "testing"
 
 func TestMarshalStateRoundTrip(t *testing.T) {
 	orig := &Room{
-		ID:            "r1",
-		Name:          "Game Night",
-		Visibility:    Private,
-		JoinCode:      "ABC123",
-		Password:      "hunter2", // json:"-" — must still survive persistence
-		MaxPlayers:    8,
-		Locale:        "en",
-		Status:        StatusPlaying,
-		GameType:      "trivia",
-		GameName:      "Trivia",
+		ID:         "r1",
+		Name:       "Game Night",
+		Visibility: Private,
+		JoinCode:   "ABC123",
+		Password:   "hunter2", // json:"-" — must still survive persistence
+		MaxPlayers: 8,
+		Locale:     "en",
+		Status:     StatusPlaying,
+		GameType:   "trivia",
+		GameName:   "Trivia",
 		Players: map[string]Player{
 			"p1": {ID: "p1", Name: "Ada", SessionID: "sess-1", Connected: true, Ready: true},
 			"p2": {ID: "p2", Name: "Bo", SessionID: "sess-2"},

@@ -22,3 +22,15 @@ test("muting sound persists across a reload", async ({ page }) => {
   await page.reload();
   await expect(page.getByTestId("sfx-toggle")).toHaveAttribute("aria-label", /^Unmute/);
 });
+
+test("a room created in PT-BR is a pt-BR room (game content language)", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "PT-BR" }).click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "pt-BR");
+  await page.getByTestId("nick-input").fill("Ana");
+  await page.getByTestId("create-room").click();
+  await page.getByTestId("create-room-confirm").click();
+  await page.waitForURL(/\/room\/.+/);
+  await expect(page.getByTestId("lobby")).toHaveAttribute("data-room-locale", "pt-BR");
+  await expect(page.getByText("Playlist da noite")).toBeVisible();
+});

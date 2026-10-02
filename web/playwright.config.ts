@@ -1,10 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 
 // End-to-end tests drive a real browser against the real stack: a dedicated
-// Go server on :8090 and the Next app on :3100 (isolated from the dev ports).
-// Both are started by Playwright and torn down after the run.
-const WS_PORT = 8099;
-const WEB_PORT = 3939;
+// Go server on :8099 and the Next app on :3939 (isolated from the dev ports).
+// Both are started by Playwright and torn down after the run. E2E_WS_PORT /
+// E2E_WEB_PORT / E2E_DIST_DIR let several runs share a machine.
+const WS_PORT = Number(process.env.E2E_WS_PORT) || 8099;
+const WEB_PORT = Number(process.env.E2E_WEB_PORT) || 3939;
+const DIST_DIR = process.env.E2E_DIST_DIR || ".next-local";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -25,7 +27,7 @@ export default defineConfig({
     {
       // Build then run the Go server (embeds decks, so the binary is
       // self-contained). Health-check gates readiness.
-      command: `sh -c "go build -o /tmp/gemu-e2e ./cmd/server && WS_ADDR=:${WS_PORT} /tmp/gemu-e2e"`,
+      command: `sh -c "go build -o /tmp/gemu-e2e-${WS_PORT} ./cmd/server && WS_ADDR=:${WS_PORT} /tmp/gemu-e2e-${WS_PORT}"`,
       cwd: "../server",
       url: `http://localhost:${WS_PORT}/healthz`,
       timeout: 120_000,
@@ -41,7 +43,7 @@ export default defineConfig({
       reuseExistingServer: false,
       env: {
         NEXT_PUBLIC_WS_URL: `ws://localhost:${WS_PORT}/ws`,
-        NEXT_DIST_DIR: ".next-local",
+        NEXT_DIST_DIR: DIST_DIR,
       },
     },
   ],

@@ -1,23 +1,32 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { Volume2, Crown } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { Player, SessionFinal } from "@/lib/protocol";
-import { Button } from "@/components/ui";
 import { Avatar } from "@/components/ui/PlayerChip";
 import { playerColorFor } from "@/components/ui/gameHues";
 import { playSfx } from "@/lib/sfx";
 
+// Confetti: fixed pseudo-random spread per index (render stays pure).
+const CONFETTI_COLORS = ["#ffd23f", "#ff8a9b", "#8ceedd", "#35d4b9", "#ff9d3f", "#b78bff"];
+const CONFETTI = Array.from({ length: 16 }, (_, i) => ({
+  id: i,
+  left: `${(i * 37 + 11) % 100}%`,
+  color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+  duration: 3 + ((i * 7) % 10) / 5,
+  delay: ((i * 3) % 10) / 12,
+}));
+
+/** Final podium (Gemu Screens · 8): champion of the night. */
 export function PodiumScreen({
   sessionFinal,
   players,
   onBackToLobby,
 }: {
   sessionFinal: SessionFinal;
-  // Optional: SessionFinal's standings carry only playerId/name/score, not
-  // avatarUrl, so real doodle avatars need the room's full player list. Not
-  // currently wired in by the caller — falls back to a letter avatar.
+  // SessionFinal's standings carry only playerId/name/score; the room's
+  // player list supplies doodle avatars (letter avatar if they left).
   players?: Player[];
   onBackToLobby: () => void;
 }) {
@@ -28,13 +37,9 @@ export function PodiumScreen({
     playSfx("winner");
   }, []);
 
-  // Get top 3
   const top3 = sessionFinal.standings.slice(0, 3);
   const others = sessionFinal.standings.slice(3);
 
-  // Resolve a full Player for the avatar ring. Falls back to a synthesized
-  // stub (letter avatar) when the caller hasn't wired in the room's player
-  // list, and to the standing's placement for the color index.
   const resolvePlayer = (standing: (typeof sessionFinal.standings)[number]) => {
     const idx = players?.findIndex((p) => p.id === standing.playerId) ?? -1;
     const player: Player =
@@ -52,25 +57,13 @@ export function PodiumScreen({
     return { player, color: playerColorFor(colorIndex) };
   };
 
-  // Generate confetti pieces
-  const confetti = useMemo(() => {
-    const colors = ["#ffd23f", "#ff8a9b", "#8ceedd", "#35d4b9", "#ff9d3f"];
-    return Array.from({ length: 15 }, (_, i) => ({
-      id: i,
-      left: `${Math.random() * 100}%`,
-      color: colors[i % colors.length],
-      duration: 3 + Math.random() * 2,
-      delay: Math.random() * 0.5,
-    }));
-  }, []);
-
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-screen gap-8 px-6 py-12 overflow-hidden">
-      {/* Confetti */}
-      {confetti.map((piece) => (
+    <div className="relative flex flex-1 flex-col items-center justify-center gap-6 overflow-hidden py-8" data-testid="podium">
+      {CONFETTI.map((piece) => (
         <div
           key={piece.id}
-          className="absolute pointer-events-none animate-fall"
+          aria-hidden
+          className="animate-fall pointer-events-none absolute"
           style={{
             left: piece.left,
             top: "-30px",
@@ -84,61 +77,48 @@ export function PodiumScreen({
         />
       ))}
 
-      {/* Header */}
-      <div className="text-center relative z-10">
-        <div className="mono-caption mb-3 flex items-center justify-center gap-2">
-          <Volume2 size={14} strokeWidth={2.5} /> That&apos;s a wrap
+      <div className="relative z-10 text-center">
+        <div className="mb-1 flex items-center justify-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.4em] text-(--accent-2)">
+          {t("podium.wrap")} <Volume2 size={14} strokeWidth={2.5} aria-hidden />
         </div>
-        <h1 className="slab text-6xl">{t("podium.title")}</h1>
+        <h1 className="slab text-[clamp(28px,8vw,44px)] uppercase leading-tight" style={{ textShadow: "0 5px 0 var(--drop)" }}>
+          {t("podium.title")}
+        </h1>
       </div>
 
-      {/* Top 3 Podium */}
-      <div className="w-full max-w-4xl relative z-10">
-        <div className="flex items-end justify-center gap-4 h-80 mb-8">
-          {/* Reorder standings: design uses pod = [totals[1], totals[0], totals[2]]
-              So top3[1] (2nd) goes left, top3[0] (1st) goes center, top3[2] (3rd) goes right */}
-          {[
-            // Design order: 2nd left, champion center, 3rd right — but a
-            // 2-player night has no 3rd, so pair each slot with its position
-            // and drop empty ones instead of crashing on undefined.
-            { standing: top3[1], flex: 1, h: "h-56", rank: 2, delay: 0.3 },
-            { standing: top3[0], flex: 1.15, h: "h-64", rank: 1, delay: 0.6 },
-            { standing: top3[2], flex: 1, h: "h-40", rank: 3, delay: 0 },
-          ]
-            .filter((slot) => slot.standing)
-            .map(({ standing, ...pos }, idx) => {
+      {/* 2nd left, champion center, 3rd right; a 2-player night has no 3rd. */}
+      <div className="relative z-10 flex w-full max-w-[620px] items-end justify-center gap-2.5 sm:gap-3.5">
+        {[
+          { standing: top3[1], flex: 1, h: 104, rank: 2, delay: 0.3, avatar: 54 },
+          { standing: top3[0], flex: 1.15, h: 150, rank: 1, delay: 0.6, avatar: 64 },
+          { standing: top3[2], flex: 1, h: 78, rank: 3, delay: 0, avatar: 54 },
+        ]
+          .filter((slot) => slot.standing)
+          .map(({ standing, ...pos }) => {
             const isChampion = pos.rank === 1;
             const { player, color } = resolvePlayer(standing);
             return (
               <div
                 key={standing.playerId}
-                className="animate-rise flex flex-col items-center justify-end gap-2"
-                style={{
-                  flex: pos.flex,
-                  animationDelay: `${pos.delay}s`,
-                }}
+                className="animate-rise flex min-w-0 flex-col items-center justify-end gap-1.5"
+                style={{ flex: pos.flex, animationDelay: `${pos.delay}s` }}
               >
-                {isChampion && (
-                  <Crown size={40} strokeWidth={2.5} style={{ color: "#ffd23f" }} />
-                )}
-                <Avatar player={player} color={color} size={56} />
-                <div className="text-center text-sm">
-                  <div className="font-bold text-(--ink) break-words">
-                    {standing.name}
-                  </div>
-                  <div className="text-sm slab text-(--accent)">
-                    {standing.score}
-                  </div>
+                {isChampion ? <Crown size={26} strokeWidth={2.5} style={{ color: "#ffd23f" }} aria-hidden /> : null}
+                <Avatar player={player} color={color} size={pos.avatar} />
+                <div
+                  className="max-w-full truncate text-center text-sm font-bold"
+                  style={{ color: isChampion ? "var(--accent)" : "var(--ink)" }}
+                >
+                  {standing.name} · {standing.score}
                 </div>
                 <div
-                  className={`w-full ${pos.h} rounded-t-2xl flex items-center justify-center text-4xl slab`}
+                  className="flex w-full items-center justify-center rounded-t-2xl font-display text-4xl"
                   style={{
-                    background: isChampion
-                      ? "linear-gradient(180deg, #ffd23f, #f5b32a)"
-                      : "#2b1a3d",
-                    border: isChampion ? "none" : "2px solid #5a3f7a",
-                    color: isChampion ? "#3d1f0e" : "rgba(255,233,168,.7)",
-                    boxShadow: isChampion ? "0 0 30px rgba(255,210,63,.35)" : "none",
+                    height: pos.h,
+                    background: isChampion ? "linear-gradient(180deg, #ffd23f, #f5b32a)" : "var(--panel)",
+                    border: isChampion ? "none" : "2px solid var(--line)",
+                    color: isChampion ? "var(--dark-ink)" : "rgba(255,233,168,.7)",
+                    boxShadow: isChampion ? "0 0 40px rgba(255,210,63,.35)" : "none",
                   }}
                   data-testid={isChampion ? "podium-winner" : undefined}
                 >
@@ -147,35 +127,32 @@ export function PodiumScreen({
               </div>
             );
           })}
-        </div>
-
-        {/* Everyone else */}
-        {others.length > 0 && (
-          <div className="mb-8 space-y-2">
-            {others.map((standing) => (
-              <div
-                key={standing.playerId}
-                className="animate-rise rounded-full bg-(--panel) border-2 border-(--line) px-6 py-2 flex items-center justify-between gap-3"
-              >
-                <span className="font-bold text-(--ink)/60 text-xs">
-                  {standing.place}
-                </span>
-                <span className="flex-1 font-bold text-(--ink)">
-                  {standing.name}
-                </span>
-                <span className="font-bold text-(--ink)/60 text-xs">
-                  {standing.score}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* Button */}
-      <Button variant="primary" size="lg" onClick={onBackToLobby} data-testid="podium-continue">
-        Same time next week? · New room
-      </Button>
+      {others.length > 0 ? (
+        <ol className="relative z-10 flex w-full max-w-[420px] flex-col gap-2">
+          {others.map((standing) => (
+            <li
+              key={standing.playerId}
+              className="animate-rise flex items-center gap-3 rounded-full border-2 border-(--line) bg-(--panel) px-5 py-2"
+            >
+              <span className="font-mono text-xs font-bold text-(--ink)/50">{standing.place}</span>
+              <span className="min-w-0 flex-1 truncate font-bold text-(--ink)">{standing.name}</span>
+              <span className="font-mono text-xs font-bold text-(--ink)/60">{standing.score}</span>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+
+      <button
+        type="button"
+        onClick={onBackToLobby}
+        data-testid="podium-continue"
+        className="buzzer relative z-10 rounded-2xl px-6 py-3.5 text-[15px] uppercase"
+        style={{ background: "linear-gradient(180deg,#ffd23f,#f5b32a)", color: "var(--dark-ink)" }}
+      >
+        {t("podium.again")}
+      </button>
     </div>
   );
 }

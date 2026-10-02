@@ -49,7 +49,7 @@
 }
 
 body {
-  background: var(--bg-deep);
+  background: var(--bg);
   color: var(--ink);
   font-family: var(--font-sans), system-ui, sans-serif;
 }
@@ -60,10 +60,12 @@ body,
   min-height: 100%;
 }
 
-/* Phones: any stray wide element must clip, never sideways-scroll the page. */
+/* Phones: any stray wide element must clip, never sideways-scroll the page.
+   `clip` (not `hidden`) so body doesn't become a scroll container and
+   `position: sticky` keeps working. */
 html,
 body {
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* ---- shared primitives ---- */
@@ -80,6 +82,19 @@ body {
   font-family: var(--font-display);
   color: var(--ink);
   text-shadow: 0 8px 0 var(--drop);
+}
+
+/* Display face without the cream + drop: for text sitting on hue fills. */
+.slab-flat {
+  font-family: var(--font-display);
+}
+
+/* The stage: warm spotlight from above on the purple backdrop
+   (Gemu Prototype root). */
+.radial-glow {
+  background:
+    radial-gradient(ellipse at 50% -20%, rgba(255, 120, 90, 0.14), transparent 55%),
+    var(--bg);
 }
 
 .mono-caption {
@@ -113,6 +128,16 @@ body {
 .buzzer:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @keyframes bulb {

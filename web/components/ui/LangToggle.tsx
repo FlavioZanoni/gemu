@@ -3,7 +3,7 @@
 import { useI18n, type Locale } from "@/lib/i18n";
 
 export function LangToggle({ className = "" }: { className?: string }) {
-  const { locale, setLocale } = useI18n();
+  const { locale, setLocale, t } = useI18n();
   const options: { value: Locale; label: string }[] = [
     { value: "en", label: "EN" },
     { value: "pt-BR", label: "PT-BR" },
@@ -12,7 +12,7 @@ export function LangToggle({ className = "" }: { className?: string }) {
     <div
       className={`inline-flex rounded-full border-2 border-(--line) bg-(--panel) p-[3px] ${className}`}
       role="group"
-      aria-label="Language"
+      aria-label={t("shell.language")}
     >
       {options.map((option) => (
         <button

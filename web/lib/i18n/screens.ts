@@ -28,6 +28,9 @@ export const screens = {
     "home.password": "Password (optional)",
     "home.starting": "Starting...",
     "home.joinRoom": "Join room",
+    "home.lockedTitle": "This room is locked",
+    "home.lockedHint": "Ask the host for the password.",
+    "home.passwordLabel": "Room password",
     "home.joining": "Joining...",
     "home.joinCode": "Join code (if private)",
     "home.live": "Live",
@@ -47,13 +50,15 @@ export const screens = {
     "decks.done": "Done",
     "decks.badJson": "That's not valid JSON.",
     "decks.badShape": "Deck needs a name, black[], and white[].",
+    "decks.rejected": "The server didn't accept that deck.",
+    "decks.added": "Deck added!",
 
     // Join gate screen
     "join.nameRequired": "Pick a nickname first.",
 
     // Lobby screen
     "lobby.readyUp": "Ready up",
-    "lobby.startGame": "Start game",
+    "lobby.startGame": "Start the show",
 
     // Playing screen
     "playing.howToPlay": "? How to play",
@@ -64,12 +69,12 @@ export const screens = {
     "results.waiting": "Waiting for host...",
 
     // Voting screen
-    "voting.title": "What's next?",
-    "voting.selectGame": "Tap to select the next game",
+    "voting.title": "Next game",
+    "voting.selectGame": "Audience vote",
     "voting.upComingNext": "Up coming next",
 
     // Podium screen
-    "podium.title": "The Winners",
+    "podium.title": "Champion of the night",
 
     // Pause overlay
     "pause.title": "Show paused",
@@ -79,8 +84,8 @@ export const screens = {
     "pause.pause": "Pause",
 
     // Edge states
-    "edge.kicked": "You've been kicked",
-    "edge.kickedDesc": "The host removed you from this room. You can head back to the lobby to join a different game.",
+    "edge.kicked": "Voted off the island",
+    "edge.kickedDesc": "The host removed you from the room.",
     "edge.joining": "Joining room...",
     "edge.returnToLobby": "Return to lobby",
     "edge.leaving": "Leaving room...",
@@ -120,6 +125,9 @@ export const screens = {
     "home.password": "Senha (opcional)",
     "home.starting": "Iniciando...",
     "home.joinRoom": "Entrar em sala",
+    "home.lockedTitle": "Esta sala tem senha",
+    "home.lockedHint": "Peça a senha para quem criou a sala.",
+    "home.passwordLabel": "Senha da sala",
     "home.joining": "Entrando...",
     "home.joinCode": "Código de entrada (se privada)",
     "home.live": "Ao vivo",
@@ -139,13 +147,15 @@ export const screens = {
     "decks.done": "Pronto",
     "decks.badJson": "JSON inválido.",
     "decks.badShape": "O deck precisa de name, black[] e white[].",
+    "decks.rejected": "O servidor não aceitou esse deck.",
+    "decks.added": "Deck adicionado!",
 
     // Join gate screen
     "join.nameRequired": "Escolha um apelido primeiro.",
 
     // Lobby screen
-    "lobby.readyUp": "Pronto",
-    "lobby.startGame": "Iniciar jogo",
+    "lobby.readyUp": "Estou pronto",
+    "lobby.startGame": "Começar o show",
 
     // Playing screen
     "playing.howToPlay": "? Como jogar",
@@ -156,12 +166,12 @@ export const screens = {
     "results.waiting": "Aguardando o anfitrião...",
 
     // Voting screen
-    "voting.title": "Qual é o próximo?",
-    "voting.selectGame": "Toque para selecionar o próximo jogo",
+    "voting.title": "Próximo jogo",
+    "voting.selectGame": "Voto da plateia",
     "voting.upComingNext": "Próximo jogo",
 
     // Podium screen
-    "podium.title": "Os Vencedores",
+    "podium.title": "Campeão da noite",
 
     // Pause overlay
     "pause.title": "Show pausado",
@@ -171,8 +181,8 @@ export const screens = {
     "pause.pause": "Pausar",
 
     // Edge states
-    "edge.kicked": "Você foi expulso",
-    "edge.kickedDesc": "O anfitrião o removeu da sala. Você pode voltar ao lobby para entrar em um jogo diferente.",
+    "edge.kicked": "Eliminado da ilha",
+    "edge.kickedDesc": "O anfitrião tirou você da sala.",
     "edge.joining": "Entrando em sala...",
     "edge.returnToLobby": "Voltar ao lobby",
     "edge.leaving": "Saindo da sala...",

@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
-import { Rocket, Trash2, Coins } from "lucide-react";
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
+import type { Player } from "@/lib/protocol";
 import { DrawingCanvas } from "../DrawingCanvas";
-import { Card, Button, Banner, HowToPlayModal } from "../ui";
+import { Button, Banner, HowToPlayModal, hueFor, playerColorFor } from "../ui";
+import { Avatar } from "../ui/PlayerChip";
 import type { GameProps } from "./types";
 
 type InventionDrawing = {
@@ -14,94 +15,117 @@ type InventionDrawing = {
   dataURL: string;
 };
 
+type Reactions = Record<string, number>;
+
 const FUNDING_BUDGET = 1000;
+const FUNDING_STEP = 50;
+const HUE = "var(--hue-invention)";
+const REACTIONS = [
+  { kind: "fund", emoji: "💰" },
+  { kind: "trash", emoji: "🗑" },
+  { kind: "rocket", emoji: "🚀" },
+] as const;
+
+// Patent-card palette (Gemu Game Screens · Patently Silly pitch card).
+const PAPER = "#fff8e7";
+const PAPER_INK = "#1c1230";
+const PAPER_BODY = "#4a4232";
+const PAPER_CAPTION = "#8a7f60";
+
+const MAX_EXPORT_SIDE = 640;
+const MAX_EXPORT_CHARS = 150_000;
+
+/** Downscale a canvas PNG to ≤640px on the long side and re-encode as WebP
+ *  (JPEG fallback), stepping quality down until it fits the upload budget —
+ *  drawings are rebroadcast to every player in each game.state. */
+async function compressDrawing(dataURL: string): Promise<string> {
+  const image = new Image();
+  image.src = dataURL;
+  await image.decode();
+  const scale = Math.min(1, MAX_EXPORT_SIDE / Math.max(image.width, image.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return dataURL;
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  let out = "";
+  for (const quality of [0.8, 0.65, 0.5, 0.35]) {
+    out = canvas.toDataURL("image/webp", quality);
+    if (!out.startsWith("data:image/webp")) out = canvas.toDataURL("image/jpeg", quality);
+    if (out.length <= MAX_EXPORT_CHARS) break;
+  }
+  return out;
+}
+
+/** sendAction may report a dropped send (false while disconnected). */
+const wasSent = (result: unknown) => result !== false;
+
+/** One-shot guard for host controls: after a press for `key` (phase/round/
+ *  pitch), the control stays disabled until the key changes — the server
+ *  also ignores stale presses — or LATCH_MS pass without a change. */
+const LATCH_MS = 4000;
+function useLatch(key: string) {
+  const [latched, setLatched] = useState<string | null>(null);
+  useEffect(() => {
+    if (latched === null) return;
+    const id = setTimeout(() => setLatched(null), LATCH_MS);
+    return () => clearTimeout(id);
+  }, [latched]);
+  return { locked: latched === key, latch: () => setLatched(key) };
+}
+
+const pad3 = (n: number) => String(n).padStart(3, "0");
+const money = (n: number) => `$${n}`;
 
 export function InventionGame(props: GameProps & { onLeave?: () => void }) {
   const { t } = useI18n();
-  const {
-    playerId,
-    players,
-    publicState,
-    privateState,
-    sendAction,
-    isAdmin,
-    onLeave,
-  } = props;
+  const { playerId, players, publicState, privateState, sendAction, isAdmin } = props;
+
   const phase = (publicState?.phase as string | undefined) ?? "collecting";
   const round = (publicState?.round as number | undefined) ?? 1;
   const totalRounds = (publicState?.totalRounds as number | undefined) ?? 3;
-  const assigned = (privateState?.assigned as string | undefined) ?? "";
-  const drawing = privateState?.drawing as InventionDrawing | undefined;
+  const doneCount = (publicState?.doneCount as number | undefined) ?? 0;
+  const neededCount = (publicState?.neededCount as number | undefined) ?? 0;
   const presenters = (publicState?.presenters as string[] | undefined) ?? [];
   const presentIndex = (publicState?.presentIndex as number | undefined) ?? 0;
-  const funding =
-    (publicState?.funding as Record<string, number> | undefined) ?? {};
-  const totalFunding =
-    (publicState?.totalFunding as Record<string, number> | undefined) ?? {};
-  const voteCount = (publicState?.voteCount as number | undefined) ?? 0;
-  const problemsSubmitted =
-    (publicState?.problemsSubmitted as number | undefined) ?? 0;
-
-  const [problemOne, setProblemOne] = useState("");
-  const [problemTwo, setProblemTwo] = useState("");
-  const [title, setTitle] = useState("");
-  const [tagline, setTagline] = useState("");
-  const [canvasData, setCanvasData] = useState("");
-  const [drawStep, setDrawStep] = useState<"idea" | "draw">("idea");
-  const [myProblemsSubmitted, setMyProblemsSubmitted] = useState(false);
-  const [fundAllocations, setFundAllocations] = useState<Record<string, number>>({});
-  const [showHowTo, setShowHowTo] = useState(round === 1 && phase === "collecting");
-
-  const presenterId = presenters[presentIndex];
-  const isPresenter = presenterId === playerId;
   const submissions =
-    (publicState?.submissions as
-      | Record<string, InventionDrawing>
-      | undefined) ?? {};
-  const currentSubmission = presenterId ? submissions[presenterId] : undefined;
-  const playerNames = useMemo(() => {
-    const map = new Map<string, string>();
-    players.forEach((player) => map.set(player.id, player.name));
+    (publicState?.submissions as Record<string, InventionDrawing> | undefined) ?? {};
+
+  const [showHowTo, setShowHowTo] = useState(round === 1 && phase === "collecting");
+  // Host "advance" is bound to the phase it was pressed in: a double tap or
+  // a tap racing an auto-advance must not skip the next phase too.
+  const advanceLatch = useLatch(`${round}:${phase}`);
+  const hostAdvance = () => {
+    if (advanceLatch.locked) return;
+    if (wasSent(sendAction({ action: "advance", phase, round }))) advanceLatch.latch();
+  };
+
+  const playerById = useMemo(() => {
+    const map = new Map<string, { player: Player; color: string }>();
+    players.forEach((player, i) => map.set(player.id, { player, color: playerColorFor(i) }));
     return map;
   }, [players]);
+  const nameOf = (id: string) =>
+    playerById.get(id)?.player.name ?? t("invention.someone");
 
-  const canVote = phase === "voting";
-  const voteOptions = useMemo(
-    () => presenters.filter((id) => id !== playerId),
-    [presenters, playerId],
-  );
-
-  const connectedCount = players.length;
-
-  const totalAllocated = useMemo(
-    () => Object.values(fundAllocations).reduce((sum, v) => sum + v, 0),
-    [fundAllocations],
-  );
-  const remainingBudget = FUNDING_BUDGET - totalAllocated;
-
-  useEffect(() => {
-    if (phase === "voting") {
-      const initial: Record<string, number> = {};
-      voteOptions.forEach((id) => {
-        initial[id] = fundAllocations[id] ?? 0;
-      });
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setFundAllocations(initial);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
-
-  useEffect(() => {
-    if (phase === "collecting") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setMyProblemsSubmitted(false);
-      setTitle("");
-      setTagline("");
-      setCanvasData("");
-      setDrawStep("idea");
-      setShowHowTo(round === 1);
-    }
-  }, [phase, round]);
+  const phaseTitle: Record<string, string> = {
+    collecting: t("invention.collecting"),
+    drawing: t("invention.drawing"),
+    presenting: t("invention.presenting"),
+    voting: t("invention.voting"),
+    results: t("invention.results"),
+    finalResults: t("invention.finalResults"),
+  };
+  const phaseDesc: Record<string, string> = {
+    collecting: t("invention.collecting.desc"),
+    drawing: t("invention.drawing.desc"),
+    presenting: t("invention.presenting.desc"),
+    voting: t("invention.voting.desc"),
+  };
+  const gated = phase === "collecting" || phase === "drawing" || phase === "voting";
 
   return (
     <>
@@ -112,465 +136,727 @@ export function InventionGame(props: GameProps & { onLeave?: () => void }) {
         stepCount={4}
         onClose={() => setShowHowTo(false)}
       />
-      <div className="space-y-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="text-sm font-mono text-(--ink)/60">ROUND {round} OF {totalRounds}</div>
-            <div className="slab mt-1 text-2xl" style={{ color: "var(--hue-invention)" }}>
-              {phase === "collecting"
-                ? t("invention.collecting")
-                : phase === "drawing"
-                  ? t("invention.drawing")
-                  : phase === "presenting"
-                    ? t("invention.presenting")
-                    : phase === "voting"
-                      ? t("invention.voting")
-                      : phase === "results"
-                        ? t("invention.results")
-                        : t("invention.finalResults")}
+      <div className="flex min-w-0 flex-col gap-4" data-testid="invention-game" data-phase={phase}>
+        <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+          <div className="min-w-0">
+            <div className="mono-caption" style={{ color: "var(--ink-dim)" }}>
+              {t("invention.roundOf", { round, total: totalRounds })}
             </div>
-            <div className="text-xs text-(--ink)/60 mt-1">
-              {phase === "collecting"
-                ? t("invention.collecting.desc")
-                : phase === "drawing"
-                  ? t("invention.drawing.desc")
-                  : phase === "presenting"
-                    ? t("invention.presenting.desc")
-                    : phase === "voting"
-                      ? t("invention.voting.desc")
-                      : ""}
-            </div>
+            <h2
+              className="font-display text-2xl leading-tight sm:text-3xl"
+              style={{ color: HUE, textShadow: "0 3px 0 rgba(0,0,0,.35)" }}
+            >
+              {phaseTitle[phase] ?? phase}
+            </h2>
+            {phaseDesc[phase] ? (
+              <div className="mt-0.5 text-sm text-(--ink-dim)">{phaseDesc[phase]}</div>
+            ) : null}
           </div>
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            {phase === "collecting" && (
-              <Banner variant="waiting" className="text-xs">
-                {t("invention.problemsSubmitted", {
-                  count: problemsSubmitted,
-                  total: connectedCount * 2,
-                })}
-              </Banner>
-            )}
-            {phase === "drawing" && (
-              <Banner variant="waiting" className="text-xs">
-                {t("invention.drawingsSubmitted", {
-                  count: (publicState?.drawingsSubmitted as number | undefined) ?? 0,
-                  total: connectedCount,
-                })}
-              </Banner>
-            )}
-            {phase === "voting" && (
-              <Banner variant="waiting" className="text-xs">
-                {t("invention.votesSubmitted", {
-                  count: voteCount,
-                  total: connectedCount,
-                })}
-              </Banner>
-            )}
-            {isAdmin && (phase === "collecting" || phase === "drawing" || phase === "voting") && (
+          <div className="flex flex-wrap items-center gap-2">
+            {gated && neededCount > 0 ? (
+              <span
+                className="rounded-full border-2 border-(--line) bg-(--panel) px-3 py-1 font-mono text-xs font-bold text-(--ink)"
+                data-testid="invention-progress"
+              >
+                {t("invention.done", { count: doneCount, total: neededCount })}
+              </span>
+            ) : null}
+            {isAdmin && gated ? (
               <Button
                 variant="secondary"
-                onClick={() => sendAction({ action: "advance" })}
+                size="sm"
+                onClick={hostAdvance}
+                disabled={advanceLatch.locked}
                 data-testid="invention-host-advance"
               >
                 {t("invention.hostAdvance")}
               </Button>
-            )}
+            ) : null}
+          </div>
+        </header>
+
+        {phase === "collecting" ? (
+          <CollectingView
+            key={`collect-${round}`}
+            done={Boolean(privateState?.problemsDone)}
+            onSubmit={(problems) => sendAction({ action: "submit_problems", problems })}
+            progress={`${doneCount}/${neededCount}`}
+          />
+        ) : null}
+
+        {phase === "drawing" ? (
+          <DrawingView
+            key={`draw-${round}`}
+            assigned={(privateState?.assigned as string | undefined) ?? ""}
+            submitted={Boolean(privateState?.drawing)}
+            progress={`${doneCount}/${neededCount}`}
+            onSubmit={(payload) => sendAction({ action: "submit_drawing", ...payload })}
+          />
+        ) : null}
+
+        {phase === "presenting" ? (
+          <PresentingView
+            presenterId={(publicState?.presenter as string | undefined) ?? presenters[presentIndex] ?? ""}
+            presentIndex={presentIndex}
+            isLast={presentIndex >= presenters.length - 1}
+            submission={submissions[(publicState?.presenter as string | undefined) ?? presenters[presentIndex] ?? ""]}
+            playerId={playerId}
+            isAdmin={isAdmin}
+            nameOf={nameOf}
+            reactions={(publicState?.reactions as Reactions | undefined) ?? {}}
+            myReactions={(privateState?.myReactions as string[] | undefined) ?? []}
+            sendAction={sendAction}
+            onSkipToVoting={hostAdvance}
+            skipLocked={advanceLatch.locked}
+            latchKey={`${round}:${presentIndex}`}
+          />
+        ) : null}
+
+        {phase === "voting" ? (
+          <VotingView
+            key={`vote-${round}`}
+            playerId={playerId}
+            submissions={submissions}
+            voted={Boolean(privateState?.voted)}
+            progress={`${doneCount}/${neededCount}`}
+            nameOf={nameOf}
+            onSubmit={(funding) => sendAction({ action: "fund", funding })}
+          />
+        ) : null}
+
+        {phase === "results" || phase === "finalResults" ? (
+          <ResultsView
+            final={phase === "finalResults"}
+            submissions={submissions}
+            funding={(publicState?.funding as Record<string, number> | undefined) ?? {}}
+            totalFunding={(publicState?.totalFunding as Record<string, number> | undefined) ?? {}}
+            playerId={playerId}
+            playerById={playerById}
+            nameOf={nameOf}
+            isAdmin={isAdmin}
+            onNextRound={() => sendAction({ action: "next_round" })}
+          />
+        ) : null}
+      </div>
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="flex flex-col gap-1 rounded-[14px] border-2 border-(--line) bg-(--panel) px-4 pb-1.5 pt-2 transition-colors focus-within:border-(--hue-invention)">
+      <span className="font-mono text-[10px] font-bold uppercase tracking-[.2em] text-(--ink-faint)">
+        {label}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+const inputClass =
+  "w-full min-w-0 bg-transparent py-1.5 font-sans text-base font-semibold text-(--ink) outline-none placeholder:text-(--ink-faint) placeholder:font-normal";
+
+function WaitingNote({ children, progress }: { children: ReactNode; progress?: string }) {
+  return (
+    <Banner variant="waiting" trailing={progress} className="justify-between">
+      {children}
+    </Banner>
+  );
+}
+
+/* --------------------------- collecting --------------------------- */
+
+function CollectingView({
+  done,
+  onSubmit,
+  progress,
+}: {
+  done: boolean;
+  onSubmit: (problems: string[]) => void;
+  progress: string;
+}) {
+  const { t } = useI18n();
+  const [one, setOne] = useState("");
+  const [two, setTwo] = useState("");
+  if (done) {
+    return <WaitingNote progress={progress}>{t("invention.problemsSent")}</WaitingNote>;
+  }
+  const ready = one.trim() !== "" && two.trim() !== "";
+  return (
+    <form
+      className="mx-auto flex w-full max-w-xl flex-col gap-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (ready) onSubmit([one.trim(), two.trim()]);
+      }}
+    >
+      <Field label={t("invention.problem1")}>
+        <input
+          type="text"
+          maxLength={140}
+          placeholder={t("invention.problem1Placeholder")}
+          value={one}
+          onChange={(e) => setOne(e.target.value)}
+          className={inputClass}
+          data-testid="invention-problem-1"
+        />
+      </Field>
+      <Field label={t("invention.problem2")}>
+        <input
+          type="text"
+          maxLength={140}
+          placeholder={t("invention.problem2Placeholder")}
+          value={two}
+          onChange={(e) => setTwo(e.target.value)}
+          className={inputClass}
+          data-testid="invention-problem-2"
+        />
+      </Field>
+      <Button
+        type="submit"
+        variant="hue"
+        gameType="invention"
+        disabled={!ready}
+        className="w-full"
+        data-testid="invention-submit-problems"
+      >
+        {t("invention.submitProblems")}
+      </Button>
+    </form>
+  );
+}
+
+/* ----------------------------- drawing ---------------------------- */
+
+function DrawingView({
+  assigned,
+  submitted,
+  progress,
+  onSubmit,
+}: {
+  assigned: string;
+  submitted: boolean;
+  progress: string;
+  onSubmit: (payload: { title: string; tagline: string; draw: string }) => void;
+}) {
+  const { t } = useI18n();
+  const [title, setTitle] = useState("");
+  const [tagline, setTagline] = useState("");
+  // Canvas output only flows OUT of DrawingCanvas — never fed back as
+  // `value`, which would redraw the canvas on every stroke.
+  const [canvasData, setCanvasData] = useState("");
+  const [sending, setSending] = useState(false);
+
+  if (submitted) {
+    return <WaitingNote progress={progress}>{t("invention.drawingSent")}</WaitingNote>;
+  }
+
+  const canSubmit = Boolean(assigned && title.trim() && canvasData) && !sending;
+  const submit = async () => {
+    if (!canSubmit) return;
+    setSending(true);
+    try {
+      const draw = await compressDrawing(canvasData);
+      onSubmit({ title: title.trim(), tagline: tagline.trim(), draw });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-wrap items-start justify-center gap-4">
+      <div className="flex min-w-[min(100%,260px)] max-w-xl flex-[1_1_280px] flex-col gap-3">
+        <div
+          className="rounded-2xl p-4"
+          style={{ background: PAPER, color: PAPER_INK, boxShadow: "0 5px 0 rgba(0,0,0,.35)" }}
+          data-testid="invention-assigned"
+        >
+          <div
+            className="font-mono text-[10px] font-bold uppercase tracking-[.2em]"
+            style={{ color: PAPER_CAPTION }}
+          >
+            {t("invention.yourProblem")}
+          </div>
+          <div className="mt-1 text-lg font-bold leading-snug">
+            {assigned || t("invention.waitingAssignment")}
           </div>
         </div>
+        <Field label={t("invention.inventionTitle")}>
+          <input
+            type="text"
+            maxLength={80}
+            placeholder={t("invention.titlePlaceholder")}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className={inputClass}
+            data-testid="invention-title-input"
+          />
+        </Field>
+        <Field label={t("invention.tagline")}>
+          <input
+            type="text"
+            maxLength={140}
+            placeholder={t("invention.taglinePlaceholder")}
+            value={tagline}
+            onChange={(e) => setTagline(e.target.value)}
+            className={inputClass}
+            data-testid="invention-tagline-input"
+          />
+        </Field>
+        <Button
+          variant="hue"
+          gameType="invention"
+          onClick={submit}
+          disabled={!canSubmit}
+          className="w-full"
+          data-testid="invention-submit-invention"
+        >
+          {t("invention.submitInvention")}
+        </Button>
+      </div>
+      {/* Width follows the viewport height so canvas + toolbar fit on
+          short/wide screens; it stacks below the form on narrow ones. */}
+      <div
+        className="min-w-0"
+        style={{
+          flex: "0 1 auto",
+          width: "min(100%, max(240px, calc((100dvh - 400px) * 0.818)))",
+        }}
+        data-testid="invention-canvas"
+      >
+        <DrawingCanvas onChange={setCanvasData} hue={HUE} />
+      </div>
+    </div>
+  );
+}
 
-      {phase === "collecting" ? (
-        <div className="space-y-3">
-          {myProblemsSubmitted ? (
-            <Banner variant="waiting">
-              {t("game.waiting")}
-            </Banner>
-          ) : (
-            <>
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  placeholder="Problem #1 (e.g., How to stop your shoes from screaming)"
-                  value={problemOne}
-                  onChange={(event) => setProblemOne(event.target.value)}
-                  className="w-full rounded-lg border-2 border-(--line) bg-(--panel) px-3 py-2 text-(--ink) placeholder-text-(--ink)/40 font-sans"
-                  data-testid="invention-problem-1"
-                />
-                <input
-                  type="text"
-                  placeholder="Problem #2"
-                  value={problemTwo}
-                  onChange={(event) => setProblemTwo(event.target.value)}
-                  className="w-full rounded-lg border-2 border-(--line) bg-(--panel) px-3 py-2 text-(--ink) placeholder-text-(--ink)/40 font-sans"
-                  data-testid="invention-problem-2"
-                />
-              </div>
-              <Button
-                variant="hue"
-                gameType="invention"
-                onClick={() => {
-                  sendAction({
-                    problems: [problemOne.trim(), problemTwo.trim()],
-                  });
-                  setMyProblemsSubmitted(true);
-                }}
-                disabled={!problemOne.trim() || !problemTwo.trim()}
-                className="w-full"
-                data-testid="invention-submit-problems"
-              >
-                SUBMIT PROBLEMS
-              </Button>
-            </>
-          )}
+/* ---------------------------- presenting --------------------------- */
+
+function PatentCard({
+  submission,
+  number,
+  testId,
+  compact = false,
+}: {
+  submission: InventionDrawing;
+  number: number;
+  testId?: string;
+  compact?: boolean;
+}) {
+  const { t } = useI18n();
+  return (
+    <div
+      className="relative rounded-[18px]"
+      style={{
+        background: PAPER,
+        padding: compact ? "14px 14px" : "20px 18px",
+        boxShadow: "0 6px 0 rgba(0,0,0,.35)",
+      }}
+      data-testid={testId}
+    >
+      <span
+        className="absolute right-3.5 -top-2.5 rounded-full px-2.5 py-1 font-mono text-[9px] font-bold uppercase"
+        style={{ background: HUE, color: "var(--dark-ink)", transform: "rotate(3deg)" }}
+      >
+        {t("invention.patentPending")}
+      </span>
+      <div
+        className="mb-1.5 font-mono text-[9px] font-bold uppercase tracking-[.2em]"
+        style={{ color: PAPER_CAPTION }}
+      >
+        {t("invention.number", { n: pad3(number) })}
+      </div>
+      <div
+        className="mb-2 break-words font-display uppercase leading-tight"
+        style={{ fontSize: compact ? 18 : 22, color: PAPER_INK }}
+        data-testid={testId ? `${testId}-title` : undefined}
+      >
+        {submission.title}
+      </div>
+      {submission.tagline ? (
+        <div
+          className="break-words text-[13px] font-medium leading-normal"
+          style={{ color: PAPER_BODY }}
+        >
+          {submission.tagline}
         </div>
       ) : null}
-
-      {phase === "drawing" ? (
-        <div className="space-y-3">
-          {drawStep === "idea" ? (
-            <>
-              {assigned ? (
-                <Card variant="selected" gameType="invention">
-                  <div className="text-sm font-semibold text-(--ink)">
-                    {t("invention.yourProblem")}
-                  </div>
-                  <div className="text-base font-bold text-(--ink) mt-2">
-                    {assigned}
-                  </div>
-                </Card>
-              ) : (
-                <Banner variant="waiting">
-                  {t("invention.waitingAssignment")}
-                </Banner>
-              )}
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  placeholder={t("invention.inventionTitle")}
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                  className="w-full rounded-lg border-2 border-(--line) bg-(--panel) px-3 py-2 text-(--ink) placeholder-text-(--ink)/40 font-sans"
-                  data-testid="invention-title-input"
-                />
-                <input
-                  type="text"
-                  placeholder={t("invention.tagline")}
-                  value={tagline}
-                  onChange={(event) => setTagline(event.target.value)}
-                  className="w-full rounded-lg border-2 border-(--line) bg-(--panel) px-3 py-2 text-(--ink) placeholder-text-(--ink)/40 font-sans"
-                />
-              </div>
-              <Button
-                variant="hue"
-                gameType="invention"
-                onClick={() => setDrawStep("draw")}
-                disabled={!assigned || !title.trim()}
-                className="w-full"
-              >
-                {t("invention.nextDraw")}
-              </Button>
-            </>
-          ) : (
-            <div className="flex flex-col gap-3" style={{ minHeight: 400 }}>
-              <div className="text-sm text-(--ink)/75">
-                {t("invention.drawFor")}{" "}
-                <span className="font-semibold text-(--ink)">{assigned}</span>
-              </div>
-              <div className="flex-1 min-h-0">
-                <DrawingCanvas
-                  value={canvasData}
-                  onChange={setCanvasData}
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="secondary"
-                  onClick={() => setDrawStep("idea")}
-                  className="flex-1"
-                >
-                  BACK
-                </Button>
-                <Button
-                  variant="hue"
-                  gameType="invention"
-                  onClick={() =>
-                    sendAction({
-                      action: "submit_drawing",
-                      title: title.trim(),
-                      tagline: tagline.trim(),
-                      draw: canvasData,
-                    })
-                  }
-                  // The server rejects a submit without a title — mirror that
-                  // here so the button can't silently no-op.
-                  disabled={!canvasData || !title.trim()}
-                  className="flex-1"
-                  data-testid="invention-submit-invention"
-                >
-                  {t("invention.submitInvention")}
-                </Button>
-              </div>
-              {drawing ? (
-                <Banner variant="waiting">
-                  {t("game.waiting")}
-                </Banner>
-              ) : null}
-            </div>
-          )}
+      {submission.problem ? (
+        <div className="mt-1.5 break-words text-xs leading-normal" style={{ color: PAPER_CAPTION }}>
+          <b>{t("invention.solves")}</b> {submission.problem}
         </div>
       ) : null}
+      {submission.dataURL ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={submission.dataURL}
+          alt={t("invention.drawingAlt", { title: submission.title })}
+          className="mx-auto mt-3 block w-auto max-w-full rounded-lg object-contain"
+          style={{
+            maxHeight: compact ? "min(30dvh, 220px)" : "min(48dvh, 440px)",
+            border: "2px solid rgba(28,18,48,.12)",
+          }}
+          data-testid={testId ? `${testId}-img` : undefined}
+        />
+      ) : null}
+    </div>
+  );
+}
 
-      {phase === "presenting" ? (
-        <div className="space-y-4">
-          <div style={{ textAlign: "center", fontSize: "10px", fontWeight: 700, letterSpacing: "0.25em", color: "#ff9d3f", marginBottom: "12px", textTransform: "uppercase" }}>
-            {presenterId === playerId
-              ? "YOU'RE PITCHING…"
-              : `${playerNames.get(presenterId) ?? "SOMEONE"} IS PITCHING…`}
-          </div>
-          {currentSubmission ? (
-            <div style={{ background: "#fff8e7", borderRadius: "18px", padding: "20px 18px", boxShadow: "0 6px 0 rgba(0,0,0,.35)", position: "relative" }}>
-              {/* PATENT PENDING sticker */}
-              <div style={{ position: "absolute", top: "-10px", right: "14px", background: "#ff9d3f", color: "#3d1f0e", fontSize: "9px", fontWeight: 700, borderRadius: "99px", padding: "4px 10px", transform: "rotate(3deg)", textTransform: "uppercase", fontFamily: "'Space Mono',monospace" }}>
-                PATENT PENDING
-              </div>
-
-              {/* Invention number */}
-              <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: ".2em", color: "#8a7f60", marginBottom: "6px", textTransform: "uppercase", fontFamily: "'Space Mono',monospace" }}>
-                INVENTION Nº {presentIndex + 1}
-              </div>
-
-              {/* Title */}
-              <div style={{ fontFamily: "'Alfa Slab One'", fontSize: "22px", color: "#1c1230", marginBottom: "8px", fontWeight: "bold" }}>
-                {currentSubmission.title}
-              </div>
-
-              {/* Tagline */}
-              {currentSubmission.tagline ? (
-                <div style={{ fontFamily: "'Space Grotesk'", fontSize: "13px", fontWeight: 500, lineHeight: "1.5", color: "#4a4232", marginBottom: "8px" }}>
-                  {currentSubmission.tagline}
-                </div>
-              ) : null}
-
-              {/* Drawing */}
-              {currentSubmission.dataURL ? (
-                <div style={{ marginTop: "12px", borderRadius: "8px", overflow: "hidden" }}>
-                  <img
-                    src={currentSubmission.dataURL}
-                    alt={currentSubmission.title}
-                    style={{ width: "100%", display: "block" }}
-                  />
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          {/* Reaction pills (visual only - no backend functionality) */}
-          {currentSubmission && (
-            <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "12px" }}>
-              <span style={{ fontSize: "16px", background: "#2b1a3d", border: "2px solid #5a3f7a", borderRadius: "99px", padding: "6px 14px", display: "flex", alignItems: "center", gap: "4px" }}>
-                <Coins size={16} strokeWidth={2.5} style={{ color: "#ffe9a8" }} />
-              </span>
-              <span style={{ fontSize: "16px", background: "#2b1a3d", border: "2px solid #5a3f7a", borderRadius: "99px", padding: "6px 14px", display: "flex", alignItems: "center", gap: "4px" }}>
-                <Trash2 size={16} strokeWidth={2.5} style={{ color: "#ffe9a8" }} />
-              </span>
-              <span style={{ fontSize: "16px", background: "#2b1a3d", border: "2px solid #ff9d3f", borderRadius: "99px", padding: "6px 14px", boxShadow: "0 0 12px rgba(255,157,63,.3)", display: "flex", alignItems: "center", gap: "4px" }}>
-                <Rocket size={16} strokeWidth={2.5} style={{ color: "#ff9d3f" }} />
-              </span>
-            </div>
-          )}
-
-          {isPresenter ? (
-            <Button
-              variant="hue"
-              gameType="invention"
-              onClick={() => sendAction({ action: "next" })}
-              className="w-full"
+function PresentingView({
+  presenterId,
+  presentIndex,
+  isLast,
+  submission,
+  playerId,
+  isAdmin,
+  nameOf,
+  reactions,
+  myReactions,
+  sendAction,
+  onSkipToVoting,
+  skipLocked,
+  latchKey,
+}: {
+  presenterId: string;
+  presentIndex: number;
+  isLast: boolean;
+  submission: InventionDrawing | undefined;
+  playerId: string;
+  isAdmin: boolean;
+  nameOf: (id: string) => string;
+  reactions: Reactions;
+  myReactions: string[];
+  sendAction: (payload: Record<string, unknown>) => unknown;
+  onSkipToVoting: () => void;
+  skipLocked: boolean;
+  latchKey: string;
+}) {
+  const { t } = useI18n();
+  const isPresenter = presenterId === playerId;
+  // "next" names the pitch it ends, so a double tap or a tap racing the
+  // pitch timer can't skip the following presenter.
+  const nextLatch = useLatch(latchKey);
+  const nextPitch = () => {
+    if (nextLatch.locked) return;
+    if (wasSent(sendAction({ action: "next", presentIndex, presenter: presenterId }))) nextLatch.latch();
+  };
+  return (
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-3.5">
+      <div
+        className="text-center font-mono text-[10px] font-bold uppercase tracking-[.25em]"
+        style={{ color: HUE }}
+        data-testid="invention-pitcher"
+      >
+        {isPresenter
+          ? t("invention.youPitching")
+          : t("invention.isPitching", { name: nameOf(presenterId) })}
+      </div>
+      {submission ? (
+        <PatentCard submission={submission} number={presentIndex + 1} testId="invention-pitch" />
+      ) : null}
+      <div className="flex flex-wrap justify-center gap-2">
+        {REACTIONS.map(({ kind, emoji }) => {
+          const mine = myReactions.includes(kind);
+          return (
+            <button
+              key={kind}
+              type="button"
+              disabled={isPresenter}
+              aria-pressed={mine}
+              title={t(`invention.react.${kind}`)}
+              aria-label={t(`invention.react.${kind}`)}
+              onClick={() => sendAction({ action: "react", kind })}
+              className="flex items-center gap-1.5 rounded-full border-2 bg-(--panel) px-3.5 py-1.5 text-base transition-transform enabled:hover:-translate-y-0.5 disabled:cursor-default"
+              style={{
+                borderColor: mine ? HUE : "var(--line)",
+                boxShadow: mine ? "0 0 12px rgba(255,157,63,.3)" : "none",
+              }}
+              data-testid={`invention-react-${kind}`}
             >
-              {t("invention.nextInvention")}
-            </Button>
-          ) : isAdmin ? (
+              <span aria-hidden>{emoji}</span>
+              <b className="font-mono text-[11px]" style={{ color: mine ? HUE : "var(--ink)" }}>
+                {reactions[kind] ?? 0}
+              </b>
+            </button>
+          );
+        })}
+      </div>
+      {isPresenter || isAdmin ? (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={isPresenter ? "hue" : "secondary"}
+            gameType="invention"
+            onClick={nextPitch}
+            disabled={nextLatch.locked}
+            className="min-w-[min(100%,200px)] flex-1"
+            data-testid="invention-next-pitch"
+          >
+            {isPresenter
+              ? isLast
+                ? t("invention.startVoting")
+                : t("invention.nextInvention")
+              : t("invention.hostNextPitch")}
+          </Button>
+          {isAdmin && !isLast ? (
             <Button
               variant="secondary"
-              onClick={() => sendAction({ action: "advance" })}
-              className="w-full"
+              onClick={onSkipToVoting}
+              disabled={skipLocked}
+              className="min-w-[min(100%,200px)] flex-1"
+              data-testid="invention-skip-voting"
             >
               {t("invention.skipVoting")}
             </Button>
           ) : null}
         </div>
       ) : null}
+    </div>
+  );
+}
 
-      {canVote ? (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-(--ink)/75">
-              {t("invention.fundingBudget", { budget: FUNDING_BUDGET })}
-            </div>
-            <span
-              className={`font-display text-lg ${
-                remainingBudget < 0 ? "text-(--danger)" : "text-(--ink)"
-              }`}
+/* ------------------------------ voting ----------------------------- */
+
+function VotingView({
+  playerId,
+  submissions,
+  voted,
+  progress,
+  nameOf,
+  onSubmit,
+}: {
+  playerId: string;
+  submissions: Record<string, InventionDrawing>;
+  voted: boolean;
+  progress: string;
+  nameOf: (id: string) => string;
+  onSubmit: (funding: Record<string, number>) => void;
+}) {
+  const { t } = useI18n();
+  // Keyed per round by the parent, so last round's sliders never leak in.
+  const [alloc, setAlloc] = useState<Record<string, number>>({});
+  const options = Object.keys(submissions)
+    .filter((id) => id !== playerId)
+    .sort();
+  const allocated = options.reduce((sum, id) => sum + (alloc[id] ?? 0), 0);
+  const remaining = FUNDING_BUDGET - allocated;
+
+  if (voted) {
+    return <WaitingNote progress={progress}>{t("invention.fundingSent")}</WaitingNote>;
+  }
+  if (options.length === 0) {
+    return <WaitingNote progress={progress}>{t("invention.nothingToFund")}</WaitingNote>;
+  }
+
+  return (
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="text-sm text-(--ink-dim)">
+          {t("invention.fundingBudget", { budget: money(FUNDING_BUDGET) })}
+        </div>
+        <span
+          className="rounded-[10px] px-3 py-0.5 font-display text-xl"
+          style={{ background: "var(--ink)", color: "var(--bg)", boxShadow: "0 3px 0 var(--drop)" }}
+          data-testid="invention-remaining"
+        >
+          {t("invention.fundingLeft", { amount: money(remaining) })}
+        </span>
+      </div>
+      <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 240px), 1fr))" }}>
+        {options.map((id, idx) => {
+          const sub = submissions[id];
+          const amount = alloc[id] ?? 0;
+          return (
+            <div
+              key={id}
+              className="flex flex-col gap-2 rounded-2xl border-2 bg-(--panel) p-3"
+              style={{ borderColor: amount > 0 ? HUE : "var(--line)" }}
+              data-testid={`invention-fund-card-${idx}`}
             >
-              ${remainingBudget}
+              <div className="flex items-center gap-3">
+                {sub.dataURL ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={sub.dataURL}
+                    alt={t("invention.drawingAlt", { title: sub.title })}
+                    className="h-16 w-14 flex-none rounded-lg object-cover"
+                    style={{ background: PAPER }}
+                  />
+                ) : null}
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-display text-sm uppercase text-(--ink)">{sub.title}</div>
+                  <div className="truncate text-xs text-(--ink-dim)">
+                    {t("invention.by", { name: nameOf(id) })}
+                  </div>
+                </div>
+                <div className="font-mono text-base font-bold" style={{ color: amount > 0 ? HUE : "var(--ink)" }}>
+                  {money(amount)}
+                </div>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={FUNDING_BUDGET}
+                step={FUNDING_STEP}
+                value={amount}
+                onChange={(e) => {
+                  const others = allocated - amount;
+                  const next = Math.min(Number(e.target.value), FUNDING_BUDGET - others);
+                  setAlloc((prev) => ({ ...prev, [id]: Math.max(0, next) }));
+                }}
+                className="w-full"
+                style={{ accentColor: HUE }}
+                aria-label={sub.title}
+                data-testid={`invention-vote-${idx}`}
+              />
+            </div>
+          );
+        })}
+      </div>
+      <Button
+        variant="hue"
+        gameType="invention"
+        disabled={remaining < 0}
+        onClick={() => {
+          const funding: Record<string, number> = {};
+          for (const id of options) if ((alloc[id] ?? 0) > 0) funding[id] = alloc[id];
+          onSubmit(funding);
+        }}
+        className="w-full"
+        data-testid="invention-vote-submit"
+      >
+        {allocated === 0 ? t("invention.fundNobody") : t("invention.submitFunding")}
+      </Button>
+    </div>
+  );
+}
+
+/* ----------------------------- results ----------------------------- */
+
+function ResultsView({
+  final,
+  submissions,
+  funding,
+  totalFunding,
+  playerId,
+  playerById,
+  nameOf,
+  isAdmin,
+  onNextRound,
+}: {
+  final: boolean;
+  submissions: Record<string, InventionDrawing>;
+  funding: Record<string, number>;
+  totalFunding: Record<string, number>;
+  playerId: string;
+  playerById: Map<string, { player: Player; color: string }>;
+  nameOf: (id: string) => string;
+  isAdmin: boolean;
+  onNextRound: () => void;
+}) {
+  const { t } = useI18n();
+  const hue = hueFor("invention");
+  const rows = Object.keys(submissions).sort(
+    (a, b) => (funding[b] ?? 0) - (funding[a] ?? 0) || (totalFunding[b] ?? 0) - (totalFunding[a] ?? 0),
+  );
+  const leader = Object.entries(totalFunding).sort(([, a], [, b]) => b - a)[0];
+
+  return (
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-3" data-testid="invention-results">
+      {final ? (
+        <div
+          className="rounded-2xl p-4 text-center"
+          style={{
+            background: `linear-gradient(180deg,${hue.gradFrom},${hue.gradTo})`,
+            color: hue.ink,
+            boxShadow: `0 5px 0 ${hue.drop}`,
+          }}
+        >
+          <div className="font-display text-xl sm:text-2xl">
+            {leader && leader[1] > 0
+              ? t("invention.finalWinner", { name: nameOf(leader[0]), amount: money(leader[1]) })
+              : t("invention.noWinner")}
+          </div>
+        </div>
+      ) : null}
+      {rows.length === 0 ? (
+        <Banner variant="waiting">{t("invention.noInventions")}</Banner>
+      ) : null}
+      {rows.map((id, index) => {
+        const sub = submissions[id];
+        const top = index === 0 && (funding[id] ?? 0) > 0;
+        const who = playerById.get(id);
+        const style: CSSProperties = top
+          ? {
+              background: `linear-gradient(180deg,${hue.gradFrom},${hue.gradTo})`,
+              color: hue.ink,
+              boxShadow: `0 5px 0 ${hue.drop}`,
+              borderColor: "transparent",
+            }
+          : {};
+        return (
+          <div
+            key={id}
+            className="flex items-center gap-3 rounded-2xl border-2 border-(--line) bg-(--panel) p-2.5 text-(--ink)"
+            style={style}
+            data-testid={`invention-result-${index}`}
+          >
+            <span className="w-5 flex-none text-center font-mono text-xs font-bold opacity-70">
+              {index + 1}
             </span>
+            {sub.dataURL ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={sub.dataURL}
+                alt={t("invention.drawingAlt", { title: sub.title })}
+                className="h-14 w-12 flex-none rounded-lg object-cover"
+                style={{ background: PAPER }}
+              />
+            ) : null}
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-display text-sm uppercase sm:text-base">{sub.title}</div>
+              <div className="flex min-w-0 items-center gap-1.5 text-xs opacity-80">
+                {who ? <Avatar player={who.player} color={who.color} size={18} /> : null}
+                <span className="truncate">
+                  {nameOf(id)}
+                  {id === playerId ? ` (${t("invention.you")})` : ""}
+                </span>
+              </div>
+            </div>
+            <div className="flex-none text-right">
+              <div className="font-display text-base sm:text-lg">
+                {t("invention.thisRound", { amount: money(funding[id] ?? 0) })}
+              </div>
+              <div className="font-mono text-[11px] opacity-70">
+                {t("invention.total", { amount: money(totalFunding[id] ?? 0) })}
+              </div>
+            </div>
           </div>
-          <div className="space-y-2">
-            {voteOptions
-              .filter((id) => Boolean(submissions[id]))
-              .map((id, idx) => {
-                const sub = submissions[id];
-                const currentAmount = fundAllocations[id] ?? 0;
-                return (
-                  <Card key={id} variant="panel">
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="text-sm font-semibold text-(--ink)">
-                            {playerNames.get(id) ?? id}
-                          </div>
-                          {sub ? (
-                            <div className="text-xs text-(--ink)/60">
-                              {sub.title}
-                            </div>
-                          ) : null}
-                        </div>
-                        <div className="text-lg font-bold text-(--ink)">
-                          ${currentAmount}
-                        </div>
-                      </div>
-                      <input
-                        type="range"
-                        min={0}
-                        max={FUNDING_BUDGET}
-                        step={50}
-                        value={currentAmount}
-                        onChange={(e) => {
-                          const val = Number(e.target.value);
-                          const otherTotal = Object.entries(fundAllocations)
-                            .filter(([k]) => k !== id)
-                            .reduce((sum, [, v]) => sum + v, 0);
-                          const clamped = Math.min(
-                            val,
-                            FUNDING_BUDGET - otherTotal,
-                          );
-                          setFundAllocations((prev) => ({
-                            ...prev,
-                            [id]: clamped,
-                          }));
-                        }}
-                        className="w-full"
-                        style={{ accentColor: "var(--hue-invention)" }}
-                        data-testid={`invention-vote-${idx}`}
-                      />
-                    </div>
-                  </Card>
-                );
-              })}
-          </div>
+        );
+      })}
+      {!final ? (
+        isAdmin ? (
           <Button
             variant="hue"
             gameType="invention"
-            disabled={remainingBudget < 0 || totalAllocated === 0}
-            onClick={() => {
-              const finalAllocations: Record<string, number> = {};
-              for (const [id, amount] of Object.entries(fundAllocations)) {
-                if (amount > 0) {
-                  finalAllocations[id] = amount;
-                }
-              }
-              sendAction({ funding: finalAllocations });
-            }}
+            onClick={onNextRound}
             className="w-full"
-            data-testid="invention-vote-submit"
+            data-testid="invention-next-round"
           >
-            {t("invention.submitFunding")}
+            {t("invention.nextRound")}
           </Button>
-        </div>
-      ) : null}
-
-      {phase === "results" || phase === "finalResults" ? (
-        <div className="space-y-4">
-          <div className="space-y-3">
-            {Object.entries(funding)
-              .sort(([, a], [, b]) => b - a)
-              .map(([id, amount], index) => (
-                <Card
-                  key={id}
-                  variant={index === 0 ? "hero" : "panel"}
-                  gameType={index === 0 ? "invention" : undefined}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="font-semibold text-(--ink)">
-                        {playerNames.get(id) ?? id}
-                      </div>
-                      {submissions[id] ? (
-                        <div className="text-xs text-(--ink)/60 mt-0.5">
-                          {submissions[id].title}
-                        </div>
-                      ) : null}
-                    </div>
-                    <div className="text-right">
-                      <div className="font-display text-lg font-bold text-(--ink)">
-                        ${amount}
-                      </div>
-                      <div className="text-xs text-(--ink)/50 mt-0.5">
-                        total: ${totalFunding[id] ?? 0}
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-          </div>
-          {phase === "finalResults" ? (
-            <>
-              <Card variant="hero" gameType="invention">
-                <div className="text-center">
-                  <div className="font-display text-2xl text-(--ink) font-bold">
-                    {(() => {
-                      const sorted = Object.entries(totalFunding).sort(
-                        ([, a], [, b]) => b - a,
-                      );
-                      const winnerId = sorted[0]?.[0];
-                      return winnerId
-                        ? t("invention.finalWinner", {
-                            name: playerNames.get(winnerId) ?? "Unknown",
-                            amount: sorted[0][1],
-                          })
-                        : t("invention.noWinner");
-                    })()}
-                  </div>
-                </div>
-              </Card>
-              {onLeave ? (
-                <Button
-                  variant="hue"
-                  gameType="invention"
-                  onClick={onLeave}
-                  className="w-full"
-                >
-                  {t("invention.backToLobby")}
-                </Button>
-              ) : null}
-            </>
-          ) : null}
-          {phase === "results" && isAdmin ? (
-            <Button
-              variant="hue"
-              gameType="invention"
-              onClick={() => sendAction({ action: "next_round" })}
-              className="w-full"
-            >
-              {t("invention.nextRound")}
-            </Button>
-          ) : null}
-          {phase === "results" && !isAdmin ? (
-            <Banner variant="waiting">
-              {t("invention.waitingRound")}
-            </Banner>
-          ) : null}
-        </div>
+        ) : (
+          <Banner variant="waiting">{t("invention.waitingRound")}</Banner>
+        )
       ) : null}
     </div>
-    </>
   );
 }

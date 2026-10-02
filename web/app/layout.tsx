@@ -3,6 +3,7 @@ import Script from "next/script";
 import { Alfa_Slab_One, Space_Grotesk, Space_Mono } from "next/font/google";
 import "./globals.css";
 import { I18nProvider } from "@/lib/i18n";
+import { AwfulBridge } from "@/components/AwfulBridge";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-sans",
@@ -79,7 +80,10 @@ export default function RootLayout({
       className={`${spaceGrotesk.variable} ${alfaSlabOne.variable} ${spaceMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <I18nProvider>{children}</I18nProvider>
+        <I18nProvider>
+          <AwfulBridge />
+          {children}
+        </I18nProvider>
         <Script
           defer
           src="https://analytics.frav.in/script.js"

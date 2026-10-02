@@ -1,128 +1,184 @@
 "use client";
 
+import { useId, type ReactNode } from "react";
 import { X } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 import type { Player, PlayedGame } from "@/lib/protocol";
 import { hueFor, playerColorFor } from "@/components/ui/gameHues";
 import { Avatar } from "@/components/ui/PlayerChip";
+import { Modal } from "@/components/ui/Modal";
 
-export function SessionScoreboard({
-  open,
-  onClose,
-  sessionScores,
-  players,
-  playedGames,
-}: {
-  open: boolean;
-  onClose: () => void;
+type BoardProps = {
   sessionScores: Record<string, number>;
   players: Player[];
   playedGames: PlayedGame[];
-}) {
-  if (!open) return null;
+  playerId?: string | null;
+};
 
-  const nameOf = (id: string) => players.find((p) => p.id === id)?.name ?? "?";
+// Placement → square opacity: the color says which game, the strength says
+// how well you did in it.
+const placeOpacity = (place: number) =>
+  place === 0 ? 0.15 : place === 1 ? 1 : place === 2 ? 0.7 : place === 3 ? 0.45 : 0.3;
 
-  // Sort players by session score (descending)
+/** "Tonight's board": session points so far + per-game placement squares
+ *  (Gemu Screens · 7). Pure content; wrap it in a screen or the modal. */
+export function BoardView({
+  sessionScores,
+  players,
+  playedGames,
+  playerId,
+  titleId,
+}: BoardProps & { titleId?: string }) {
+  const { t } = useI18n();
   const sortedPlayers = [...players].sort(
-    (a, b) => (sessionScores[b.id] ?? 0) - (sessionScores[a.id] ?? 0)
+    (a, b) => (sessionScores[b.id] ?? 0) - (sessionScores[a.id] ?? 0),
   );
 
-  // Build placement history for each player
-  const getPlacementHistory = (playerId: string) => {
-    return playedGames.map((game) => {
-      const placement = game.standings.find((s) => s.playerId === playerId);
-      return {
-        gameType: game.gameType,
-        place: placement?.place ?? 0,
-      };
-    });
-  };
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(18, 9, 24, 0.92)" }}
-      onClick={onClose}
-      role="dialog"
-      aria-modal
-    >
-      <div
-        className="bg-(--panel) border-2 border-(--line) rounded-3xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto pop-in"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex-1">
-            <div className="mono-caption mb-2 text-(--ink)/60">
-              AFTER {playedGames.length} GAME{playedGames.length !== 1 ? "S" : ""}
-            </div>
-            <h2 className="slab text-4xl text-(--ink)">TONIGHT'S BOARD</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-(--ink)/60 hover:text-(--ink) transition p-2"
-            aria-label="Close"
-          >
-            <X size={24} strokeWidth={2.5} />
-          </button>
+    <div className="flex w-full flex-col items-center" data-testid="session-board">
+      <div className="mb-5 text-center">
+        <div className="font-mono text-xs font-bold uppercase tracking-[0.4em] text-(--accent-2)">
+          {t("board.after", { n: playedGames.length })}
         </div>
-
-        {/* Standings rows */}
-        <div className="flex flex-col gap-3">
-          {sortedPlayers.map((player, idx) => {
-            const placement = getPlacementHistory(player.id);
-            const sessionScore = sessionScores[player.id] ?? 0;
-
-            return (
-              <div
-                key={player.id}
-                className="animate-rise rounded-2xl border-2 border-(--line) bg-(--panel) p-4 flex items-center justify-between gap-4"
-                style={{ animationDelay: `${idx * 0.1}s` }}
+        <h2
+          id={titleId}
+          className="slab text-[clamp(28px,7vw,40px)] uppercase leading-tight"
+          style={{ textShadow: "0 5px 0 var(--drop)" }}
+        >
+          {t("board.title")}
+        </h2>
+      </div>
+      <ol className="flex w-full flex-col gap-2.5">
+        {sortedPlayers.map((player, idx) => {
+          const leader = idx === 0 && (sessionScores[player.id] ?? 0) > 0;
+          const you = player.id === playerId;
+          const ink = leader ? "var(--dark-ink)" : "var(--ink)";
+          return (
+            <li
+              key={player.id}
+              className="animate-rise flex min-w-0 items-center gap-3 rounded-2xl px-3 py-2.5 sm:gap-3.5 sm:px-4"
+              style={{
+                animationDelay: `${idx * 0.08}s`,
+                background: leader ? "linear-gradient(180deg,#ffd23f,#f5b32a)" : "var(--panel)",
+                border: leader ? "none" : "2px solid var(--line)",
+                boxShadow: leader ? "0 5px 0 var(--drop)" : undefined,
+              }}
+            >
+              <span
+                className="w-6 flex-none text-center font-display text-lg"
+                style={{ color: leader ? "var(--dark-ink)" : "rgba(255,233,168,.6)" }}
               >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="slab text-2xl w-8 text-center text-(--accent)">
-                    {idx + 1}
-                  </div>
-                  <Avatar
-                    player={player}
-                    color={playerColorFor(players.findIndex((p) => p.id === player.id))}
-                    size={48}
-                  />
-                  <div className="min-w-0">
-                    <div className="font-bold text-(--ink) truncate">
-                      {player.name}
-                    </div>
-                  </div>
+                {idx + 1}
+              </span>
+              <Avatar
+                player={player}
+                color={playerColorFor(players.findIndex((p) => p.id === player.id))}
+                size={42}
+              />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[15px] font-bold" style={{ color: ink }}>
+                  {player.name}
+                  {you ? ` ${t("shell.youSuffix")}` : ""}
                 </div>
-
-                {/* Placement history squares */}
-                <div className="flex gap-1 flex-shrink-0">
-                  {placement.map((p, gameIdx) => {
-                    const hue = hueFor(p.gameType);
-                    const opacity = p.place === 0 ? 0.3 : 1;
+                <div className="mt-1 flex flex-wrap gap-1" aria-hidden>
+                  {playedGames.map((game, gi) => {
+                    const place = game.standings.find((s) => s.playerId === player.id)?.place ?? 0;
                     return (
-                      <div
-                        key={gameIdx}
-                        className="w-3 h-3 rounded-sm"
-                        style={{
-                          backgroundColor: hue.base,
-                          opacity,
-                        }}
-                        title={p.place === 0 ? "Did not place" : `Place: ${p.place}`}
+                      <span
+                        key={gi}
+                        className="h-3 w-3 rounded-[4px]"
+                        style={{ background: hueFor(game.gameType).base, opacity: placeOpacity(place) }}
+                        title={`${game.gameName} · ${place || "–"}`}
                       />
                     );
                   })}
                 </div>
-
-                {/* Total score */}
-                <div className="slab text-2xl text-(--accent-2) flex-shrink-0">
-                  {sessionScore}
-                </div>
               </div>
-            );
-          })}
-        </div>
+              <span className="flex-none font-display text-[23px]" style={{ color: ink }}>
+                {sessionScores[player.id] ?? 0}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+      {playedGames.length > 0 ? (
+        <p className="mt-3 text-center font-mono text-[9px] uppercase tracking-[0.12em] text-(--ink)/35">
+          {t("board.squaresNote")}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** Tonight's board as an overlay (score peek / score strip tap). */
+export function SessionScoreboard({
+  open,
+  onClose,
+  footer,
+  ...board
+}: BoardProps & { open: boolean; onClose: () => void; footer?: ReactNode }) {
+  const { t } = useI18n();
+  const titleId = useId();
+  return (
+    <Modal open={open} onClose={onClose} labelledBy={titleId} className="max-w-xl">
+      <div className="relative rounded-3xl border-2 border-(--line) bg-(--bg) px-4 pb-5 pt-6 sm:px-7">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-3 top-3 rounded-full p-2 text-(--ink)/60 transition hover:text-(--ink)"
+          aria-label={t("common.close")}
+        >
+          <X size={22} strokeWidth={2.5} />
+        </button>
+        <BoardView {...board} titleId={titleId} />
+        {footer ? <div className="mt-5">{footer}</div> : null}
       </div>
+    </Modal>
+  );
+}
+
+/** Between games: the board as a full screen with keep playing / end the
+ *  night (host only; ending goes to the final podium). */
+export function BoardScreen({
+  isAdmin,
+  onKeepPlaying,
+  onEndNight,
+  ...board
+}: BoardProps & { isAdmin: boolean; onKeepPlaying: () => void; onEndNight: () => void }) {
+  const { t } = useI18n();
+  return (
+    <div className="mx-auto flex w-full max-w-[560px] flex-col items-center py-8">
+      <BoardView {...board} />
+      <div className="mt-6 flex flex-wrap justify-center gap-3.5">
+        <button
+          type="button"
+          onClick={onKeepPlaying}
+          data-testid="board-keep-playing"
+          className="buzzer rounded-[14px] border-2 border-(--ink) bg-(--panel) px-7 py-3.5 text-[15px] uppercase text-(--ink)"
+          style={{ ["--buzzer-drop" as string]: "rgba(0,0,0,.4)" }}
+        >
+          {t("board.keepPlaying")}
+        </button>
+        {isAdmin ? (
+          <button
+            type="button"
+            onClick={onEndNight}
+            data-testid="results-end-night"
+            className="buzzer rounded-[14px] px-7 py-3.5 text-[15px] uppercase text-white"
+            style={{
+              background: "linear-gradient(180deg,#ff6b85,#e84863)",
+              ["--buzzer-drop" as string]: "#8f1f33",
+            }}
+          >
+            {t("results.endTheNight")}
+          </button>
+        ) : null}
+      </div>
+      {isAdmin ? (
+        <p className="mt-3 text-center font-mono text-[10px] uppercase tracking-[0.12em] text-(--ink)/40">
+          {t("board.hostOnlyNote")}
+        </p>
+      ) : null}
     </div>
   );
 }

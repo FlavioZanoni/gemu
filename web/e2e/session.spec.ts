@@ -22,9 +22,28 @@ test.describe("session loop", () => {
       // Host sees all three next-step actions.
       await expect(room.host.getByTestId("results-play-again")).toBeVisible();
       await expect(room.host.getByTestId("results-vote-next")).toBeVisible();
+      // Ending the night lives on tonight's board.
+      await room.host.getByTestId("results-board").click();
+      await expect(room.host.getByTestId("session-board")).toBeVisible();
       await expect(room.host.getByTestId("results-end-night")).toBeVisible();
+      await room.host.getByTestId("board-keep-playing").click();
+      await expect(room.host.getByTestId("results-vote-next")).toBeVisible();
       // Non-host sees the waiting state, not the buttons.
       await expect(room.guests[0].getByTestId("results-play-again")).toHaveCount(0);
+
+      // The host can still edit the playlist after the first game.
+      await room.host.getByTestId("manage-room").click();
+      const stopCard = room.host.getByTestId("manage-sheet").getByTestId("game-card-stop");
+      await expect(stopCard).toHaveAttribute("data-selected", "false");
+      await stopCard.click();
+      await expect(stopCard).toHaveAttribute("data-selected", "true");
+      await room.host.keyboard.press("Escape");
+
+      // Anyone can leave from the results screen.
+      await room.guests[0].getByTestId("room-menu").click();
+      await room.guests[0].getByTestId("leave-room").click();
+      await room.guests[0].waitForURL((url) => !url.pathname.startsWith("/room/"));
+      await expect(room.guests[0].getByTestId("create-room")).toBeVisible();
     } finally {
       await room.cleanup();
     }
@@ -38,6 +57,14 @@ test.describe("session loop", () => {
 
       // Replay queues the same game and returns to the intro; the host starts it.
       await room.host.getByTestId("results-play-again").click();
+      await expect(room.host.getByTestId("intro-title")).toHaveText("TRIVIA");
+      // Playlist & kick stay reachable on the intro too.
+      await room.host.getByTestId("manage-room").click();
+      const garticCard = room.host.getByTestId("manage-sheet").getByTestId("game-card-gartic");
+      await garticCard.click();
+      await expect(garticCard).toHaveAttribute("data-selected", "true");
+      await expect(room.host.getByTestId("manage-sheet").getByTestId("kick-Guest1")).toBeVisible();
+      await room.host.keyboard.press("Escape");
       await room.host.getByTestId("intro-start").click();
       for (const page of room.pages) {
         await expect(page.getByTestId("game-surface")).toBeVisible();
@@ -53,6 +80,7 @@ test.describe("session loop", () => {
       await startGame(room, "trivia");
       await playTriviaToResults(room);
 
+      await room.host.getByTestId("results-board").click();
       await room.host.getByTestId("results-end-night").click();
       // Podium appears for everyone with a champion and a continue button.
       for (const page of room.pages) {
@@ -73,7 +101,11 @@ test.describe("session loop", () => {
       await playTriviaToResults(room);
 
       await room.host.getByTestId("results-vote-next").click();
-      // The queued game lands on the intro, ready for the host to start again.
+      // The winner is revealed with the drumroll for everyone...
+      for (const page of room.pages) {
+        await expect(page.getByTestId("drumroll")).toBeVisible();
+      }
+      // ...then the queued game lands on the intro, ready for the host to start again.
       await expect(room.host.getByTestId("intro-start")).toBeVisible();
     } finally {
       await room.cleanup();

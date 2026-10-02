@@ -1,9 +1,11 @@
 package ws
 
 import (
+	"encoding/json"
 	"log"
 	"time"
 
+	"gemu-server/internal/games"
 	"gemu-server/internal/rooms"
 )
 
@@ -67,14 +69,17 @@ func (h *Hub) StartPersistence(interval time.Duration) {
 // to the lobby with session scores intact — players reconnect and the host
 // starts the next game. Everyone is marked disconnected so reconnects
 // re-associate; the sweeper reclaims rooms nobody returns to.
-func (h *Hub) RestoreFromStore() {
+//
+// A load error is returned, not swallowed: the saver does a full replace of
+// the persisted set, so starting it after a failed load would wipe every
+// stored room. The caller must retry or run without durability.
+func (h *Hub) RestoreFromStore() error {
 	if h.store == nil {
-		return
+		return nil
 	}
 	blob, err := h.store.LoadRooms()
 	if err != nil {
-		log.Printf("persist load: %v", err)
-		return
+		return err
 	}
 	now := time.Now()
 	restored := 0
@@ -101,13 +106,27 @@ func (h *Hub) RestoreFromStore() {
 			p.LastSeen = now
 			room.Players[id] = p
 		}
+		session := &gameSession{}
+		if decks := room.CustomDecks(); len(decks) > 0 {
+			var custom []games.Deck
+			if err := json.Unmarshal(decks, &custom); err != nil {
+				log.Printf("persist restore decks %s: %v", room.ID, err)
+			} else {
+				session.customDecks = custom
+			}
+		}
 		h.rooms.Create(room)
 		h.mu.Lock()
-		h.sessions[room.ID] = &gameSession{}
+		h.sessions[room.ID] = session
 		h.mu.Unlock()
 		restored++
 	}
 	if restored > 0 {
 		log.Printf("restored %d room(s) from storage", restored)
 	}
+	return nil
 }
+
+// DisableStore detaches the durability backend (e.g. after a failed boot
+// load), so nothing overwrites the persisted rooms.
+func (h *Hub) DisableStore() { h.store = nil }

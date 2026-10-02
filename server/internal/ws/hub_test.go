@@ -315,11 +315,19 @@ func TestRoomJoinRespectsMaxPlayers(t *testing.T) {
 			"name":        "Limit",
 			"gameType":    "invention",
 			"displayName": "Host",
-			"maxPlayers":  1,
+			"maxPlayers":  2,
 			"sessionId":   "sess-host",
 		},
 	}
 	hub.handleRoomCreate(host, createEnv)
+
+	second := &Client{ID: "second"}
+	hub.handleRoomJoin(second, Envelope{Type: "room.join", Payload: map[string]any{
+		"roomId": host.RoomID, "displayName": "Second", "sessionId": "sess-second",
+	}})
+	if second.RoomID == "" {
+		t.Fatalf("expected the second seat to be free")
+	}
 
 	joiner := &Client{ID: "joiner"}
 	joinEnv := Envelope{

@@ -16,6 +16,8 @@ test("create a room lands in the green room with a join code", async ({ page }) 
   await page.goto("/");
   await page.getByTestId("nick-input").fill("Host");
   await page.getByTestId("create-room").click();
+  await expect(page.getByTestId("create-sheet")).toBeVisible();
+  await page.getByTestId("create-room-confirm").click();
 
   // Redirects to /room/<id> once the server confirms the room.
   await page.waitForURL(/\/room\/.+/);

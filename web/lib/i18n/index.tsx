@@ -38,7 +38,12 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>("en");
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(storageKey);
+    let saved: string | null = null;
+    try {
+      saved = window.localStorage.getItem(storageKey);
+    } catch {
+      // Sandboxed frame without storage: keep the default.
+    }
     // Deliberate post-hydration set: SSR always renders "en"; switching in an
     // initializer would cause a hydration mismatch.
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -47,8 +52,17 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
-    window.localStorage.setItem(storageKey, next);
+    try {
+      window.localStorage.setItem(storageKey, next);
+    } catch {
+      // Not persisted; still switches for this page.
+    }
   }, []);
+
+  // Keep <html lang> in step with the UI language (screen readers, hyphens).
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   const t = useCallback(
     (key: string, params?: Record<string, string | number>) => {
